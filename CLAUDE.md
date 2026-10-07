@@ -17,6 +17,10 @@ Deadline: final report submitted 31/12/2026. Work weeks: 19–25/10, 09–15/11,
 
 Read `.docx` with `python-docx`; legacy `.doc` files need UTF-16LE string extraction.
 
+## Design diagrams
+
+`thesis/diagrams/` holds `use-case.drawio` and `erd.drawio` (12 tables: content `test_papers → paper_parts → questions`; exam `exams → exam_sections / candidates / exam_invigilators`; runtime `attempts`, `answers`; audit `invigilator_actions`, `security_events`; `users` for admin/invigilator only — candidates are per-exam PIN accounts). The ERD is the reference for the EF Core model; keep them in sync. Edit the `.drawio` files directly (draw.io desktop is at `D:\draw.io\draw.io.exe`), then re-export: `"/d/draw.io/draw.io.exe" -x -f png -e -s 2 -b 10 -o erd.drawio.png erd.drawio`.
+
 ## Planned stack (from the outline)
 
 C# ASP.NET Core Web API on **.NET 10**, **SignalR** for real-time, **MySQL** via **EF Core**, **React** frontend, **Safe Exam Browser** (Windows only) as the lockdown client.

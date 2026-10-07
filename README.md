@@ -57,10 +57,23 @@ Theo hướng dẫn tổ chức repository của Khoa:
     ├── pdf/            Bản PDF
     ├── html/           Tài liệu dạng web
     ├── abs/            Slide, video trình bày
+    ├── diagrams/       Sơ đồ thiết kế draw.io (use case, ERD)
     └── refs/           Tài liệu tham khảo
         ├── faculty-templates/   Quy định chung, mẫu đề cương/báo cáo, lịch thực hiện
         └── cambridge-digital/   Tài liệu thi máy Cambridge / Inspera
 ```
+
+## Thiết kế
+
+Sơ đồ nguồn `.drawio` mở bằng [draw.io](https://www.drawio.com/); file `.drawio.png` có nhúng sơ đồ nên cũng mở lại để sửa được.
+
+### Sơ đồ Use Case tổng quát
+
+![Use Case](thesis/diagrams/use-case.drawio.png)
+
+### Sơ đồ thực thể – quan hệ (ERD)
+
+![ERD](thesis/diagrams/erd.drawio.png)
 
 ## Kế hoạch thực hiện
 
@@ -80,7 +93,8 @@ Theo hướng dẫn tổ chức repository của Khoa:
 
 - [x] Đề cương chi tiết (v4)
 - [x] Tài liệu tham khảo quy trình thi máy
-- [ ] Đặc tả yêu cầu, use case, ERD, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API
+- [x] Sơ đồ use case tổng quát, ERD
+- [ ] Đặc tả yêu cầu, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API
 - [ ] Backend: đăng nhập, phân quyền, quản lý kỳ thi/thí sinh, đồng hồ server
 - [ ] Màn hình thí sinh & cổng giám thị
 - [ ] Tích hợp Safe Exam Browser, đóng gói
