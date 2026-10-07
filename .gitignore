@@ -1,0 +1,30 @@
+# Local AI tooling (contains API keys)
+.agents/
+.claude/settings.local.json
+
+# Office lock/temp files
+~$*
+*.tmp
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Node / React
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
