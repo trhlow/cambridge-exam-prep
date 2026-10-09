@@ -2,7 +2,7 @@
 
 Đồ án chuyên ngành — Khoa Công nghệ Thông tin, Trường Kỹ thuật và Công nghệ.
 
-Website mô phỏng trọn một buổi **thi Cambridge English trên máy tính** (B2 First, C1 Advanced, C2 Proficiency): tạo kỳ thi, cấp tài khoản thí sinh, thí sinh làm bài trong trình duyệt khóa, giám thị theo dõi cả phòng theo thời gian thực và xử lý sự cố, thu bài.
+Website mô phỏng trọn một buổi **thi tiếng Anh trên máy tính** cho **A2 Key, B1 Preliminary và IELTS**: tạo kỳ thi, cấp tài khoản thí sinh, thí sinh làm bài trong trình duyệt khóa, giám thị theo dõi cả phòng theo thời gian thực và xử lý sự cố, thu bài.
 
 > Website **không** dùng đề thi thật của Cambridge và **không** kết nối với hệ thống thật của Cambridge/Inspera. Đề thi là đề tự soạn phục vụ thi thử và tập huấn.
 
@@ -25,14 +25,24 @@ Thi máy khó ở khâu vận hành: giám thị phải tạm dừng đúng thí
 
 ## Chức năng chính
 
-- **Mô hình hai tầng:** một kỳ thi (Parent) gồm nhiều phần thi (Child): Reading & Use of English, Writing, Listening — mỗi phần giám sát riêng.
+- **Mô hình hai tầng:** một kỳ thi (Parent) gồm nhiều phần thi (Child), số phần và thứ tự tùy loại bài thi — mỗi phần giám sát riêng.
 - **Đồng hồ làm bài do server nắm**, tự nộp khi hết giờ.
 - **Cổng giám thị thời gian thực (SignalR):** bảng theo dõi cả phòng, chọn nhiều thí sinh thao tác cùng lúc; tạm dừng / làm tiếp, cộng giờ bù, sửa giờ kết thúc (*End now / End at / End in*), tua lại phần nghe.
 - **Màn hình thí sinh:** vào thi bằng mã PIN, làm bài, ghi chú, đánh dấu câu, đổi cỡ chữ và độ tương phản.
 - **Safe Exam Browser:** server kiểm tra cấu hình SEB (Browser Exam Key) mới cho vào thi; vi phạm hiển thị cảnh báo cho giám thị.
 - **Ba vai trò:** quản trị, giám thị, thí sinh.
 
-**Ngoài phạm vi:** phần Speaking, chấm điểm, máy Mac/Chromebook, chạy nhiều server.
+**Ngoài phạm vi:** các cấp B2 First, C1 Advanced, C2 Proficiency; phần Speaking; chấm điểm; máy Mac/Chromebook; chạy nhiều server.
+
+## Bài thi hỗ trợ
+
+| Bài thi | Phần thi trên máy (theo thứ tự) |
+|---|---|
+| A2 Key | Reading & Writing (60 phút) → Listening (~30 phút) |
+| B1 Preliminary | Reading (45 phút) → Writing (45 phút) → Listening (~30 phút) |
+| IELTS Academic / General Training | Listening (~30 phút) → Reading (60 phút) → Writing (60 phút) |
+
+Thời lượng A2 Key và B1 Preliminary lấy theo *Exam Day Booklet for Digital exams (01/2026)*. Thời lượng IELTS lấy theo cấu trúc chuẩn của IELTS trên máy.
 
 ## Công nghệ
 
