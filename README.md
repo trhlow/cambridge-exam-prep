@@ -42,6 +42,8 @@ Thi máy khó ở khâu vận hành: giám thị phải tạm dừng đúng thí
 | B1 Preliminary | Reading (45 phút) → Writing (45 phút) → Listening (~30 phút) |
 | IELTS Academic / General Training | Listening (~30 phút) → Reading (60 phút) → Writing (60 phút) |
 
+Cả ba bài thi đều triển khai trên cùng hệ thống Inspera, nên **quy trình làm bài và giám sát giống hệt nhau**; chỉ khác danh sách phần thi. Speaking thi trực tiếp, không làm trên hệ thống.
+
 Thời lượng A2 Key và B1 Preliminary lấy theo *Exam Day Booklet for Digital exams (01/2026)*. Thời lượng IELTS lấy theo cấu trúc chuẩn của IELTS trên máy.
 
 ## Công nghệ
