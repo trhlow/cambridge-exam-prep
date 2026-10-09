@@ -27,7 +27,7 @@ C# ASP.NET Core Web API on **.NET 10**, **SignalR** for real-time, **MySQL** via
 
 ## Domain model and key design constraints
 
-- **Two-tier exam:** an Exam (Parent) contains Sections (Child). Each section is timed and monitored independently. Speaking is out of scope. Section count and order depend on the exam type, so never hard-code three sections or a fixed order:
+- **Two-tier exam:** an Exam (Parent) contains Sections (Child). Each section is timed and monitored independently. Section count and order depend on the exam type, so never hard-code three sections or a fixed order:
 
   | Exam | Sections in order |
   |---|---|
@@ -36,7 +36,7 @@ C# ASP.NET Core Web API on **.NET 10**, **SignalR** for real-time, **MySQL** via
   | IELTS Academic / General Training | Listening (~30) → Reading (60) → Writing (60) |
 
 - **Scope change (09/10/2026):** the user narrowed scope to A2 Key, B1 Preliminary and IELTS. The signed outline (v4) and the idea doc still say B2/C1/C2 — the user's instruction wins; don't build or seed data for B2/C1/C2.
-- **References are CEQ-only:** everything in `thesis/refs/cambridge-digital/` describes Cambridge English Qualifications on Inspera. Nothing in the repo documents IELTS invigilation; don't assume IELTS follows CEQ procedures without a source. The Jan 2026 booklet lists "A2 Key (until July 2026) / Key for Schools".
+- **One procedure for all three exams:** A2 Key, B1 Preliminary and IELTS are all delivered on Inspera, so invigilator workflow (Parent/Child levels, pause/resume, incident extra time, rewind audio, Edit End Time, warnings) is identical — follow `thesis/refs/cambridge-digital/` for every exam type (confirmed by the user, 09/10/2026). The exams differ **only** in their section list, so model exam type → ordered section templates as data, not as per-exam code paths. Speaking is taken face-to-face for all three and never appears in the system. The Jan 2026 booklet lists "A2 Key (until July 2026) / Key for Schools".
 - **Attempt state machine:** not started → in progress → paused → submitted. Ending is irreversible for the candidate; the real system has a "re-open session" recovery for wrongly closed parents.
 - **Server-authoritative timer:** the server owns remaining time; clients only display it. Pause/resume and extra time must adjust the server-side end time.
 - **Invigilator operations:** pause/resume (single, multi-select, or whole room), add extra time, edit end time (*Use test end time / End now / End at hh:mm:ss / End in ±minutes*), disregard extra time, Listening incident flow (pause → reset audio track to the incident point → resume without losing answers).
