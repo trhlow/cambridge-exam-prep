@@ -137,7 +137,7 @@ Tổng: 3 story, 6 điểm.
 - **Status:** pending
 
 ## Key Questions
-1. Jira site nào? Connector Atlassian đã đăng nhập nhưng chưa thấy site (`getAccessibleAtlassianResources` rỗng) — cần URL `xxx.atlassian.net` và quyền cho connector.
+1. ~~Jira site nào?~~ Đã giải quyết: https://victoryexam.atlassian.net, project `SCRUM` (xem "Jira" bên dưới).
 2. Khi nào Victory gửi đề A2 đầy đủ (câu hỏi, hình, đáp án, 5 file audio)? Chặn VE-5/VE-10 bằng dữ liệu thật; trước đó dùng đề mẫu tự soạn.
 3. Ai chấm Writing — giáo viên với tài khoản admin hay cần vai trò "giáo viên" riêng?
 
@@ -157,11 +157,18 @@ Tổng: 3 story, 6 điểm.
 | Chưa có đề A2 thật | Tự soạn đề mẫu đúng format để demo |
 | Connector Jira không tạo được sprint | Tạo issue qua connector, người dùng tạo sprint trên board; hoặc nhập `jira-backlog.csv` |
 
+## Jira
+- Site https://victoryexam.atlassian.net, project **Victory Exam** (key `SCRUM`, team-managed Scrum).
+- Epic E1–E13 = SCRUM-5 … SCRUM-17; story VE-n = SCRUM-(n+17) (VE-1 = SCRUM-18 … VE-55 = SCRUM-72). Mỗi story có nhãn `VE-n` và `sprint-N`, điểm ở *Story point estimate*.
+- Sprint đang chạy "SCRUM Sprint 0" (10/10–24/10) chứa VE-1…VE-12; VE-1, VE-2 đã Done.
+- Connector không tạo được sprint: tạo Sprint 2…11 trên board rồi lọc backlog theo nhãn `sprint-N` để kéo vào.
+
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
 | Atlassian connector trả về danh sách site rỗng | 1 | Cần người dùng cung cấp site Jira / cấp quyền |
 | `sprints.py` in ra console lỗi UnicodeEncodeError (cp1252) | 1 | Ghi ra file UTF-8 thay vì in |
+| Jira: "cloud id isn't explicitly granted" | 2 | Người dùng kết nối lại connector (/mcp) và chọn site victoryexam |
 
 ## Notes
 - Cập nhật trạng thái phase: pending → in_progress → complete.
