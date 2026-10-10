@@ -12,11 +12,12 @@
 - Files created/modified: `src/backend/**`, `docker/**`, `thesis/diagrams/*`, `README.md`, `CLAUDE.md`
 
 ### Lập kế hoạch sprint
-- **Status:** complete (phần Jira đang chờ site)
+- **Status:** complete
 - Actions taken:
   - Khởi tạo plan bằng `planning-with-files` (`.planning/2026-10-10-sprint-plan/`)
   - Viết `sprints.py` → `sprint-backlog.md`, `jira-backlog.csv` (12 sprint, 13 epic, 55 story)
-  - Kiểm tra Jira: tài khoản đã kết nối, chưa thấy site
+  - Jira (victoryexam.atlassian.net, project SCRUM): tạo 13 epic (SCRUM-5…17) và 55 story (SCRUM-18…72) có điểm, nhãn, tiêu chí chấp nhận
+  - VE-1…VE-12 xếp vào sprint đang chạy; VE-1, VE-2 chuyển Done; kiểm tra bằng JQL: 55 story, 12 trong sprint
 
 ## Test Results
 | Test | Input | Expected | Actual | Status |
@@ -27,4 +28,4 @@
 ## Error Log
 | Timestamp | Error | Attempt | Resolution |
 |-----------|-------|---------|------------|
-| 2026-10-10 | Atlassian: không có site truy cập được | 1 | Chờ người dùng cung cấp site |
+| 2026-10-10 | Atlassian: không có site truy cập được | 1 | Người dùng cung cấp site và cấp quyền connector |
