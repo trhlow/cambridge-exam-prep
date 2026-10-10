@@ -37,3 +37,12 @@
 - Migration `SchemaReviewFixes`: `end_at_override` → `end_adjust_seconds`, `security_stamp` (users, candidates), `exam_sections.start_announced_at`, 14 CHECK constraint; DbContext tự đổi `concurrency_stamp`
 - Test DB: RED (thiếu migration) → GREEN; toàn bộ 46/46 test đạt; migration đã áp vào DB phát triển
 - Script sinh ERD / use case đưa vào `thesis/diagrams/tools/` (ERD đọc trực tiếp MySQL); ERD sinh lại: 21 bảng, 177 cột
+
+### Sprint 1 — VE-3 đăng nhập nhân viên (10/10, tối)
+- **Status:** complete (Jira SCRUM-20 → Done)
+- Skill: `test-driven-development` (13 test tích hợp RED đúng lý do → GREEN), `security-review` (không có lỗ hổng độ tin cậy cao)
+- API: `POST /api/staff/auth/login|logout`, `GET /api/staff/auth/me`, `GET /api/admin/users` (Admin)
+- Cookie "Staff" HttpOnly + SameSite=Strict (Secure ở Production), 401/403 thay redirect, kiểm tra `IsActive` + `security_stamp` mỗi request
+- Băm PBKDF2, rehash khi cần, thời gian thất bại đồng đều; admin đầu tiên từ `Bootstrap:AdminUsername/AdminPassword`
+- Toàn bộ 59/59 test đạt; commit `85187ed`
+- Còn lại cho VE-30: giới hạn tần suất đăng nhập

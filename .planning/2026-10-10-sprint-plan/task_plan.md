@@ -4,7 +4,7 @@
 Giao hệ thống thi máy cho phòng thi của Victory, tái hiện trải nghiệm Cambridge/Inspera: A2 Key for Schools chạy đầy đủ trước (demo 16/10/2026), rồi B1 Preliminary for Schools, IELTS nếu kịp, và nộp quyển báo cáo ngày 31/12/2026.
 
 ## Next Step
-Sprint 1 — VE-3: dựng đăng nhập nhân viên (cookie + phân quyền) trên ASP.NET Core.
+VE-4: viết test tích hợp đăng nhập thí sinh (username/password + PIN phòng thi) trước, rồi cài cookie thí sinh riêng và kiểm tra security_stamp.
 
 ## Current Phase
 Phase 1 (Sprint 1, 12/10 – 18/10)
@@ -41,7 +41,7 @@ Tổng: 2 story, 7 điểm.
 
 ### Phase 1: Sprint 1 (12/10 – 18/10) — Demo A2 phía thí sinh vào thứ Sáu 16/10
 Tổng: 10 story, 42 điểm.
-- [ ] VE-3 [E2] (5đ) Đăng nhập nhân viên (admin, giám thị) bằng cookie, phân quyền theo vai trò
+- [x] VE-3 [E2] (5đ) Đăng nhập nhân viên (admin, giám thị) bằng cookie, phân quyền theo vai trò
 - [ ] VE-4 [E2] (5đ) Đăng nhập thí sinh bằng username/password + mã PIN phòng thi
 - [ ] VE-5 [E3] (5đ) Định dạng gói đề JSON (+audio, hình) và import đề A2
 - [ ] VE-6 [E5] (3đ) Dựng frontend React + TypeScript (Vite), khung màn hình kiểu Inspera
@@ -51,7 +51,7 @@ Tổng: 10 story, 42 điểm.
 - [ ] VE-10 [E6] (5đ) Listening A2: phát nối 5 track một lần, chọn tranh, kéo thả
 - [ ] VE-11 [E8] (3đ) Chấm tự động Reading Part 1–5 và Listening theo đáp án
 - [ ] VE-12 [E12] (1đ) Báo cáo tiến độ tuần 1 (progress-report)
-- **Status:** pending
+- **Status:** in_progress
 
 ### Phase 2: Sprint 2 (19/10 – 25/10) — Cổng giám thị thời gian thực (tuần gặp GV 1)
 Tổng: 8 story, 29 điểm.
