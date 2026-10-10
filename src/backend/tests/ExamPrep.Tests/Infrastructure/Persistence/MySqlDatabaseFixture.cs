@@ -17,7 +17,7 @@ public sealed class MySqlDatabaseFixture : IAsyncLifetime
 
     public bool IsAvailable => !string.IsNullOrWhiteSpace(serverConnection);
 
-    private string ConnectionString => $"{serverConnection};database={databaseName}";
+    public string ConnectionString => $"{serverConnection};database={databaseName}";
 
     public ExamPrepDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<ExamPrepDbContext>().UseMySQL(ConnectionString).Options);
