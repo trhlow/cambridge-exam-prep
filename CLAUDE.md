@@ -4,55 +4,80 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Vietnamese university capstone ("Đồ án chuyên ngành", class DA23TTA): a web app that simulates a **computer-based English exam session** for practice — scope is **A2 Key, B1 Preliminary and IELTS only** — candidates take mock tests, invigilators rehearse incident handling, centres run mock exams with their own content. No source code exists yet (`src/` is empty); the repo currently holds planning documents and references. When code is added, update this file with build/test/run commands.
+Vietnamese university capstone ("Đồ án chuyên ngành", class DA23TTA) built for the Victory English centre: a computer-based exam system for the centre's exam room that reproduces the Cambridge/Inspera candidate and invigilator experience (layout, format, interface). Exams are taken at the centre on its computers.
 
-Deadline: final report submitted 31/12/2026. Work weeks: 19–25/10, 09–15/11, 30/11–06/12, 21–27/12/2026.
+- **Scope:** A2 Key for Schools first (demo due Fri 16/10/2026), then B1 Preliminary for Schools, then IELTS (no fixed format; later). B2/C1/C2 are out of scope.
+- **Everything is built from scratch**, including question authoring: Victory's old exam-entry system is gone (decided 10/10/2026). Victory supplies the exam content (questions, answer keys, audio split into one track per Listening part).
+- **Done so far:** database schema (EF Core migrations on MySQL) with integration tests. Not yet: API endpoints, frontend, auth, SignalR.
+
+Deadline: final report submitted 31/12/2026. Faculty check-in weeks: 19–25/10, 09–15/11, 30/11–06/12, 21–27/12/2026.
+
+## Commands
+
+Run from `src/backend` unless noted. Requires .NET SDK 10 (pinned in `global.json`) and Docker Desktop.
+
+```bash
+# Start MySQL (from repo root). docker/.env holds the passwords and is git-ignored; copy docker/.env.example first.
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
+
+# Connection string for the API (Development reads user-secrets)
+dotnet user-secrets set "ConnectionStrings:ExamPrep" "server=localhost;port=3306;database=examprep;user=examprep;password=<MYSQL_PASSWORD>" --project src/ExamPrep.Api
+
+# Build / run (health check at /health)
+dotnet build
+ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/ExamPrep.Api
+
+# Migrations (design-time factory reads ConnectionStrings__ExamPrep from the environment)
+dotnet ef migrations add <Name> -p src/ExamPrep.Infrastructure -s src/ExamPrep.Api -o Persistence/Migrations
+ConnectionStrings__ExamPrep="<conn>" dotnet ef database update -p src/ExamPrep.Infrastructure -s src/ExamPrep.Api
+
+# Tests (Microsoft.Testing.Platform runner, xUnit v3). DB tests need a server-level root connection
+# and are reported as skipped without it; each run creates and drops its own examprep_test_* database.
+EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_PASSWORD>" dotnet test
+dotnet test --filter-method "*SnakeCase*"      # single test / pattern
+```
+
+## Backend architecture (`src/backend`)
+
+- `ExamPrep.Domain` — entities (one class per file) and enums. No EF dependency.
+- `ExamPrep.Infrastructure` — `Persistence/ExamPrepDbContext`, one `IEntityTypeConfiguration` per entity in `Persistence/Configurations`, migrations, `SeedData` (exam types, section templates, default branding "Victory"). `ModelConventions` stores every enum as `varchar(32)` text and every `DateTime` as UTC; `SnakeCaseNaming` lower-snake-cases all tables and columns. Provider is Oracle's `MySql.EntityFrameworkCore` 10 (`UseMySQL`), because Pomelo has no EF Core 10 release.
+- `ExamPrep.Api` — ASP.NET Core host; `AddInfrastructure` fails fast if the connection string is missing.
+- `ExamPrep.Tests` — mirrors `src/`; `MySqlDatabaseFixture` + `A2ExamBuilder` for DB integration tests.
+
+The schema has 21 tables in four groups: **content** (`exam_types → section_templates`, `test_papers → paper_parts → question_groups → questions → answer_keys`, `assets`), **sessions** (`exams → exam_sections / candidates / exam_invigilators`), **delivery** (`attempts`, `responses`, `annotations`, `manual_marks`), **monitoring** (`invigilator_actions`, `security_events`, `candidate_messages`), plus `users` (staff only) and `site_settings` (centre name + logo, admin-editable).
+
+Key modelling decisions:
+- Exam types and their ordered sections are **data** (`section_templates`), so A2 (2 sections), B1 (3) and later IELTS share one engine. Never hard-code a section list.
+- `question_groups.interaction_type` drives the candidate UI: `SingleChoice`, `ImageChoice`, `InlineChoice` (word picker over a gap), `InlineText` (typed gap), `DragDropMatch` (word cards), `Essay` (word counter). Inline gaps live in `body_html` as `{{q:19}}`.
+- Listening audio is one track per part (`paper_parts.audio_asset_id`); the player chains them into one continuous recording, as Inspera does.
+- Server-authoritative timer on `attempts`: `ends_at` is recomputed from `started_at`, section duration, `planned_extra_seconds` (from `candidates.planned_extra_percent`), `incident_extra_seconds`, `paused_seconds`, `end_at_override`, `disregard_extra_time`. `concurrency_stamp` is an optimistic-concurrency token — set a new Guid on every attempt update so invigilator and candidate writes cannot overwrite each other.
+- Auto-marking uses `answer_keys` (several rows = accepted alternatives). Writing has no key: teachers mark it in `manual_marks`.
+
+`thesis/diagrams/erd.drawio` is generated from the live MySQL schema; regenerate it after a migration rather than editing by hand. Export: `"/d/draw.io/draw.io.exe" -x -f png -e -s 2 -b 10 -o erd.drawio.png erd.drawio` (draw.io desktop is at `D:\draw.io`).
 
 ## Source of truth
 
-- **`thesis/doc/DeCuong_ChiTiet_DoAnChuyenNganh_TranHoangLong_v4.docx`** (approved outline) is authoritative for the stack and overall goals; its exam levels are superseded by the scope change below.
-- `thesis/doc/BaoCaoKyThuat_HeThongWebQuanLyThi_CambridgeDigital.docx` is an earlier strategy report. Its domain analysis (Parent/Child test, violation matrix, invigilator operations) is useful, but its stack (Node.js/Go, Socket.io, PostgreSQL, Redis, offline cache, 1,000-user load target) is **superseded** by the outline — do not follow it.
-- `thesis/refs/cambridge-digital/` — official Cambridge/Inspera exam-day and invigilator guides; consult these for real-world workflow behavior.
-- `thesis/refs/faculty-templates/0_MOT_SO_QUY_DINH_CHUNG_2026.doc` — faculty rules for the report and repo (see below).
+- `thesis/refs/cambridge-digital/` — official Cambridge/Inspera exam-day and invigilator guides. Invigilator procedures are identical for A2, B1 and IELTS (all on Inspera; confirmed by the user 09/10/2026).
+- `thesis/refs/inspera-ui-a2.md` — screen-by-screen notes of the official A2 Key for Schools sample tests: header icons, part tabs with "n of m", split panes, inline word picker, drag-and-drop matching, Options menu (contrast, text size, hide timer), notes/highlight. Build the candidate UI against this.
+- `thesis/refs/ielts-format.md` — IELTS structure and question types.
+- `thesis/doc/DeCuong_ChiTiet_DoAnChuyenNganh_TranHoangLong_v4.docx` (approved outline) — authoritative for the stack and goals; its exam levels and "self-authored content" are superseded by the decisions above.
+- `thesis/doc/BaoCaoKyThuat_HeThongWebQuanLyThi_CambridgeDigital.docx` — earlier strategy report; its stack (Node/Go, PostgreSQL, Redis, 1,000 users) is superseded — do not follow it.
 
-Read `.docx` with `python-docx`; legacy `.doc` files need UTF-16LE string extraction.
+Read `.docx` with `python-docx`, `.pdf` with `pypdf`; legacy `.doc` needs UTF-16LE string extraction.
 
-## Design diagrams
+## Exam-room behaviour to reproduce (from the refs)
 
-`thesis/diagrams/` holds `use-case.drawio` and `erd.drawio` (12 tables: content `test_papers → paper_parts → questions`; exam `exams → exam_sections / candidates / exam_invigilators`; runtime `attempts`, `answers`; audit `invigilator_actions`, `security_events`; `users` for admin/invigilator only — candidates are per-exam PIN accounts). The ERD is the reference for the EF Core model; keep them in sync. Edit the `.drawio` files directly (draw.io desktop is at `D:\draw.io\draw.io.exe`), then re-export: `"/d/draw.io/draw.io.exe" -x -f png -e -s 2 -b 10 -o erd.drawio.png erd.drawio`.
-
-## Planned stack (from the outline)
-
-C# ASP.NET Core Web API on **.NET 10**, **SignalR** for real-time, **MySQL** via **EF Core**, **React** frontend, **Safe Exam Browser** (Windows only) as the lockdown client.
-
-## Domain model and key design constraints
-
-- **Two-tier exam:** an Exam (Parent) contains Sections (Child). Each section is timed and monitored independently. Section count and order depend on the exam type, so never hard-code three sections or a fixed order:
-
-  | Exam | Sections in order |
-  |---|---|
-  | A2 Key | Reading & Writing (60 min, one combined section) → Listening (~30 min) |
-  | B1 Preliminary | Reading (45) → Writing (45) → Listening (~30) |
-  | IELTS Academic / General Training | Listening (~30) → Reading (60) → Writing (60) |
-
-- **Scope change (09/10/2026):** the user narrowed scope to A2 Key, B1 Preliminary and IELTS. The signed outline (v4) and the idea doc still say B2/C1/C2 — the user's instruction wins; don't build or seed data for B2/C1/C2.
-- **One procedure for all three exams:** A2 Key, B1 Preliminary and IELTS are all delivered on Inspera, so invigilator workflow (Parent/Child levels, pause/resume, incident extra time, rewind audio, Edit End Time, warnings) is identical — follow `thesis/refs/cambridge-digital/` for every exam type (confirmed by the user, 09/10/2026). The exams differ **only** in their section list, so model exam type → ordered section templates as data, not as per-exam code paths. Speaking is taken face-to-face for all three and never appears in the system. The Jan 2026 booklet lists "A2 Key (until July 2026) / Key for Schools".
-- **Attempt state machine:** not started → in progress → paused → submitted. Ending is irreversible for the candidate; the real system has a "re-open session" recovery for wrongly closed parents.
-- **Server-authoritative timer:** the server owns remaining time; clients only display it. Pause/resume and extra time must adjust the server-side end time.
-- **Invigilator operations:** pause/resume (single, multi-select, or whole room), add extra time, edit end time (*Use test end time / End now / End at hh:mm:ss / End in ±minutes*), disregard extra time, Listening incident flow (pause → reset audio track to the incident point → resume without losing answers).
-- **Candidate UI:** login by PIN, notes, flag questions, font-size and contrast settings.
-- **SEB integration:** server validates the Browser Exam Key / config key before allowing entry; violations (browser exited, disconnect, etc.) surface as alerts on the invigilator dashboard.
-- **Roles:** admin, invigilator, candidate.
-- **Out of scope:** B2 First / C1 Advanced / C2 Proficiency, scoring, real Cambridge/IELTS content or integration, Mac/Chromebook, multi-server deployment.
+- **Candidate login:** printed username (first 5 letters of family name + first initial + candidate number) and password, then the session PIN the invigilator reads out (`exams.session_pin`). `exams.invigilator_password` exits the lockdown browser or moves a candidate to another computer.
+- **Invigilator operations** happen at section level, only on candidates who are online and in progress: pause/resume (single, multi-select, whole room), incident extra time, Edit End Time (*End now / End at / End in*; End now offers "Disregard extra time" for candidates with extra time). End now at section level is irreversible.
+- **Listening incident:** two separate actions — rewind audio by N minutes (only while the candidate is not paused, at most the minutes already played), then add the same minutes as incident extra time.
+- **Ended at parent level by mistake:** restore with Edit End Time → "Use test end time" (`candidates.parent_end_override_at` back to null).
+- **Offline candidates** cannot be paused; their clock keeps running and the invigilator adds incident time when they log back in.
+- **SEB:** the server validates the Safe Exam Browser config key; only server-observable warnings are real (`security_events`).
 
 ## Repository conventions (faculty-mandated)
 
-- Required folders: `progress-report/` (weekly progress reports, from template `3_MAU_BAO_CAO_TIEN_DO_2026.doc`) and `thesis/` (`doc/`, `pdf/`, `html/`, `abs/`, `refs/`). Code goes in `src/`, installers/test data/deployment notes in `setup/`, Docker files (if any) in `docker/`.
-- At least one commit per week — commit history is graded. A progress report without matching commits counts as not done.
-- `README.md` must stay current and include author contact info (email, phone).
-- Report format: Times New Roman 13pt, 1.5 line spacing, IEEE references, chapters: Mở đầu, Tổng quan, Cơ sở lý thuyết, Hiện thực hóa, Kết quả, Kết luận.
-- Documentation and the report are written in Vietnamese.
-
-## Local-only files
-
-`.agents/` holds local AI tooling (design skills and an MCP config containing an API key). It is gitignored — never commit it.
+- Required folders: `progress-report/` (weekly reports from template `3_MAU_BAO_CAO_TIEN_DO_2026.doc`) and `thesis/` (`doc/`, `pdf/`, `html/`, `abs/`, `refs/`, plus `diagrams/`). Code in `src/`, installers/test data in `setup/`, Docker files in `docker/`.
+- At least one commit per week — commit history is graded.
+- `README.md` must stay current and include author contact info.
+- Report: Times New Roman 13pt, 1.5 spacing, IEEE references; chapters Mở đầu, Tổng quan, Cơ sở lý thuyết, Hiện thực hóa, Kết quả, Kết luận. Documentation and report are in Vietnamese.
+- Never commit Cambridge or Victory exam content, `docker/.env`, or `.agents/` (local AI tooling with an API key).
