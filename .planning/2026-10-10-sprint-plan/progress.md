@@ -29,3 +29,11 @@
 | Timestamp | Error | Attempt | Resolution |
 |-----------|-------|---------|------------|
 | 2026-10-10 | Atlassian: không có site truy cập được | 1 | Người dùng cung cấp site và cấp quyền connector |
+
+### Sprint 1 — Bước 0: rà soát CSDL (10/10, chiều)
+- **Status:** complete
+- Rà soát 21 bảng theo màn hình A2 và quy trình giám thị → 5 lỗ hổng D1–D5 (chi tiết trong findings.md)
+- `AttemptClock` (Domain/Delivery) viết theo TDD: 26 test RED → GREEN ngay lần đầu
+- Migration `SchemaReviewFixes`: `end_at_override` → `end_adjust_seconds`, `security_stamp` (users, candidates), `exam_sections.start_announced_at`, 14 CHECK constraint; DbContext tự đổi `concurrency_stamp`
+- Test DB: RED (thiếu migration) → GREEN; toàn bộ 46/46 test đạt; migration đã áp vào DB phát triển
+- Script sinh ERD / use case đưa vào `thesis/diagrams/tools/` (ERD đọc trực tiếp MySQL); ERD sinh lại: 21 bảng, 177 cột

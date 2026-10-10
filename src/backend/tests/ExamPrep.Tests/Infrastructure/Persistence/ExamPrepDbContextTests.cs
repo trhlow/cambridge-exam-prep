@@ -128,13 +128,39 @@ public sealed class ExamPrepDbContextTests(MySqlDatabaseFixture database) : ICla
         var heartbeatFromCandidate = await candidate.Attempts.SingleAsync(a => a.Id == attemptId, ct);
 
         pausedByInvigilator.Status = AttemptStatus.Paused;
-        pausedByInvigilator.ConcurrencyStamp = Guid.NewGuid();
         await invigilator.SaveChangesAsync(ct);
 
         heartbeatFromCandidate.LastHeartbeatAt = DateTime.UtcNow;
-        heartbeatFromCandidate.ConcurrencyStamp = Guid.NewGuid();
 
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => candidate.SaveChangesAsync(ct));
+    }
+
+    [Fact]
+    public async Task SaveChanges_GivesAttemptNewConcurrencyStamp_OnEveryUpdate()
+    {
+        database.SkipIfUnavailable();
+        await using var db = database.CreateContext();
+        var attemptId = (await A2ExamBuilder.SeedAsync(db, ct)).AttemptId;
+        var attempt = await db.Attempts.SingleAsync(a => a.Id == attemptId, ct);
+        var before = attempt.ConcurrencyStamp;
+
+        attempt.LastHeartbeatAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        Assert.NotEqual(before, attempt.ConcurrencyStamp);
+    }
+
+    [Theory]
+    [InlineData("UPDATE candidates SET planned_extra_percent = 150 WHERE id = {0}")]
+    [InlineData("UPDATE exam_sections SET duration_minutes = 0 WHERE exam_id = (SELECT exam_id FROM candidates WHERE id = {0})")]
+    [InlineData("UPDATE attempts SET paused_seconds = -1 WHERE candidate_id = {0}")]
+    public async Task Database_RejectsInvalidValues(string sql)
+    {
+        database.SkipIfUnavailable();
+        await using var db = database.CreateContext();
+        var candidateId = (await A2ExamBuilder.SeedAsync(db, ct)).CandidateId;
+
+        await Assert.ThrowsAnyAsync<Exception>(() => db.Database.ExecuteSqlRawAsync(sql, [candidateId], ct));
     }
 
     [Fact]

@@ -8,7 +8,8 @@ Vietnamese university capstone ("Đồ án chuyên ngành", class DA23TTA) built
 
 - **Scope:** A2 Key for Schools first (demo due Fri 16/10/2026), then B1 Preliminary for Schools, then IELTS (no fixed format; later). B2/C1/C2 are out of scope.
 - **Everything is built from scratch**, including question authoring: Victory's old exam-entry system is gone (decided 10/10/2026). Victory supplies the exam content (questions, answer keys, audio split into one track per Listening part).
-- **Done so far:** database schema (EF Core migrations on MySQL) with integration tests. Not yet: API endpoints, frontend, auth, SignalR.
+- **Done so far:** database schema (EF Core migrations on MySQL, reviewed 10/10 — see `.planning/2026-10-10-sprint-plan/findings.md`), the server-side exam clock (`AttemptClock`), 46 tests. Not yet: API endpoints, frontend, auth, SignalR.
+- **Planning:** sprint backlog in `.planning/2026-10-10-sprint-plan/` (source of truth `sprints.py`), mirrored on Jira https://victoryexam.atlassian.net project `SCRUM` (story VE-n = SCRUM-(n+17)).
 
 Deadline: final report submitted 31/12/2026. Faculty check-in weeks: 19–25/10, 09–15/11, 30/11–06/12, 21–27/12/2026.
 
@@ -39,7 +40,7 @@ dotnet test --filter-method "*SnakeCase*"      # single test / pattern
 
 ## Backend architecture (`src/backend`)
 
-- `ExamPrep.Domain` — entities (one class per file) and enums. No EF dependency.
+- `ExamPrep.Domain` — entities (one class per file), enums, and domain logic: `Delivery/AttemptClock` (all timer and audio rules; throws `Common/DomainRuleException` for operations not allowed in the current state). No EF dependency.
 - `ExamPrep.Infrastructure` — `Persistence/ExamPrepDbContext`, one `IEntityTypeConfiguration` per entity in `Persistence/Configurations`, migrations, `SeedData` (exam types, section templates, default branding "Victory"). `ModelConventions` stores every enum as `varchar(32)` text and every `DateTime` as UTC; `SnakeCaseNaming` lower-snake-cases all tables and columns. Provider is Oracle's `MySql.EntityFrameworkCore` 10 (`UseMySQL`), because Pomelo has no EF Core 10 release.
 - `ExamPrep.Api` — ASP.NET Core host; `AddInfrastructure` fails fast if the connection string is missing.
 - `ExamPrep.Tests` — mirrors `src/`; `MySqlDatabaseFixture` + `A2ExamBuilder` for DB integration tests.
@@ -50,10 +51,13 @@ Key modelling decisions:
 - Exam types and their ordered sections are **data** (`section_templates`), so A2 (2 sections), B1 (3) and later IELTS share one engine. Never hard-code a section list.
 - `question_groups.interaction_type` drives the candidate UI: `SingleChoice`, `ImageChoice`, `InlineChoice` (word picker over a gap), `InlineText` (typed gap), `DragDropMatch` (word cards), `Essay` (word counter). Inline gaps live in `body_html` as `{{q:19}}`.
 - Listening audio is one track per part (`paper_parts.audio_asset_id`); the player chains them into one continuous recording, as Inspera does.
-- Server-authoritative timer on `attempts`: `ends_at` is recomputed from `started_at`, section duration, `planned_extra_seconds` (from `candidates.planned_extra_percent`), `incident_extra_seconds`, `paused_seconds`, `end_at_override`, `disregard_extra_time`. `concurrency_stamp` is an optimistic-concurrency token — set a new Guid on every attempt update so invigilator and candidate writes cannot overwrite each other.
+- Server-authoritative timer on `attempts`: change it only through `AttemptClock`, which recomputes `ends_at` from `started_at`, section duration, `paused_seconds`, `end_adjust_seconds` (signed; End now / End at / End in — relative so a later pause still moves the end), `planned_extra_seconds` + `incident_extra_seconds` (dropped when `disregard_extra_time`), capped by `candidates.parent_end_override_at`. Listening position = time since `audio_started_at` minus `audio_adjust_ms` (pauses and rewinds).
+- `concurrency_stamp` is rotated automatically by `ExamPrepDbContext.SaveChanges` for every modified attempt; a write based on a stale read throws `DbUpdateConcurrencyException` — reload and retry, never force.
+- `users.security_stamp` / `candidates.security_stamp` invalidate sign-in cookies (candidate login rotates it, so the previous computer is signed out). `exam_sections.start_announced_at` only drives the "started early" warning; it never blocks a candidate.
+- Value rules are also MySQL CHECK constraints (durations > 0, extra percent 0–100, non-negative timer fields, scores within max); cross-row rules (unique question numbers per paper, paper matches the section template) are validated by the importer.
 - Auto-marking uses `answer_keys` (several rows = accepted alternatives). Writing has no key: teachers mark it in `manual_marks`.
 
-`thesis/diagrams/erd.drawio` is generated from the live MySQL schema; regenerate it after a migration rather than editing by hand. Export: `"/d/draw.io/draw.io.exe" -x -f png -e -s 2 -b 10 -o erd.drawio.png erd.drawio` (draw.io desktop is at `D:\draw.io`).
+`thesis/diagrams/erd.drawio` is generated from the live MySQL schema — after a migration run `python -I thesis/diagrams/tools/gen_erd.py` (repo root, MySQL container up); `tools/gen_use_case.py` regenerates the use case. Export from `thesis/diagrams`: `"/d/draw.io/draw.io.exe" -x -f png -e -s 2 -b 10 -o erd.drawio.png erd.drawio`, then `python -I ../../.agents/skills/drawio-skill/scripts/repair_png.py erd.drawio.png` (draw.io desktop is at `D:\draw.io`).
 
 ## Source of truth
 

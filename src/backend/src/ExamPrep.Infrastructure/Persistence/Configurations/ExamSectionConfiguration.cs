@@ -9,6 +9,11 @@ internal sealed class ExamSectionConfiguration : IEntityTypeConfiguration<ExamSe
     public void Configure(EntityTypeBuilder<ExamSection> builder)
     {
         builder.HasKey(s => s.Id);
+        builder.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_exam_sections_duration", "duration_minutes > 0");
+            t.HasCheckConstraint("CK_exam_sections_order", "order_no > 0");
+        });
         builder.HasOne(s => s.Exam).WithMany(e => e.Sections).HasForeignKey(s => s.ExamId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(s => s.SectionTemplate).WithMany().HasForeignKey(s => s.SectionTemplateId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(s => s.TestPaper).WithMany().HasForeignKey(s => s.TestPaperId).OnDelete(DeleteBehavior.Restrict);

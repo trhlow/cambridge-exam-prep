@@ -9,6 +9,7 @@ internal sealed class AssetConfiguration : IEntityTypeConfiguration<Asset>
     public void Configure(EntityTypeBuilder<Asset> builder)
     {
         builder.HasKey(a => a.Id);
+        builder.ToTable(t => t.HasCheckConstraint("CK_assets_size", "size_bytes >= 0"));
         builder.Property(a => a.OriginalFileName).HasMaxLength(255);
         builder.Property(a => a.StoredPath).HasMaxLength(512);
         builder.Property(a => a.ContentType).HasMaxLength(128);

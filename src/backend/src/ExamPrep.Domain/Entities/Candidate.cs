@@ -29,6 +29,9 @@ public class Candidate
 
     public string? SeatNo { get; set; }
 
+    /// <summary>Changes on every login, so moving to another computer signs the previous one out.</summary>
+    public Guid SecurityStamp { get; set; } = Guid.NewGuid();
+
     /// <summary>Approved special-arrangement extra time, as a percentage of each section's duration.</summary>
     public int PlannedExtraPercent { get; set; }
 

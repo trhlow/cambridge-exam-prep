@@ -22,5 +22,11 @@ public class ExamSection
     /// <summary>Copied from the template so later template edits do not change a scheduled exam.</summary>
     public int DurationMinutes { get; set; }
 
+    /// <summary>
+    /// When the invigilator told the room to start this section. Candidates who start earlier get a
+    /// "started early" warning; it never blocks them, matching Inspera.
+    /// </summary>
+    public DateTime? StartAnnouncedAt { get; set; }
+
     public ICollection<Attempt> Attempts { get; set; } = [];
 }
