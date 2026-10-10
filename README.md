@@ -2,9 +2,11 @@
 
 Đồ án chuyên ngành — Khoa Công nghệ Thông tin, Trường Kỹ thuật và Công nghệ.
 
-Website mô phỏng trọn một buổi **thi tiếng Anh trên máy tính** cho **A2 Key, B1 Preliminary và IELTS**: tạo kỳ thi, cấp tài khoản thí sinh, thí sinh làm bài trong trình duyệt khóa, giám thị theo dõi cả phòng theo thời gian thực và xử lý sự cố, thu bài.
+Hệ thống thi tiếng Anh trên máy tính cho phòng thi của **Trung tâm Anh ngữ Victory**, tái hiện trải nghiệm thi máy Cambridge (nền tảng Inspera): bố cục đề, định dạng câu hỏi, giao diện thí sinh và cổng giám thị. Làm trước **A2 Key for Schools**, sau đó **B1 Preliminary for Schools**, cuối cùng là IELTS.
 
-> Website **không** dùng đề thi thật của Cambridge và **không** kết nối với hệ thống thật của Cambridge/Inspera. Đề thi là đề tự soạn phục vụ thi thử và tập huấn.
+Quy trình gồm: nhập đề và đáp án, tạo kỳ thi, cấp tài khoản thí sinh, thí sinh làm bài trong trình duyệt khóa tại trung tâm, giám thị theo dõi cả phòng theo thời gian thực và xử lý sự cố, hệ thống tự chấm Reading/Listening theo đáp án, giáo viên chấm Writing.
+
+> Hệ thống **không** kết nối với hệ thống thật của Cambridge/Inspera. Đề thi do trung tâm Victory cung cấp; repository công khai không chứa đề thật.
 
 ## Thông tin
 
@@ -32,14 +34,14 @@ Thi máy khó ở khâu vận hành: giám thị phải tạm dừng đúng thí
 - **Safe Exam Browser:** server kiểm tra cấu hình SEB (Browser Exam Key) mới cho vào thi; vi phạm hiển thị cảnh báo cho giám thị.
 - **Ba vai trò:** quản trị, giám thị, thí sinh.
 
-**Ngoài phạm vi:** các cấp B2 First, C1 Advanced, C2 Proficiency; phần Speaking; chấm điểm; máy Mac/Chromebook; chạy nhiều server.
+**Ngoài phạm vi:** các cấp B2 First, C1 Advanced, C2 Proficiency; phần Speaking (thi trực tiếp); máy Mac/Chromebook; chạy nhiều server.
 
 ## Bài thi hỗ trợ
 
 | Bài thi | Phần thi trên máy (theo thứ tự) |
 |---|---|
-| A2 Key | Reading & Writing (60 phút) → Listening (~30 phút) |
-| B1 Preliminary | Reading (45 phút) → Writing (45 phút) → Listening (~30 phút) |
+| A2 Key for Schools | Reading & Writing (60 phút) → Listening (~30 phút) |
+| B1 Preliminary for Schools | Reading (45 phút) → Writing (45 phút) → Listening (~30 phút) |
 | IELTS Academic / General Training | Listening (~30 phút) → Reading (60 phút) → Writing (60 phút) |
 
 Cả ba bài thi đều triển khai trên cùng hệ thống Inspera, nên **quy trình làm bài và giám sát giống hệt nhau**; chỉ khác danh sách phần thi. Speaking thi trực tiếp, không làm trên hệ thống.
@@ -61,8 +63,10 @@ Thời lượng A2 Key và B1 Preliminary lấy theo *Exam Day Booklet for Digit
 Theo hướng dẫn tổ chức repository của Khoa:
 
 ```
+├── docker/             docker-compose cho MySQL (.env.example mẫu)
 ├── setup/              Bộ cài đặt, dữ liệu thử, hướng dẫn triển khai
-├── src/                Mã nguồn (backend ASP.NET Core + frontend React)
+├── src/
+│   └── backend/        ASP.NET Core (.NET 10): Domain, Infrastructure (EF Core), Api, Tests
 ├── progress-report/    Báo cáo tiến độ hằng tuần (bắt buộc)
 └── thesis/             Tài liệu đồ án (bắt buộc)
     ├── doc/            Đề cương chi tiết, báo cáo (.docx)
@@ -72,7 +76,9 @@ Theo hướng dẫn tổ chức repository của Khoa:
     ├── diagrams/       Sơ đồ thiết kế draw.io (use case, ERD)
     └── refs/           Tài liệu tham khảo
         ├── faculty-templates/   Quy định chung, mẫu đề cương/báo cáo, lịch thực hiện
-        └── cambridge-digital/   Tài liệu thi máy Cambridge / Inspera
+        ├── cambridge-digital/   Tài liệu thi máy Cambridge / Inspera
+        ├── inspera-ui-a2.md     Ghi chép giao diện bài thi mẫu A2 Key for Schools
+        └── ielts-format.md      Format đề và dạng câu hỏi IELTS
 ```
 
 ## Thiết kế
@@ -99,15 +105,36 @@ Sơ đồ nguồn `.drawio` mở bằng [draw.io](https://www.drawio.com/); file
 
 ## Cài đặt & chạy
 
-Đang phát triển — hướng dẫn cài đặt sẽ được cập nhật trong `setup/` khi có mã nguồn.
+Yêu cầu: .NET SDK 10, Docker Desktop.
+
+```bash
+# 1. Cơ sở dữ liệu MySQL
+cp docker/.env.example docker/.env        # rồi đổi mật khẩu trong docker/.env
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
+
+# 2. Chuỗi kết nối cho API (lưu bằng user-secrets, không nằm trong repo)
+cd src/backend
+dotnet user-secrets set "ConnectionStrings:ExamPrep" "server=localhost;port=3306;database=examprep;user=examprep;password=<MYSQL_PASSWORD>" --project src/ExamPrep.Api
+
+# 3. Tạo bảng
+ConnectionStrings__ExamPrep="server=localhost;port=3306;database=examprep;user=examprep;password=<MYSQL_PASSWORD>"   dotnet ef database update -p src/ExamPrep.Infrastructure -s src/ExamPrep.Api
+
+# 4. Chạy API (kiểm tra tại http://localhost:<port>/health)
+ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/ExamPrep.Api
+
+# 5. Kiểm thử (test CSDL cần tài khoản root để tạo database tạm)
+EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_PASSWORD>" dotnet test
+```
 
 ## Tiến độ
 
 - [x] Đề cương chi tiết (v4)
 - [x] Tài liệu tham khảo quy trình thi máy
 - [x] Sơ đồ use case tổng quát, ERD
+- [x] Khảo sát giao diện bài thi mẫu A2 Key for Schools
+- [x] Cơ sở dữ liệu: 21 bảng (EF Core + MySQL), migration, dữ liệu mẫu A2/B1, 16 test tích hợp
 - [ ] Đặc tả yêu cầu, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API
-- [ ] Backend: đăng nhập, phân quyền, quản lý kỳ thi/thí sinh, đồng hồ server
+- [ ] Backend: đăng nhập, phân quyền, nhập đề, quản lý kỳ thi/thí sinh, đồng hồ server
 - [ ] Màn hình thí sinh & cổng giám thị
 - [ ] Tích hợp Safe Exam Browser, đóng gói
 - [ ] Kiểm thử tình huống, kiểm thử tải, buổi thi thử
