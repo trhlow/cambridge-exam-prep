@@ -9,6 +9,11 @@ internal sealed class QuestionGroupConfiguration : IEntityTypeConfiguration<Ques
     public void Configure(EntityTypeBuilder<QuestionGroup> builder)
     {
         builder.HasKey(g => g.Id);
+        builder.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_question_groups_order", "order_no > 0");
+            t.HasCheckConstraint("CK_question_groups_max_words", "max_words_per_answer IS NULL OR max_words_per_answer > 0");
+        });
         builder.Property(g => g.Instructions).HasMaxLength(1000);
         builder.Property(g => g.BodyHtml).HasColumnType("mediumtext");
         builder.Property(g => g.OptionPoolJson).HasColumnType("json");

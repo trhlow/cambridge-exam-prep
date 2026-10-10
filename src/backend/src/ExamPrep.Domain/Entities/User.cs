@@ -19,5 +19,8 @@ public class User
 
     public bool IsActive { get; set; } = true;
 
+    /// <summary>Changes on password reset or deactivation; sign-in cookies carrying an older stamp are rejected.</summary>
+    public Guid SecurityStamp { get; set; } = Guid.NewGuid();
+
     public DateTime CreatedAt { get; set; }
 }

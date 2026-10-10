@@ -32,13 +32,16 @@ public class Attempt
 
     public int IncidentExtraSeconds { get; set; }
 
-    /// <summary>Set by "End now" with "Disregard extra time".</summary>
+    /// <summary>Set by "End now" with "Disregard extra time": planned and incident extra time no longer count.</summary>
     public bool DisregardExtraTime { get; set; }
 
-    /// <summary>Absolute end set by "End at" / "End in" / "End now"; null uses the computed end.</summary>
-    public DateTime? EndAtOverride { get; set; }
+    /// <summary>
+    /// Signed seconds added to the standard end by "End now" / "End at" / "End in". Kept relative, not as an
+    /// absolute time, so a later pause still moves the end; "Use test end time" resets it to 0.
+    /// </summary>
+    public int EndAdjustSeconds { get; set; }
 
-    /// <summary>Effective end time, stored for monitoring queries.</summary>
+    /// <summary>Effective end as of the last change (frozen while paused), stored for monitoring queries.</summary>
     public DateTime? EndsAt { get; set; }
 
     public DateTime? SubmittedAt { get; set; }

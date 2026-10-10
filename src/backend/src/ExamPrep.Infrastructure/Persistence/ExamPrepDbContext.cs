@@ -53,6 +53,30 @@ public class ExamPrepDbContext(DbContextOptions<ExamPrepDbContext> options) : Db
         SnakeCaseNaming.Apply(modelBuilder);
     }
 
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        RotateAttemptConcurrencyStamps();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        RotateAttemptConcurrencyStamps();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    /// <summary>
+    /// Every attempt update gets a new stamp, so a write based on a stale read (e.g. a candidate heartbeat
+    /// racing an invigilator pause) fails with DbUpdateConcurrencyException instead of overwriting.
+    /// </summary>
+    private void RotateAttemptConcurrencyStamps()
+    {
+        foreach (var entry in ChangeTracker.Entries<Attempt>().Where(e => e.State == EntityState.Modified))
+        {
+            entry.Entity.ConcurrencyStamp = Guid.NewGuid();
+        }
+    }
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         ModelConventions.Apply(configurationBuilder);
