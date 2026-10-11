@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using ExamPrep.Api.Auth;
+using ExamPrep.Api.Monitoring;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Persistence;
@@ -9,9 +10,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExamPrep.Api.Delivery;
 
-/// <summary>Where the candidate stands in a section: the server's clock and every saved answer.</summary>
+/// <summary>Where the candidate stands in a section: the server's clock, every saved answer and the invigilator's messages.</summary>
 /// <param name="AudioPositionMs">Listening only: where the recording is now; null until the candidate presses Play.</param>
-public sealed record AttemptState(int SectionId, string Status, DateTime? EndsAt, int RemainingSeconds, DateTime ServerNow, IReadOnlyDictionary<int, string> Answers, int? AudioPositionMs);
+public sealed record AttemptState(
+    int SectionId,
+    string Status,
+    DateTime? EndsAt,
+    int RemainingSeconds,
+    DateTime ServerNow,
+    IReadOnlyDictionary<int, string> Answers,
+    int? AudioPositionMs,
+    IReadOnlyList<CandidateMessageView> Messages);
 
 public sealed record ResponseItem([Range(1, 1000)] int QuestionNumber, [StringLength(20_000)] string Value);
 
@@ -96,6 +105,33 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
 
         var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);
         var now = Now();
+        if (AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now))
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return await StateAsync(attempt, section, candidate, now, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sent every few seconds while the section is open: marks the candidate online for the invigilator and returns
+    /// the clock, so a pause, an end-time change, a rewind or a message reaches the candidate within seconds.
+    /// </summary>
+    [HttpPost("heartbeat")]
+    public async Task<ActionResult<AttemptState>> Heartbeat(int sectionId, CancellationToken cancellationToken)
+    {
+        var attempt = await FindAttemptAsync(sectionId, cancellationToken);
+        if (attempt is null)
+        {
+            return NotFound();
+        }
+
+        var now = Now();
+        // A direct update: the heartbeat must not rotate the attempt's concurrency stamp and clash with timer changes.
+        await db.Attempts.Where(a => a.Id == attempt.Id)
+            .ExecuteUpdateAsync(set => set.SetProperty(a => a.LastHeartbeatAt, now).SetProperty(a => a.ConnectionStatus, ConnectionStatus.Online), cancellationToken);
+
+        var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);
         if (AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now))
         {
             await db.SaveChangesAsync(cancellationToken);
@@ -210,7 +246,8 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         var remaining = attemptClock.Remaining(now);
         int? audioPosition = attempt.AudioStartedAt is null ? null : (int)attemptClock.AudioPosition(now).TotalMilliseconds;
 
-        return new AttemptState(section.Id, attempt.Status.ToString(), attempt.EndsAt, (int)Math.Ceiling(remaining.TotalSeconds), now, answers, audioPosition);
+        var messages = await CandidateMessages.ForCandidateAsync(db, section.ExamId, candidate.Id, cancellationToken);
+        return new AttemptState(section.Id, attempt.Status.ToString(), attempt.EndsAt, (int)Math.Ceiling(remaining.TotalSeconds), now, answers, audioPosition, messages);
     }
 
     private async Task<CandidateSectionSummary?> FindSectionAsync(int sectionId, CancellationToken cancellationToken) =>
