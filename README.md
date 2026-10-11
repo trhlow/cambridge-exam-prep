@@ -141,7 +141,8 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Màn hình thí sinh A2 Reading & Writing kiểu Inspera (React + TS), kỳ thi demo — 21 test frontend
 - [x] Đồng hồ server, tự lưu, hết giờ tự nộp; Listening phát một lần, kéo thả
 - [x] Chấm tự động Reading Part 1–5 và Listening theo đáp án; API kết quả cho nhân viên — 182 test backend, 48 test frontend
-- [ ] Backend: quản lý kỳ thi/thí sinh; cổng giám thị, cổng quản trị
+- [x] Cổng nhân viên `/staff`: quản trị đề (import, xuất bản), kỳ thi (gắn đề, PIN, mật khẩu giám thị), thí sinh (dán từ Excel, username kiểu Cambridge, in phiếu), tài khoản giám thị và phân công; trang theo dõi của giám thị (tạm dừng, cộng giờ sự cố, Edit End Time, tua audio, thông báo) — 218 test backend, 60 test frontend
+- [ ] Cập nhật thời gian thực bằng SignalR (hiện làm mới 3–5 giây), chấm Writing, xuất kết quả Excel
 - [ ] Tích hợp Safe Exam Browser, đóng gói
 - [ ] Kiểm thử tình huống, kiểm thử tải, buổi thi thử
 - [ ] Quyển báo cáo

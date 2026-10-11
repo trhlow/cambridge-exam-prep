@@ -121,3 +121,13 @@
 - Import qua `POST /api/admin/papers/import`: 201, Draft, 7 part, 32 câu; `Demo:ReadingWritingFolder` cho kỳ thi demo dùng đề thật (2 test DemoSeeder) → backend 184/184
 - Xem trên trình duyệt (Playwright, Chrome extension không kết nối): đủ 7 part; sửa ảnh Part 2 quá to và 3 tranh Part 7 bị xuống dòng bằng `width` theo kích thước in
 - .gitignore thêm `__pycache__/`, `.pytest_cache/`, `.playwright-mcp/` (ảnh chụp có nội dung đề)
+
+### Sprint 1 (kéo từ Sprint 2–3) — Cổng nhân viên: VE-14…17, VE-21…23
+- **Status:** complete (Jira SCRUM-31…34, SCRUM-38…40 → Done); VE-13 SignalR chưa làm
+- Skill: `planning-with-files`, `test-driven-development` (34 test backend + 12 test frontend, RED trước), `minimalist-ui` (giao diện `/staff`), `security-review` (không phát hiện lỗ hổng mức High/Medium)
+- API admin: kỳ thi (gắn đề đã xuất bản theo mẫu phần thi, PIN/mật khẩu giám thị tự sinh, trạng thái, khoá đề khi đã có thí sinh làm), đề (danh sách, xuất bản, xoá nếu chưa dùng), thí sinh (nhập cả danh sách, báo lỗi từng dòng, username Cambridge bỏ dấu, phiếu in lại), tài khoản nhân viên (tạo, đặt lại mật khẩu, khoá → đăng xuất ngay), phân công giám thị
+- API giám thị: bảng theo dõi theo phần thi; Pause/Resume, cộng giờ sự cố, End now/at/in, Use test end time, tua audio; thông báo cho cả phòng hoặc từng thí sinh; heartbeat 5 s của thí sinh; giám thị chỉ thấy kỳ thi được phân công (kể cả kết quả)
+- Giao diện `/staff` (bundle riêng): đăng nhập, Exams, kỳ thi (PIN, thí sinh dán từ Excel, giám thị, in phiếu, kết quả), trang theo dõi kiểu Inspera, Papers (import .zip), Staff
+- Thí sinh: chuông thông báo + cửa sổ bật lên; Listening theo kịp khi giám thị tua
+- Kiểm tra trên Chrome: thêm 2 thí sinh bằng dán, Pause → máy thí sinh hiện màn hình tạm dừng trong vài giây, Resume, +5 phút (59:37 → 1:04:26), thông báo hiện ngay; giám thị demo chỉ thấy kỳ thi của mình; phiếu đăng nhập in được
+- Toàn bộ: backend 218/218, frontend 60/60; commit `8c11202`, `8f541fa`, `f127ba5`, `fbcafed`
