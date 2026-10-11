@@ -10,7 +10,8 @@ using Microsoft.EntityFrameworkCore;
 namespace ExamPrep.Api.Delivery;
 
 /// <summary>Where the candidate stands in a section: the server's clock and every saved answer.</summary>
-public sealed record AttemptState(int SectionId, string Status, DateTime? EndsAt, int RemainingSeconds, DateTime ServerNow, IReadOnlyDictionary<int, string> Answers);
+/// <param name="AudioPositionMs">Listening only: where the recording is now; null until the candidate presses Play.</param>
+public sealed record AttemptState(int SectionId, string Status, DateTime? EndsAt, int RemainingSeconds, DateTime ServerNow, IReadOnlyDictionary<int, string> Answers, int? AudioPositionMs);
 
 public sealed record ResponseItem([Range(1, 1000)] int QuestionNumber, [StringLength(20_000)] string Value);
 
@@ -103,6 +104,42 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         return await StateAsync(attempt, section, candidate, now, cancellationToken);
     }
 
+    /// <summary>
+    /// Listening: the candidate pressed Play. The recording starts once; calling again (after a reload or on
+    /// another computer) leaves it running where it is, so it can never be heard from the start again.
+    /// </summary>
+    [HttpPost("audio")]
+    public async Task<ActionResult<AttemptState>> PlayAudio(int sectionId, CancellationToken cancellationToken)
+    {
+        var attempt = await FindAttemptAsync(sectionId, cancellationToken);
+        if (attempt is null)
+        {
+            return Problem(title: "This part of the test has not started.", statusCode: StatusCodes.Status409Conflict);
+        }
+
+        var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);
+        var hasAudio = await db.PaperParts.AnyAsync(p => p.TestPaperId == section.TestPaperId && p.AudioAssetId != null, cancellationToken);
+        if (!hasAudio)
+        {
+            return Problem(title: "This part of the test has no recording.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var now = Now();
+        AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now);
+        if (attempt.Status != AttemptStatus.InProgress)
+        {
+            return Problem(title: "The recording can only start while you are working on the test.", statusCode: StatusCodes.Status409Conflict);
+        }
+
+        if (attempt.AudioStartedAt is null)
+        {
+            AttemptExpiry.ClockFor(attempt, section, candidate).StartAudio(now);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return await StateAsync(attempt, section, candidate, now, cancellationToken);
+    }
+
     /// <summary>Saves (inserts or replaces) the candidate's answers while the section is running.</summary>
     [HttpPut("responses")]
     public async Task<IActionResult> Save(int sectionId, SaveResponsesRequest request, CancellationToken cancellationToken)
@@ -169,9 +206,11 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
             .Where(r => r.AttemptId == attempt.Id && r.Value != null)
             .Select(r => new { r.Question!.Number, r.Value })
             .ToDictionaryAsync(r => r.Number, r => r.Value!, cancellationToken);
-        var remaining = AttemptExpiry.ClockFor(attempt, section, candidate).Remaining(now);
+        var attemptClock = AttemptExpiry.ClockFor(attempt, section, candidate);
+        var remaining = attemptClock.Remaining(now);
+        int? audioPosition = attempt.AudioStartedAt is null ? null : (int)attemptClock.AudioPosition(now).TotalMilliseconds;
 
-        return new AttemptState(section.Id, attempt.Status.ToString(), attempt.EndsAt, (int)Math.Ceiling(remaining.TotalSeconds), now, answers);
+        return new AttemptState(section.Id, attempt.Status.ToString(), attempt.EndsAt, (int)Math.Ceiling(remaining.TotalSeconds), now, answers, audioPosition);
     }
 
     private async Task<CandidateSectionSummary?> FindSectionAsync(int sectionId, CancellationToken cancellationToken) =>

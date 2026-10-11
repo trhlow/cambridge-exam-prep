@@ -169,6 +169,16 @@ public sealed class ApiFixture : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Pretends the candidate pressed Play <paramref name="earlier"/> ago.</summary>
+    public async Task MoveAudioStartBackAsync(int candidateId, int sectionId, TimeSpan earlier)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var attempt = db.Attempts.Single(a => a.CandidateId == candidateId && a.ExamSectionId == sectionId);
+        attempt.AudioStartedAt -= earlier;
+        await db.SaveChangesAsync();
+    }
+
     public async Task<Attempt> GetAttemptAsync(int candidateId, int sectionId)
     {
         using var scope = Factory.Services.CreateScope();
