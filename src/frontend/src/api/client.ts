@@ -37,6 +37,8 @@ export const candidateApi = {
   /** Starts the section, or returns the running attempt unchanged (after a reload). */
   startAttempt: (sectionId: number) => post<AttemptState>(`/api/candidate/sections/${sectionId}/attempt`),
   attempt: (sectionId: number) => request<AttemptState>(`/api/candidate/sections/${sectionId}/attempt`),
+  /** Listening: starts the recording once; later calls return where it is now. */
+  playAudio: (sectionId: number) => post<AttemptState>(`/api/candidate/sections/${sectionId}/audio`),
   saveResponses: (sectionId: number, responses: { questionNumber: number; value: string }[]) =>
     request<void>(`/api/candidate/sections/${sectionId}/responses`, { method: 'PUT', body: JSON.stringify({ responses }) }),
 }

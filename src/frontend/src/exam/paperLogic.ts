@@ -12,15 +12,19 @@ export function questionsOf(part: Part): Question[] {
   return part.groups.flatMap((g) => g.questions)
 }
 
-/** A part whose choice questions each bring their own picture is paged question by question. */
+/**
+ * Inspera pages question by question when every question brings its own pictures: notices in A2 Reading
+ * Part 1, picture options in A2 Listening Part 1.
+ */
 function isOnePerPage(part: Part): boolean {
   const questions = questionsOf(part)
-  return (
-    part.layout === 'Single' &&
-    questions.length > 1 &&
-    part.groups.every((g) => g.interactionType === 'SingleChoice' || g.interactionType === 'ImageChoice') &&
-    questions.every((q) => q.stimulusHtml !== null)
-  )
+  if (part.layout !== 'Single' || questions.length < 2) {
+    return false
+  }
+
+  const isPictureChoice = part.groups.every((g) => g.interactionType === 'ImageChoice')
+  const isNoticeChoice = part.groups.every((g) => g.interactionType === 'SingleChoice') && questions.every((q) => q.stimulusHtml !== null)
+  return isPictureChoice || isNoticeChoice
 }
 
 export function buildPages(paper: Paper): Page[] {

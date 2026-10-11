@@ -76,4 +76,6 @@ export interface AttemptState {
   remainingSeconds: number
   serverNow: string
   answers: Answers
+  /** Listening: where the recording is now; null until Play is pressed. */
+  audioPositionMs: number | null
 }
