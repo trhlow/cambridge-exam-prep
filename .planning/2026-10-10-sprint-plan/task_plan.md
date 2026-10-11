@@ -4,7 +4,11 @@
 Giao hệ thống thi máy cho phòng thi của Victory, tái hiện trải nghiệm Cambridge/Inspera: A2 Key for Schools chạy đầy đủ trước (demo 16/10/2026), rồi B1 Preliminary for Schools, IELTS nếu kịp, và nộp quyển báo cáo ngày 31/12/2026.
 
 ## Next Step
-VE-56 phần Listening (tách mp3 31 phút thành 5 track theo tapescript, chuyển đề Listening) khi người dùng cho làm; VE-12 (báo cáo tiến độ tuần, kiểm tra 19–25/10).
+Người dùng (11/10) yêu cầu làm cổng admin và giám thị ngay, kéo việc của Sprint 2–3 lên trước. Thứ tự:
+1. API admin (VE-21 kỳ thi + gắn đề + PIN/mật khẩu giám thị, danh sách đề + xuất bản; VE-22 thí sinh + phiếu đăng nhập; VE-23 tài khoản giám thị + phân công).
+2. Giao diện admin `/staff` (đăng nhập nhân viên, Đề thi, Kỳ thi, Thí sinh, Giám thị, Kết quả).
+3. API + màn hình giám thị theo Inspera "child test monitoring": bảng thí sinh theo phần thi, chọn nhiều → Pause/Resume, Incident extra time, Edit End Time, Rewind audio, thông báo (VE-13…17); làm mới bằng polling trước, SignalR sau.
+Còn treo: VE-56 Listening, VE-12 báo cáo tuần.
 
 ## Current Phase
 Phase 1 (Sprint 1, 12/10 – 18/10)

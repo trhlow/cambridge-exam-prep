@@ -1,9 +1,8 @@
+using ExamPrep.Api.Admin;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Content;
 using ExamPrep.Infrastructure.Persistence;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExamPrep.Api.Demo;
@@ -135,7 +134,12 @@ public static class DemoSeeder
     private static async Task<TestPaper> ImportAsync(PaperPackageImporter importer, string folder, int adminId, CancellationToken cancellationToken)
     {
         var result = await importer.ImportAsync(new MemoryStream(PackageFolder.Zip(folder, fillMissing: true)), adminId, cancellationToken);
-        return result.Paper ?? throw new InvalidOperationException($"Demo sample {folder} is invalid:{Environment.NewLine}{string.Join(Environment.NewLine, result.Errors)}");
+        var paper = result.Paper ?? throw new InvalidOperationException($"Demo sample {folder} is invalid:{Environment.NewLine}{string.Join(Environment.NewLine, result.Errors)}");
+
+        // Published, so the admin portal can schedule further demo sessions with it.
+        paper.Status = PaperStatus.Published;
+        paper.PublishedAt = DateTime.UtcNow;
+        return paper;
     }
 
     private static ExamSection Section(SectionTemplate template, TestPaper paper) => new()
@@ -155,12 +159,10 @@ public static class DemoSeeder
             LastName = "Nguyen",
             Username = options.CandidateUsername,
             PasswordHash = string.Empty,
-            PasswordProtected = provider.GetRequiredService<IDataProtectionProvider>()
-                .CreateProtector("ExamPrep.CandidatePassword")
-                .Protect(options.CandidatePassword),
+            PasswordProtected = string.Empty,
             CreatedAt = DateTime.UtcNow,
         };
-        candidate.PasswordHash = provider.GetRequiredService<IPasswordHasher<Candidate>>().HashPassword(candidate, options.CandidatePassword);
+        provider.GetRequiredService<CandidateCredentials>().SetPassword(candidate, options.CandidatePassword);
         return candidate;
     }
 }
