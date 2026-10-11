@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Content;
@@ -42,6 +43,52 @@ public sealed class ApiFixture : IAsyncLifetime
         });
 
     public HttpClient CreateClient() => Factory.CreateClient();
+
+    /// <summary>A client signed in as the given staff member.</summary>
+    public async Task<HttpClient> StaffClientAsync(string username, string password)
+    {
+        var client = CreateClient();
+        var login = await client.PostAsJsonAsync("/api/staff/auth/login", new { username, password });
+        login.EnsureSuccessStatusCode();
+        return client;
+    }
+
+    public Task<HttpClient> AdminClientAsync() => StaffClientAsync(AdminUsername, AdminPassword);
+
+    /// <summary>Two published A2 papers without content (Reading &amp; Writing, Listening), enough to schedule an exam.</summary>
+    public async Task<(int ReadingWritingId, int ListeningId)> CreatePublishedPapersAsync()
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var adminId = db.Users.Where(u => u.Username == AdminUsername).Select(u => u.Id).Single();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var now = DateTime.UtcNow;
+        var readingWriting = new TestPaper { SectionTemplateId = 1, Title = $"RW {suffix}", Status = PaperStatus.Published, PublishedAt = now, CreatedByUserId = adminId, CreatedAt = now };
+        var listening = new TestPaper { SectionTemplateId = 2, Title = $"L {suffix}", Status = PaperStatus.Published, PublishedAt = now, CreatedByUserId = adminId, CreatedAt = now };
+        db.TestPapers.AddRange(readingWriting, listening);
+        await db.SaveChangesAsync();
+        return (readingWriting.Id, listening.Id);
+    }
+
+    /// <summary>Gives the candidate a running attempt at the section, as if they had just started it.</summary>
+    public async Task<int> StartAttemptAsync(int candidateId, int sectionId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var now = DateTime.UtcNow;
+        var attempt = new Attempt
+        {
+            CandidateId = candidateId,
+            ExamSectionId = sectionId,
+            Status = AttemptStatus.InProgress,
+            StartedAt = now,
+            EndsAt = now.AddMinutes(60),
+            LastHeartbeatAt = now,
+        };
+        db.Attempts.Add(attempt);
+        await db.SaveChangesAsync();
+        return attempt.Id;
+    }
 
     /// <summary>Creates a staff account directly in the database with a properly hashed password.</summary>
     public async Task<User> CreateStaffAsync(UserRole role, string password, bool isActive = true)

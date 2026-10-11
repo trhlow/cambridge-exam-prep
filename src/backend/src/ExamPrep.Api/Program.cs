@@ -1,3 +1,4 @@
+using ExamPrep.Api.Admin;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Content;
 using ExamPrep.Api.Delivery;
@@ -12,6 +13,7 @@ builder.Services.AddStaffAuthentication(builder.Environment);
 builder.Services.AddCandidateAuthentication(builder.Environment);
 builder.Services.AddAssetAccess();
 builder.Services.AddScoped<CandidateSectionQuery>();
+builder.Services.AddScoped<CandidateCredentials>();
 builder.Services.AddScoped<AttemptExpiry>();
 builder.Services.AddHostedService<AttemptExpiryWorker>();
 builder.Services.AddProblemDetails();
