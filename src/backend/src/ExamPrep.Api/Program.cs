@@ -1,5 +1,6 @@
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Content;
+using ExamPrep.Api.Demo;
 using ExamPrep.Infrastructure;
 using ExamPrep.Infrastructure.Persistence;
 
@@ -21,6 +22,10 @@ await AdminBootstrapper.EnsureAdminAsync(app.Services, app.Configuration);
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    var demo = app.Configuration.GetSection("Demo").Get<DemoOptions>() ?? new DemoOptions();
+    demo = demo with { SamplesRoot = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, demo.SamplesRoot)) };
+    await DemoSeeder.SeedAsync(app.Services, demo, CancellationToken.None);
 }
 
 app.UseHttpsRedirection();
