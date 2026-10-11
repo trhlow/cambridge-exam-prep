@@ -1,4 +1,4 @@
-import type { CandidateProfile, CandidateSection, Paper } from './types'
+import type { AttemptState, CandidateProfile, CandidateSection, Paper } from './types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -34,4 +34,9 @@ export const candidateApi = {
   logout: () => post<void>('/api/candidate/auth/logout'),
   sections: () => request<CandidateSection[]>('/api/candidate/sections'),
   paper: (sectionId: number) => request<Paper>(`/api/candidate/sections/${sectionId}/paper`),
+  /** Starts the section, or returns the running attempt unchanged (after a reload). */
+  startAttempt: (sectionId: number) => post<AttemptState>(`/api/candidate/sections/${sectionId}/attempt`),
+  attempt: (sectionId: number) => request<AttemptState>(`/api/candidate/sections/${sectionId}/attempt`),
+  saveResponses: (sectionId: number, responses: { questionNumber: number; value: string }[]) =>
+    request<void>(`/api/candidate/sections/${sectionId}/responses`, { method: 'PUT', body: JSON.stringify({ responses }) }),
 }

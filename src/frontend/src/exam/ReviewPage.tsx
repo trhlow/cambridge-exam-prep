@@ -8,13 +8,18 @@ type Props = {
 }
 
 /**
- * Where the ✓ tile leads: how many questions are answered per part and which are still empty.
- * Submitting (and the server clock that submits automatically) comes with VE-8.
+ * Where the ✓ tile leads: how many questions are answered per part and which are still empty. As in the
+ * Cambridge exam room there is no submit button: answers are saved as the candidate works and the section
+ * ends when its time runs out (or when the invigilator ends it).
  */
 export function ReviewPage({ paper, answers, onBack }: Props) {
   return (
     <div className="review">
       <h2>{paper.title}: check your answers</h2>
+      <p className="review-note">
+        Your answers are saved automatically. This part of the test ends when the time is up. If you have finished early, check your answers,
+        then wait quietly for the end of the test.
+      </p>
       <table className="review-table">
         <thead>
           <tr>
@@ -42,9 +47,6 @@ export function ReviewPage({ paper, answers, onBack }: Props) {
       <div className="review-actions">
         <button type="button" className="btn btn--secondary" onClick={onBack}>
           Back to the test
-        </button>
-        <button type="button" className="btn btn--primary" disabled title="Submitting arrives with VE-8">
-          Submit
         </button>
       </div>
     </div>
