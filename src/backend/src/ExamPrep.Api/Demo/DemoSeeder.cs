@@ -16,6 +16,12 @@ public sealed record DemoOptions
     /// <summary>Folder holding the sample packages; relative paths are resolved against the API's content root.</summary>
     public string SamplesRoot { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Optional package folder for Reading &amp; Writing, e.g. a paper converted from PDF under the git-ignored
+    /// setup/exam-package/sources. Used when it holds a paper.json; otherwise the synthetic sample is used.
+    /// </summary>
+    public string? ReadingWritingFolder { get; init; }
+
     public string ExamName { get; init; } = string.Empty;
     public string CandidateUsername { get; init; } = string.Empty;
     public string CandidatePassword { get; init; } = string.Empty;
@@ -65,7 +71,8 @@ public static class DemoSeeder
         }
 
         var importer = provider.GetRequiredService<PaperPackageImporter>();
-        var readingWriting = await ImportAsync(importer, Path.Combine(options.SamplesRoot, ReadingWritingSample), adminId.Value, cancellationToken);
+        var readingWritingFolder = ReadingWritingFolder(options, logger);
+        var readingWriting = await ImportAsync(importer, readingWritingFolder, adminId.Value, cancellationToken);
         var listening = await ImportAsync(importer, Path.Combine(options.SamplesRoot, ListeningSample), adminId.Value, cancellationToken);
 
         var templates = await db.SectionTemplates.AsNoTracking()
@@ -111,6 +118,18 @@ public static class DemoSeeder
             .ToListAsync(cancellationToken);
         db.TestPapers.RemoveRange(unusedPapers);
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string ReadingWritingFolder(DemoOptions options, ILogger logger)
+    {
+        var folder = options.ReadingWritingFolder;
+        if (!string.IsNullOrWhiteSpace(folder) && File.Exists(Path.Combine(folder, "paper.json")))
+        {
+            logger.LogInformation("Demo Reading & Writing paper comes from {Folder}.", folder);
+            return folder;
+        }
+
+        return Path.Combine(options.SamplesRoot, ReadingWritingSample);
     }
 
     private static async Task<TestPaper> ImportAsync(PaperPackageImporter importer, string folder, int adminId, CancellationToken cancellationToken)
