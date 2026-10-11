@@ -1,4 +1,5 @@
 using ExamPrep.Infrastructure.Content;
+using ExamPrep.Infrastructure.Marking;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.AddSingleton<IAssetStorage>(new FileSystemAssetStorage(assetsRoot));
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<PaperPackageImporter>();
+        services.AddScoped<AttemptMarker>();
         return services;
     }
 }
