@@ -43,4 +43,27 @@ public sealed class CandidateSectionsController(ExamPrepDbContext db) : Controll
                 attemptStatuses.GetValueOrDefault(s.Id, AttemptStatus.NotStarted).ToString()))
             .ToList();
     }
+
+    /// <summary>The paper of one of the candidate's sections, without answer keys. 404 for any other exam's section.</summary>
+    [HttpGet("{sectionId:int}/paper")]
+    public async Task<ActionResult<CandidatePaper>> Paper(int sectionId, CancellationToken cancellationToken)
+    {
+        var examId = User.GetExamId();
+        var section = await db.ExamSections
+            .AsNoTracking()
+            .Include(s => s.SectionTemplate)
+            .SingleOrDefaultAsync(s => s.Id == sectionId && s.ExamId == examId, cancellationToken);
+        if (section is null)
+        {
+            return NotFound();
+        }
+
+        var paper = await db.TestPapers
+            .AsNoTracking()
+            .Include(p => p.Parts).ThenInclude(p => p.Groups).ThenInclude(g => g.Questions)
+            .AsSplitQuery()
+            .SingleAsync(p => p.Id == section.TestPaperId, cancellationToken);
+
+        return CandidatePaperMapper.From(section, paper);
+    }
 }

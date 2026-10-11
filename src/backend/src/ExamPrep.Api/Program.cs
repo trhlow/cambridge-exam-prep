@@ -1,4 +1,5 @@
 using ExamPrep.Api.Auth;
+using ExamPrep.Api.Content;
 using ExamPrep.Infrastructure;
 using ExamPrep.Infrastructure.Persistence;
 
@@ -7,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration, Path.Combine(builder.Environment.ContentRootPath, "App_Data", "assets"));
 builder.Services.AddStaffAuthentication(builder.Environment);
 builder.Services.AddCandidateAuthentication(builder.Environment);
+builder.Services.AddAssetAccess();
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();

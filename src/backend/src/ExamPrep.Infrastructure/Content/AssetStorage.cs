@@ -4,6 +4,9 @@ namespace ExamPrep.Infrastructure.Content;
 public interface IAssetStorage
 {
     Task<string> SaveAsync(byte[] content, string sha256, string extension, CancellationToken cancellationToken);
+
+    /// <summary>Absolute path of a stored file, for serving it.</summary>
+    string ResolvePath(string storedPath);
 }
 
 /// <summary>
@@ -29,4 +32,6 @@ public sealed class FileSystemAssetStorage(string root) : IAssetStorage
 
         return $"{folder}/{fileName}";
     }
+
+    public string ResolvePath(string storedPath) => Path.GetFullPath(Path.Combine(root, storedPath));
 }
