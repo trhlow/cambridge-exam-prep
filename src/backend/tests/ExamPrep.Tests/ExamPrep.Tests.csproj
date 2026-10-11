@@ -20,6 +20,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- The sample exam packages in setup/ double as format documentation and as test fixtures. -->
+  <ItemGroup>
+    <None Include="..\..\..\..\setup\exam-package\samples\**\*.json" LinkBase="Samples" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\ExamPrep.Infrastructure\ExamPrep.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\ExamPrep.Domain\ExamPrep.Domain.csproj" />

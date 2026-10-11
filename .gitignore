@@ -28,3 +28,10 @@ build/
 # IDE
 .vscode/
 .idea/
+
+# Uploaded exam pictures and audio (never commit exam content)
+App_Data/
+
+# Real exam papers from Cambridge/Victory (never commit)
+đề thi*/
+/de-thi*/
