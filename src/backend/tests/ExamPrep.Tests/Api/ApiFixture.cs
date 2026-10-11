@@ -149,6 +149,33 @@ public sealed class ApiFixture : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
+    public async Task SetPlannedExtraPercentAsync(int candidateId, int percent)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var candidate = await db.Candidates.FindAsync(candidateId) ?? throw new InvalidOperationException($"Candidate {candidateId} not found.");
+        candidate.PlannedExtraPercent = percent;
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>Pretends the candidate started the section <paramref name="earlier"/> ago (moves start and end back).</summary>
+    public async Task MoveAttemptStartBackAsync(int candidateId, int sectionId, TimeSpan earlier)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var attempt = db.Attempts.Single(a => a.CandidateId == candidateId && a.ExamSectionId == sectionId);
+        attempt.StartedAt -= earlier;
+        attempt.EndsAt -= earlier;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<Attempt> GetAttemptAsync(int candidateId, int sectionId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        return db.Attempts.Single(a => a.CandidateId == candidateId && a.ExamSectionId == sectionId);
+    }
+
     public async Task RotateSecurityStampAsync(int userId)
     {
         using var scope = Factory.Services.CreateScope();
