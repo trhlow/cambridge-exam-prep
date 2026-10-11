@@ -4,7 +4,7 @@
 Giao hệ thống thi máy cho phòng thi của Victory, tái hiện trải nghiệm Cambridge/Inspera: A2 Key for Schools chạy đầy đủ trước (demo 16/10/2026), rồi B1 Preliminary for Schools, IELTS nếu kịp, và nộp quyển báo cáo ngày 31/12/2026.
 
 ## Next Step
-VE-5: định dạng gói đề JSON (+audio, hình) và import đề A2 — viết test import trước (kiểm tra số câu, template phần thi, đáp án).
+VE-56: bộ chuyển đề mẫu A2 2022 (PDF + 1 mp3 trong `đề thi A2/`, git-ignored) → gói đề theo `setup/exam-package/FORMAT.md`; sau đó VE-6/VE-7 (frontend Inspera).
 
 ## Current Phase
 Phase 1 (Sprint 1, 12/10 – 18/10)
@@ -43,7 +43,8 @@ Tổng: 2 story, 7 điểm.
 Tổng: 10 story, 42 điểm.
 - [x] VE-3 [E2] (5đ) Đăng nhập nhân viên (admin, giám thị) bằng cookie, phân quyền theo vai trò
 - [x] VE-4 [E2] (5đ) Đăng nhập thí sinh bằng username/password + mã PIN phòng thi
-- [ ] VE-5 [E3] (5đ) Định dạng gói đề JSON (+audio, hình) và import đề A2
+- [x] VE-5 [E3] (5đ) Định dạng gói đề JSON (+audio, hình) và import đề A2
+- [ ] VE-56 [E3] (3đ) Bộ chuyển đề PDF → gói đề JSON (A2) và tách audio Listening thành 5 track
 - [ ] VE-6 [E5] (3đ) Dựng frontend React + TypeScript (Vite), khung màn hình kiểu Inspera
 - [ ] VE-7 [E5] (8đ) Reading & Writing A2: 4 kiểu câu (chọn đáp án, chọn từ trên ô trống, gõ từ, viết bài)
 - [ ] VE-8 [E5] (5đ) Đồng hồ do server nắm, tự lưu câu trả lời, hết giờ tự nộp

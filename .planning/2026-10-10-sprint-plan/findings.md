@@ -58,3 +58,18 @@
 | Cookie thí sinh tách scheme với nhân viên | Cookie này không gọi được API của bên kia |
 | `DateOnly` cần converter với `MySql.EntityFrameworkCore` | Provider đọc cột `date` thành `DateTime`, ném InvalidCastException |
 | Brute-force PIN 4 chữ số | Để VE-30 (rate limit) |
+
+## VE-5 — gói đề (11/10)
+| Quyết định | Lý do |
+|---|---|
+| 1 gói zip = 1 paper (1 phần thi) | Khớp `test_papers.section_template_id`; A2 = 2 gói, B1 = 3 gói |
+| Đề mẫu tự soạn trong `setup/` dùng làm fixture test | Một nguồn cho tài liệu và test; không commit đề Cambridge/Victory |
+| Kiểm tra theo template (số part) + quy tắc từng kiểu câu, không hard-code kiểu câu theo part | Template không lưu kiểu câu từng part; bộ chuyển PDF (VE-56) sẽ gán theo bảng A2 |
+| Lưu file theo SHA-256, dùng lại file trùng | Import lại đề không nhân đôi audio 20+ MB |
+| HTML lọc bằng HtmlSanitizer sau khi đổi link asset | Chặn script/onerror; thư viện đã kiểm chứng thay vì tự viết |
+| Khi làm `/api/assets/{id}` phải gửi `X-Content-Type-Options: nosniff` | Nội dung file không được kiểm tra, chỉ đuôi file |
+
+## Đề mẫu A2 2022 (Cambridge, do người dùng cung cấp 11/10)
+- Thư mục `đề thi A2/` (git-ignored): R&W questions (12 trang, 13 ảnh), R&W answer key, Listening question paper (8 trang, 11 ảnh), answer key, tapescript, Speaking (ngoài phạm vi), 1 file mp3 1875 s (cả 5 part).
+- `pypdf` trích được chữ → bộ chuyển đọc text theo part; Part 3 R&W trang 6 trích ra rất ít chữ → bài đọc có thể là ảnh hoặc bố cục cột, cần xem kỹ khi làm VE-56.
+- Audio một file → tách 5 track bằng ffmpeg theo mốc thời gian (dò khoảng lặng + đối chiếu tapescript "Part 1/2/…").
