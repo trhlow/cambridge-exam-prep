@@ -70,8 +70,11 @@ public sealed class ApiFixture : IAsyncLifetime
         return (readingWriting.Id, listening.Id);
     }
 
-    /// <summary>Gives the candidate a running attempt at the section, as if they had just started it.</summary>
-    public async Task<int> StartAttemptAsync(int candidateId, int sectionId)
+    /// <summary>
+    /// Gives the candidate a running attempt at the section, as if they had just started it; an offline candidate's
+    /// last heartbeat was long ago.
+    /// </summary>
+    public async Task<int> StartAttemptAsync(int candidateId, int sectionId, bool isOnline = true, int durationMinutes = 60, int? audioPlayedMinutes = null)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
@@ -82,8 +85,9 @@ public sealed class ApiFixture : IAsyncLifetime
             ExamSectionId = sectionId,
             Status = AttemptStatus.InProgress,
             StartedAt = now,
-            EndsAt = now.AddMinutes(60),
-            LastHeartbeatAt = now,
+            EndsAt = now.AddMinutes(durationMinutes),
+            LastHeartbeatAt = isOnline ? now : now.AddMinutes(-5),
+            AudioStartedAt = audioPlayedMinutes is { } played ? now.AddMinutes(-played) : null,
         };
         db.Attempts.Add(attempt);
         await db.SaveChangesAsync();
@@ -175,6 +179,30 @@ public sealed class ApiFixture : IAsyncLifetime
         await db.SaveChangesAsync();
         var sectionIds = exam.Sections.ToDictionary(s => s.SectionTemplateId, s => s.Id);
         return new SeededCandidate(candidate.Id, exam.Id, candidate.Username, exam.SessionPin, sectionIds[1], sectionIds[2]);
+    }
+
+    /// <summary>Enters another candidate for an existing session; returns its id and username.</summary>
+    public async Task<(int CandidateId, string Username)> AddCandidateAsync(int examId, string password, string firstName = "Binh", string lastName = "Tran")
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<Candidate>>();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var candidate = new Candidate
+        {
+            ExamId = examId,
+            CandidateNumber = suffix[..6],
+            FirstName = firstName,
+            LastName = lastName,
+            Username = $"tranb{suffix}",
+            PasswordHash = string.Empty,
+            PasswordProtected = "not-used-in-tests",
+            CreatedAt = DateTime.UtcNow,
+        };
+        candidate.PasswordHash = hasher.HashPassword(candidate, password);
+        db.Candidates.Add(candidate);
+        await db.SaveChangesAsync();
+        return (candidate.Id, candidate.Username);
     }
 
     /// <summary>Marks a section as finished for the candidate (submitted, or its time ran out).</summary>
