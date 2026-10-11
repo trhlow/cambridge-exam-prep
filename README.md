@@ -134,7 +134,8 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Khảo sát giao diện bài thi mẫu A2 Key for Schools
 - [x] Cơ sở dữ liệu: 21 bảng (EF Core + MySQL), migration, dữ liệu mẫu A2/B1, 16 test tích hợp
 - [ ] Đặc tả yêu cầu, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API
-- [ ] Backend: đăng nhập, phân quyền, nhập đề, quản lý kỳ thi/thí sinh, đồng hồ server
+- [x] Backend: đăng nhập nhân viên (admin, giám thị) và thí sinh (username/password + PIN phòng thi), phân quyền, đồng hồ server — 78 test
+- [ ] Backend: nhập đề, quản lý kỳ thi/thí sinh, làm bài, chấm tự động
 - [ ] Màn hình thí sinh & cổng giám thị
 - [ ] Tích hợp Safe Exam Browser, đóng gói
 - [ ] Kiểm thử tình huống, kiểm thử tải, buổi thi thử
