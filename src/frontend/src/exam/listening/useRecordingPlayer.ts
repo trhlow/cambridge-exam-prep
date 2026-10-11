@@ -9,6 +9,8 @@ export interface RecordingPlayer {
   start: (positionMs: number) => Promise<void>
   /** Only for an invigilator pause; the candidate has no way to stop the recording. */
   stop: () => void
+  /** Where the recording is now (ms from its start), or null while it is not playing. */
+  positionMs: () => number | null
 }
 
 function trackDuration(url: string): Promise<number> {
@@ -32,6 +34,8 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
   const urlsRef = useRef(urls)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const durationsRef = useRef<Promise<number[]> | null>(null)
+  /** Start of each track within the whole recording, once the durations are known. */
+  const offsetsRef = useRef<number[] | null>(null)
   const trackRef = useRef(0)
   const shouldPlayRef = useRef(false)
   const urlsKey = urls.join('|')
@@ -47,6 +51,9 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
     audio.preload = 'auto'
     audioRef.current = audio
     durationsRef.current = Promise.all(tracks.map(trackDuration))
+    void durationsRef.current.then((durations) => {
+      offsetsRef.current = durations.map((_, i) => durations.slice(0, i).reduce((sum, d) => sum + d, 0))
+    })
 
     const playNext = () => {
       trackRef.current += 1
@@ -115,5 +122,15 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
     setState((current) => (current === 'finished' ? current : 'idle'))
   }, [])
 
-  return { state, start, stop }
+  const positionMs = useCallback(() => {
+    const audio = audioRef.current
+    const offsets = offsetsRef.current
+    if (!audio || !offsets || !shouldPlayRef.current) {
+      return null
+    }
+
+    return (offsets[trackRef.current] ?? 0) + audio.currentTime * 1000
+  }, [])
+
+  return { state, start, stop, positionMs }
 }

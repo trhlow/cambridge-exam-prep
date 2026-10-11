@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { candidateApi } from '../api/client'
-import type { Answers, AttemptState } from '../api/types'
+import type { Answers, AttemptState, CandidateMessage } from '../api/types'
 import { AutosaveQueue, type SaveStatus } from './autosave'
 import { remainingSecondsNow } from './timing'
 
-/** Re-read the server clock this often (the invigilator may pause, add or end time). */
-const SYNC_INTERVAL_MS = 30_000
+/**
+ * Heartbeat: tells the server the candidate is online and re-reads the clock, so an invigilator's pause, extra
+ * time, end time, rewind or message reaches this screen within seconds.
+ */
+const SYNC_INTERVAL_MS = 5_000
 /** After the countdown reaches zero, give the last save a moment before asking the server to end. */
 const TIME_UP_CHECK_DELAY_MS = 1_500
 
@@ -21,6 +24,10 @@ export interface AttemptView {
   audioPositionNow: () => number | null
   /** Listening: tells the server the candidate pressed Play; resolves to the recording position. */
   playAudio: () => Promise<number>
+  /** From the invigilator, oldest first. */
+  messages: CandidateMessage[]
+  /** When the server's figures were last received (changes on every heartbeat). */
+  syncedAt: number | null
 }
 
 type Clock = { status: AttemptState['status']; remaining: number; audioPositionMs: number | null; receivedAt: number }
@@ -31,6 +38,7 @@ type Clock = { status: AttemptState['status']; remaining: number; audioPositionM
  */
 export function useAttempt(sectionId: number): AttemptView {
   const [clock, setClock] = useState<Clock | null>(null)
+  const [messages, setMessages] = useState<CandidateMessage[]>([])
   const [answers, setAnswers] = useState<Answers>({})
   const [error, setError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
@@ -39,10 +47,11 @@ export function useAttempt(sectionId: number): AttemptView {
 
   const apply = useCallback((state: AttemptState) => {
     setClock({ status: state.status, remaining: state.remainingSeconds, audioPositionMs: state.audioPositionMs, receivedAt: Date.now() })
+    setMessages((current) => (sameMessages(current, state.messages ?? []) ? current : (state.messages ?? [])))
   }, [])
 
   const sync = useCallback(() => {
-    candidateApi.attempt(sectionId).then(apply, () => setSaveStatus('offline'))
+    candidateApi.heartbeat(sectionId).then(apply, () => setSaveStatus('offline'))
   }, [sectionId, apply])
 
   useEffect(() => {
@@ -102,5 +111,19 @@ export function useAttempt(sectionId: number): AttemptView {
     return state.audioPositionMs ?? 0
   }, [sectionId, apply])
 
-  return { isLoaded: clock !== null, error, status: clock?.status ?? null, remainingSeconds, answers, saveStatus, setAnswer, audioPositionNow, playAudio }
+  return {
+    isLoaded: clock !== null,
+    error,
+    status: clock?.status ?? null,
+    remainingSeconds,
+    answers,
+    saveStatus,
+    setAnswer,
+    audioPositionNow,
+    playAudio,
+    messages,
+    syncedAt: clock?.receivedAt ?? null,
+  }
 }
+
+const sameMessages = (a: CandidateMessage[], b: CandidateMessage[]) => a.length === b.length && a.every((m, i) => m.id === b[i].id)

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { CandidateProfile } from '../api/types'
 import { BellIcon, MenuIcon, NotesIcon, WifiIcon } from '../ui/icons'
 import { VictoryLogo } from '../ui/VictoryLogo'
@@ -10,13 +11,15 @@ type Props = {
   saveStatus: SaveStatus
   /** Listening: shown under the candidate's name while the recording plays, as in Inspera. */
   isAudioPlaying?: boolean
+  /** The invigilator's messages (bell icon); a plain bell when the section has none to show. */
+  bell?: ReactNode
 }
 
 /**
  * Inspera header: logo, candidate name and number, the countdown, then connection, messages, options and
  * notes. The connection icon turns red while answers cannot reach the server (they are kept and retried).
  */
-export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false }: Props) {
+export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, bell }: Props) {
   const isOffline = saveStatus === 'offline'
 
   return (
@@ -45,9 +48,11 @@ export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false }
         >
           <WifiIcon />
         </span>
-        <button type="button" className="top-icon" aria-label="Messages">
-          <BellIcon />
-        </button>
+        {bell ?? (
+          <button type="button" className="top-icon" aria-label="Messages">
+            <BellIcon />
+          </button>
+        )}
         <button type="button" className="top-icon" aria-label="Options">
           <MenuIcon />
         </button>

@@ -4,6 +4,7 @@ import type { CandidateProfile, CandidateSection, Paper } from '../api/types'
 import { ArrowIcon } from '../ui/icons'
 import { BottomBar } from './BottomBar'
 import { ListeningIntro } from './listening/ListeningIntro'
+import { MessageCentre } from './MessageCentre'
 import { useRecordingPlayer } from './listening/useRecordingPlayer'
 import { buildPages } from './paperLogic'
 import { PartView } from './PartView'
@@ -11,6 +12,9 @@ import { ReviewPage } from './ReviewPage'
 import { TopBar } from './TopBar'
 import { useAttempt } from './useAttempt'
 import { timeLeftText } from './timing'
+
+/** Further apart than this, the recording follows the server: the invigilator has rewound it. */
+const AUDIO_DRIFT_MS = 4_000
 
 type Props = {
   profile: CandidateProfile
@@ -50,7 +54,9 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
   const pages = useMemo(() => (paper ? buildPages(paper) : []), [paper])
   const audioUrls = useMemo(() => paper?.parts.map((p) => p.audioUrl).filter((url): url is string => url !== null) ?? [], [paper])
   const player = useRecordingPlayer(audioUrls)
-  const { stop: stopRecording } = player
+  const { stop: stopRecording, start: startRecording, positionMs: recordingPosition, state: playerState } = player
+  const { syncedAt, audioPositionNow } = attempt
+  const [audioNotice, setAudioNotice] = useState<string | null>(null)
 
   // An invigilator pause stops the recording; the server moves its position back by the paused time.
   useEffect(() => {
@@ -58,6 +64,31 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
       stopRecording()
     }
   }, [attempt.status, stopRecording])
+
+  // VE-16: after an invigilator rewind the server's position jumps back; the recording follows it.
+  useEffect(() => {
+    if (playerState !== 'playing' || syncedAt === null) {
+      return
+    }
+
+    const server = audioPositionNow()
+    const local = recordingPosition()
+    if (server === null || local === null || Math.abs(server - local) < AUDIO_DRIFT_MS) {
+      return
+    }
+
+    const wasRewound = server < local
+    void startRecording(server).then(() => wasRewound && setAudioNotice('The invigilator has moved the recording back.'))
+  }, [syncedAt, playerState, audioPositionNow, recordingPosition, startRecording])
+
+  useEffect(() => {
+    if (!audioNotice) {
+      return
+    }
+
+    const timer = setTimeout(() => setAudioNotice(null), 8_000)
+    return () => clearTimeout(timer)
+  }, [audioNotice])
 
   useEffect(() => {
     candidateApi.paper(section.id).then(setPaper, (e: Error) => setPaperError(e.message))
@@ -101,7 +132,18 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
 
   return (
     <div className="exam">
-      <TopBar profile={profile} timeLeft={timeLeftText(attempt.remainingSeconds)} saveStatus={attempt.saveStatus} isAudioPlaying={player.state === 'playing'} />
+      <TopBar
+        profile={profile}
+        timeLeft={timeLeftText(attempt.remainingSeconds)}
+        saveStatus={attempt.saveStatus}
+        isAudioPlaying={player.state === 'playing'}
+        bell={<MessageCentre sectionId={section.id} messages={attempt.messages} />}
+      />
+      {audioNotice && (
+        <div className="audio-notice" role="status">
+          {audioNotice}
+        </div>
+      )}
       <main className="exam-main">
         {isReviewing ? (
           <ReviewPage paper={paper} answers={attempt.answers} onBack={() => setIsReviewing(false)} />

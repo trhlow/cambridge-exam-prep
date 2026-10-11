@@ -78,4 +78,13 @@ export interface AttemptState {
   answers: Answers
   /** Listening: where the recording is now; null until Play is pressed. */
   audioPositionMs: number | null
+  /** From the invigilator, to the whole room or to this candidate; oldest first. */
+  messages: CandidateMessage[]
+}
+
+export interface CandidateMessage {
+  id: number
+  text: string
+  sentAt: string
+  candidateId: number | null
 }
