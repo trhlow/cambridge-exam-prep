@@ -60,8 +60,13 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
             .ToList();
     }
 
-    /// <summary>Every question of an attempt with the candidate's answer, the accepted answers and the mark.</summary>
+    /// <summary>
+    /// Every question of an attempt with the candidate's answer, the accepted answers and the mark. Administrators
+    /// only: invigilators are in the exam room while other candidates may still be taking the same paper, so they
+    /// must not see the answer key.
+    /// </summary>
     [HttpGet("attempts/{attemptId:int}/marking")]
+    [Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
     public async Task<ActionResult<AttemptMarking>> Marking(int attemptId, CancellationToken cancellationToken)
     {
         var attempt = await db.Attempts.AsNoTracking()

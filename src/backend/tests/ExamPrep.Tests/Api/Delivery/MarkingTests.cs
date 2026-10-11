@@ -177,6 +177,26 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task Marking_WithTheAnswerKey_IsNotAvailableToInvigilators()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await CandidateAsync();
+        using var _ = client;
+        (await client.PostAsync($"/api/candidate/sections/{candidate.ReadingWritingSectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
+        var attemptId = (await api.GetAttemptAsync(candidate.CandidateId, candidate.ReadingWritingSectionId)).Id;
+        const string password = "Invigilator#2026";
+        var invigilator = await api.CreateStaffAsync(UserRole.Invigilator, password);
+        using var staff = api.CreateClient();
+        (await staff.PostAsJsonAsync("/api/staff/auth/login", new LoginRequest(invigilator.Username, password), ct)).EnsureSuccessStatusCode();
+
+        var marking = await staff.GetAsync($"/api/staff/attempts/{attemptId}/marking", ct);
+        var results = await staff.GetAsync($"/api/staff/exams/{candidate.ExamId}/results", ct);
+
+        Assert.Equal(HttpStatusCode.Forbidden, marking.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, results.StatusCode);
+    }
+
+    [Fact]
     public async Task Marking_Returns404_ForAnUnknownAttempt()
     {
         api.SkipIfUnavailable();
