@@ -24,16 +24,7 @@ public static class StaffAuthenticationSetup
         services.AddAuthentication(StaffAuthDefaults.Scheme)
             .AddCookie(StaffAuthDefaults.Scheme, options =>
             {
-                options.Cookie.Name = StaffAuthDefaults.CookieName;
-                options.Cookie.HttpOnly = true;
-                options.Cookie.SameSite = SameSiteMode.Strict;
-                options.Cookie.SecurePolicy = environment.IsProduction()
-                    ? CookieSecurePolicy.Always
-                    : CookieSecurePolicy.SameAsRequest;
-                options.ExpireTimeSpan = SessionLifetime;
-                options.SlidingExpiration = true;
-                options.Events.OnRedirectToLogin = context => WriteStatus(context, StatusCodes.Status401Unauthorized);
-                options.Events.OnRedirectToAccessDenied = context => WriteStatus(context, StatusCodes.Status403Forbidden);
+                ApiCookieOptions.Apply(options, StaffAuthDefaults.CookieName, SessionLifetime, environment);
                 options.Events.OnValidatePrincipal = ValidateAccountAsync;
             });
 
@@ -58,12 +49,6 @@ public static class StaffAuthenticationSetup
             new Claim(StaffAuthDefaults.SecurityStampClaim, user.SecurityStamp.ToString()),
         ], StaffAuthDefaults.Scheme);
         return new ClaimsPrincipal(identity);
-    }
-
-    private static Task WriteStatus(RedirectContext<CookieAuthenticationOptions> context, int statusCode)
-    {
-        context.Response.StatusCode = statusCode;
-        return Task.CompletedTask;
     }
 
     private static async Task ValidateAccountAsync(CookieValidatePrincipalContext context)

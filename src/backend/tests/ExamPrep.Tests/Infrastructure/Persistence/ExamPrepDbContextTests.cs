@@ -63,6 +63,26 @@ public sealed class ExamPrepDbContextTests(MySqlDatabaseFixture database) : ICla
     }
 
     [Fact]
+    public async Task SaveChanges_RoundTripsDateOnlyColumns()
+    {
+        database.SkipIfUnavailable();
+        A2ExamBuilder.SeededExam seeded;
+        await using (var db = database.CreateContext())
+        {
+            seeded = await A2ExamBuilder.SeedAsync(db, ct);
+            var candidate = await db.Candidates.SingleAsync(c => c.Id == seeded.CandidateId, ct);
+            candidate.DateOfBirth = new DateOnly(2012, 3, 4);
+            await db.SaveChangesAsync(ct);
+        }
+
+        await using var read = database.CreateContext();
+        var exam = await read.Exams.Include(e => e.Candidates).SingleAsync(e => e.Id == seeded.ExamId, ct);
+
+        Assert.Equal(new DateOnly(2026, 11, 20), exam.ScheduledDate);
+        Assert.Equal(new DateOnly(2012, 3, 4), Assert.Single(exam.Candidates).DateOfBirth);
+    }
+
+    [Fact]
     public async Task SaveChanges_StoresEnumsAsReadableText()
     {
         database.SkipIfUnavailable();
