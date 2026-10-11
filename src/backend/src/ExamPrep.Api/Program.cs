@@ -28,7 +28,13 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
     var demo = app.Configuration.GetSection("Demo").Get<DemoOptions>() ?? new DemoOptions();
-    demo = demo with { SamplesRoot = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, demo.SamplesRoot)) };
+    demo = demo with
+    {
+        SamplesRoot = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, demo.SamplesRoot)),
+        ReadingWritingFolder = string.IsNullOrWhiteSpace(demo.ReadingWritingFolder)
+            ? null
+            : Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, demo.ReadingWritingFolder)),
+    };
     await DemoSeeder.SeedAsync(app.Services, demo, CancellationToken.None);
 }
 

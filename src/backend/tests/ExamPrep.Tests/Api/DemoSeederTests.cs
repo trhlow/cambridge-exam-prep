@@ -88,6 +88,43 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task Seed_UsesTheReadingWritingFolderWhenItExists()
+    {
+        api.SkipIfUnavailable();
+        var folder = Directory.CreateTempSubdirectory("demo-rw-").FullName;
+        var sample = Path.Combine(AppContext.BaseDirectory, "Samples", "a2-key-fs-reading-writing", "paper.json");
+        var paper = JsonNode.Parse(await File.ReadAllTextAsync(sample, ct))!;
+        paper["title"] = "Converted paper";
+        await File.WriteAllTextAsync(Path.Combine(folder, "paper.json"), paper.ToJsonString(), ct);
+        var options = Options() with { ReadingWritingFolder = folder };
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+
+        Assert.Equal("Converted paper", await ReadingWritingTitleAsync(options.ExamName));
+    }
+
+    [Fact]
+    public async Task Seed_FallsBackToTheSampleWhenTheReadingWritingFolderIsMissing()
+    {
+        api.SkipIfUnavailable();
+        var options = Options() with { ReadingWritingFolder = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}") };
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+
+        Assert.StartsWith("A2 Key for Schools – Victory sample test 1", await ReadingWritingTitleAsync(options.ExamName));
+    }
+
+    private async Task<string> ReadingWritingTitleAsync(string examName)
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        return await db.ExamSections
+            .Where(s => s.Exam!.Name == examName && s.OrderNo == 1)
+            .Select(s => s.TestPaper!.Title)
+            .SingleAsync(ct);
+    }
+
+    [Fact]
     public async Task Seed_DoesNothingWhenDisabled()
     {
         api.SkipIfUnavailable();

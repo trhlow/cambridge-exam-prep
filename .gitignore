@@ -36,3 +36,10 @@ App_Data/
 setup/exam-package/sources/*
 !setup/exam-package/sources/README.md
 đề thi*/
+
+# Python caches (exam-package converter and its tests)
+__pycache__/
+.pytest_cache/
+
+# Browser-automation screenshots (may show exam content)
+.playwright-mcp/
