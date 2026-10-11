@@ -48,3 +48,13 @@
 - Mọi mốc thời gian lưu UTC; giao diện hiển thị giờ Việt Nam (UTC+7).
 - Ảnh nhúng trong HTML không có khoá ngoại tới `assets` → không xoá cứng asset đang được tham chiếu.
 - Admin đầu tiên tạo lúc khởi động từ cấu hình (VE-3).
+
+## VE-4 — quyết định đăng nhập thí sinh (11/10)
+| Quyết định | Lý do |
+|---|---|
+| Hai bước: username/password rồi PIN, cùng một cookie (claim `pin_verified`) | Giống Inspera: giám thị đọc PIN khi cả phòng đã đăng nhập |
+| Chỉ đăng nhập khi `exams.status = Active` (403 sau khi mật khẩu đúng) | Không cho vào trước ngày thi; không lộ thông tin khi sai mật khẩu |
+| Mỗi lần đăng nhập đổi `candidates.security_stamp` | Chuyển máy thì máy cũ tự đăng xuất, khỏi hai máy cùng làm một bài |
+| Cookie thí sinh tách scheme với nhân viên | Cookie này không gọi được API của bên kia |
+| `DateOnly` cần converter với `MySql.EntityFrameworkCore` | Provider đọc cột `date` thành `DateTime`, ném InvalidCastException |
+| Brute-force PIN 4 chữ số | Để VE-30 (rate limit) |

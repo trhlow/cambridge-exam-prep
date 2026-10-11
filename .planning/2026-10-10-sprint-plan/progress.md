@@ -46,3 +46,17 @@
 - Băm PBKDF2, rehash khi cần, thời gian thất bại đồng đều; admin đầu tiên từ `Bootstrap:AdminUsername/AdminPassword`
 - Toàn bộ 59/59 test đạt; commit `85187ed`
 - Còn lại cho VE-30: giới hạn tần suất đăng nhập
+
+## Session: 2026-10-11
+
+### Jira
+- VE-1, VE-2, VE-3 (SCRUM-18/19/20): gán người làm, thêm comment báo cáo hoàn thành chi tiết
+- VE-4 (SCRUM-21): In Progress → Done kèm comment
+
+### Sprint 1 — VE-4 đăng nhập thí sinh + PIN
+- **Status:** complete
+- Skill: `test-driven-development` (17 test RED đúng lý do: 404 + chưa đăng ký hasher → GREEN), `security-review` (không có lỗ hổng độ tin cậy cao), `planning-with-files`
+- API: `POST /api/candidate/auth/login|pin|logout`, `GET /api/candidate/auth/me`, `GET /api/candidate/sections`
+- Cookie "Candidate" tách khỏi "Staff"; đăng nhập đổi `security_stamp` (máy cũ bị đăng xuất); chỉ vào được khi kỳ thi Active; PIN so sánh thời gian hằng
+- Lỗi phát hiện nhờ test: provider MySQL của Oracle không đọc được cột `date` thành `DateOnly` → thêm converter trong `ModelConventions` (test DB tái hiện trước khi sửa)
+- Toàn bộ 78/78 test đạt; commit `fb1a821`

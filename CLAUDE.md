@@ -8,7 +8,7 @@ Vietnamese university capstone ("Đồ án chuyên ngành", class DA23TTA) built
 
 - **Scope:** A2 Key for Schools first (demo due Fri 16/10/2026), then B1 Preliminary for Schools, then IELTS (no fixed format; later). B2/C1/C2 are out of scope.
 - **Everything is built from scratch**, including question authoring: Victory's old exam-entry system is gone (decided 10/10/2026). Victory supplies the exam content (questions, answer keys, audio split into one track per Listening part).
-- **Done so far:** database schema (EF Core migrations on MySQL, reviewed 10/10 — see `.planning/2026-10-10-sprint-plan/findings.md`), the server-side exam clock (`AttemptClock`), 46 tests. Not yet: API endpoints, frontend, auth, SignalR.
+- **Done so far:** database schema (EF Core migrations on MySQL, reviewed 10/10 — see `.planning/2026-10-10-sprint-plan/findings.md`), the server-side exam clock (`AttemptClock`), staff sign-in (VE-3) and candidate sign-in with session PIN (VE-4); 78 tests. Not yet: exam import, frontend, SignalR.
 - **Planning:** sprint backlog in `.planning/2026-10-10-sprint-plan/` (source of truth `sprints.py`), mirrored on Jira https://victoryexam.atlassian.net project `SCRUM` (story VE-n = SCRUM-(n+17)).
 
 Deadline: final report submitted 31/12/2026. Faculty check-in weeks: 19–25/10, 09–15/11, 30/11–06/12, 21–27/12/2026.
@@ -42,7 +42,7 @@ dotnet test --filter-method "*SnakeCase*"      # single test / pattern
 
 - `ExamPrep.Domain` — entities (one class per file), enums, and domain logic: `Delivery/AttemptClock` (all timer and audio rules; throws `Common/DomainRuleException` for operations not allowed in the current state). No EF dependency.
 - `ExamPrep.Infrastructure` — `Persistence/ExamPrepDbContext`, one `IEntityTypeConfiguration` per entity in `Persistence/Configurations`, migrations, `SeedData` (exam types, section templates, default branding "Victory"). `ModelConventions` stores every enum as `varchar(32)` text and every `DateTime` as UTC; `SnakeCaseNaming` lower-snake-cases all tables and columns. Provider is Oracle's `MySql.EntityFrameworkCore` 10 (`UseMySQL`), because Pomelo has no EF Core 10 release.
-- `ExamPrep.Api` — ASP.NET Core host; `AddInfrastructure` fails fast if the connection string is missing.
+- `ExamPrep.Api` — ASP.NET Core host; `AddInfrastructure` fails fast if the connection string is missing. `Auth/` has two separate cookie schemes sharing `ApiCookieOptions` (HttpOnly, SameSite=Strict, 401/403 instead of redirects): **Staff** (`victory.staff`, policies `Staff`/`Admin`, first admin from `Bootstrap:AdminUsername`/`AdminPassword`) and **Candidate** (`victory.candidate`; login → `pin_verified=False`, `POST /api/candidate/auth/pin` re-issues it with `True`; policy `CandidateExam` requires the PIN). Both re-check `security_stamp` on every request; candidate login rotates it. Candidates can sign in only while `exams.status = Active`.
 - `ExamPrep.Tests` — mirrors `src/`; `MySqlDatabaseFixture` + `A2ExamBuilder` for DB integration tests.
 
 The schema has 21 tables in four groups: **content** (`exam_types → section_templates`, `test_papers → paper_parts → question_groups → questions → answer_keys`, `assets`), **sessions** (`exams → exam_sections / candidates / exam_invigilators`), **delivery** (`attempts`, `responses`, `annotations`, `manual_marks`), **monitoring** (`invigilator_actions`, `security_events`, `candidate_messages`), plus `users` (staff only) and `site_settings` (centre name + logo, admin-editable).
