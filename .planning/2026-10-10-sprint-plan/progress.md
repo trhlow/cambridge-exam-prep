@@ -90,3 +90,13 @@
 - Kiểm tra trên Chrome: chọn đáp án → tải lại vẫn còn; đẩy giờ bắt đầu lùi 1 tiếng → worker nộp trong < 8 s → màn kết thúc → Listening mở
 - DemoSeeder ResetOnStart: mỗi lần bật API dev tạo lại kỳ thi demo
 - Toàn bộ: backend 144/144, frontend 39/39; commit `8d6b490`, `853165c`
+
+### Sprint 1 — VE-10: Listening A2
+- **Status:** complete (Jira SCRUM-27 → Done)
+- Skill: `image-to-code` (chụp lớp phủ Play, thanh "Audio is Playing", Part 5 kéo thả của bài mẫu Inspera — audio bị tắt tiếng bằng JS), `test-driven-development` (backend 5, frontend 9 test, RED trước), `security-review`, `planning-with-files`
+- Backend: `POST .../audio` đặt AudioStartedAt một lần; AttemptState có `audioPositionMs`
+- Frontend: lớp phủ Play / Continue listening; useRecordingPlayer phát nối 5 track, không có nút, chặn phím media; Part 1 Listening mỗi câu một trang; DragDropMatch kéo thả bằng pointer events (chuột, cảm ứng) hoặc chọn-đặt bằng bàn phím
+- Âm thanh đề mẫu: make_audio.ps1 đọc tapescript tự soạn bằng giọng Windows (mỗi đoạn hai lần) → 5 mp3, ~17 phút
+- Kiểm tra trên Chrome (tắt tiếng): Play → "Audio is Playing"; sang Part 5 audio vẫn chạy; tải lại → Continue listening tiếp ở giây 85 (không phát lại từ đầu); thử pause → tự phát tiếp; kéo "cake" vào ô 21 thành công
+- Đổi cách kéo thả: HTML5 drag-and-drop không nhận chuột tự động/cảm ứng → pointer events
+- Toàn bộ: backend 149/149, frontend 48/48; commit `51f5ae4`, `6cff1fc`
