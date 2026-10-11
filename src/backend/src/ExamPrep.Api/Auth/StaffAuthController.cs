@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication;
@@ -67,7 +66,7 @@ public sealed class StaffAuthController(
     [Authorize(Policy = StaffAuthDefaults.StaffPolicy)]
     public async Task<ActionResult<StaffProfile>> Me(CancellationToken cancellationToken)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetStaffId();
         var user = await db.Users.AsNoTracking().SingleAsync(u => u.Id == userId, cancellationToken);
         return StaffProfile.From(user);
     }

@@ -1,0 +1,156 @@
+{
+  "formatVersion": 1,
+  "examType": "A2_KEY_FS",
+  "section": 2,
+  "title": "A2 Key for Schools – Victory sample test 1 – Listening",
+  "parts": [
+    {
+      "partNo": 1,
+      "layout": "Single",
+      "audio": "audio/part1.mp3",
+      "groups": [
+        {
+          "interactionType": "ImageChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "questions": [
+            {
+              "number": 1,
+              "promptHtml": "What will the weather be like tomorrow?",
+              "options": [
+                { "key": "A", "image": "images/l-p1-q1-a.png", "text": "Sunny" },
+                { "key": "B", "image": "images/l-p1-q1-b.png", "text": "Rainy" },
+                { "key": "C", "image": "images/l-p1-q1-c.png", "text": "Windy" }
+              ],
+              "answers": ["B"]
+            },
+            {
+              "number": 2,
+              "promptHtml": "What did the boy buy at the shop?",
+              "options": [
+                { "key": "A", "image": "images/l-p1-q2-a.png", "text": "A cap" },
+                { "key": "B", "image": "images/l-p1-q2-b.png", "text": "A T-shirt" },
+                { "key": "C", "image": "images/l-p1-q2-c.png", "text": "A bag" }
+              ],
+              "answers": ["A"]
+            },
+            {
+              "number": 3,
+              "promptHtml": "Where are the girl's keys?",
+              "options": [
+                { "key": "A", "image": "images/l-p1-q3-a.png", "text": "On the table" },
+                { "key": "B", "image": "images/l-p1-q3-b.png", "text": "In her coat" },
+                { "key": "C", "image": "images/l-p1-q3-c.png", "text": "Under the sofa" }
+              ],
+              "answers": ["C"]
+            },
+            {
+              "number": 4,
+              "promptHtml": "What time does the film start?",
+              "options": [
+                { "key": "A", "image": "images/l-p1-q4-a.png", "text": "6.15" },
+                { "key": "B", "image": "images/l-p1-q4-b.png", "text": "6.45" },
+                { "key": "C", "image": "images/l-p1-q4-c.png", "text": "7.30" }
+              ],
+              "answers": ["B"]
+            },
+            {
+              "number": 5,
+              "promptHtml": "Which sport will the children play this afternoon?",
+              "options": [
+                { "key": "A", "image": "images/l-p1-q5-a.png", "text": "Tennis" },
+                { "key": "B", "image": "images/l-p1-q5-b.png", "text": "Basketball" },
+                { "key": "C", "image": "images/l-p1-q5-c.png", "text": "Volleyball" }
+              ],
+              "answers": ["A"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 2,
+      "layout": "Single",
+      "audio": "audio/part2.mp3",
+      "title": "School Science Trip",
+      "groups": [
+        {
+          "interactionType": "InlineText",
+          "instructions": "For each question, write the correct answer in the gap. Write one word or a number or a date or a time.",
+          "maxWordsPerAnswer": 3,
+          "bodyHtml": "<p>You will hear a teacher talking to students about a school trip.</p><table><tr><td>Place:</td><td>Science museum in {{q:6}}</td></tr><tr><td>Date:</td><td>{{q:7}} November</td></tr><tr><td>Bus leaves at:</td><td>{{q:8}}</td></tr><tr><td>Cost of trip:</td><td>£{{q:9}}</td></tr><tr><td>Bring:</td><td>a {{q:10}} and a packed lunch</td></tr></table>",
+          "questions": [
+            { "number": 6, "answers": ["Bristol"] },
+            { "number": 7, "answers": ["14", "14th", "fourteenth"] },
+            { "number": 8, "answers": ["8.15", "8:15", "quarter past eight"] },
+            { "number": 9, "answers": ["12", "twelve"] },
+            { "number": 10, "answers": ["notebook"] }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 3,
+      "layout": "Single",
+      "audio": "audio/part3.mp3",
+      "groups": [
+        {
+          "interactionType": "SingleChoice",
+          "instructions": "For each question, choose the correct answer. You will hear Emma talking to her friend Jack about a holiday.",
+          "questions": [
+            { "number": 11, "promptHtml": "Where did Emma go on holiday?", "options": [{ "key": "A", "text": "to the beach" }, { "key": "B", "text": "to a farm" }, { "key": "C", "text": "to a big city" }], "answers": ["B"] },
+            { "number": 12, "promptHtml": "How did Emma travel there?", "options": [{ "key": "A", "text": "by train" }, { "key": "B", "text": "by car" }, { "key": "C", "text": "by plane" }], "answers": ["A"] },
+            { "number": 13, "promptHtml": "What did Emma enjoy most?", "options": [{ "key": "A", "text": "riding horses" }, { "key": "B", "text": "feeding the animals" }, { "key": "C", "text": "cooking dinner" }], "answers": ["B"] },
+            { "number": 14, "promptHtml": "What was the weather like?", "options": [{ "key": "A", "text": "hot every day" }, { "key": "B", "text": "cold and wet" }, { "key": "C", "text": "sunny but windy" }], "answers": ["C"] },
+            { "number": 15, "promptHtml": "What will Emma do next summer?", "options": [{ "key": "A", "text": "go back to the same place" }, { "key": "B", "text": "visit her cousins" }, { "key": "C", "text": "stay at home" }], "answers": ["A"] }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 4,
+      "layout": "Single",
+      "audio": "audio/part4.mp3",
+      "groups": [
+        {
+          "interactionType": "SingleChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "questions": [
+            { "number": 16, "promptHtml": "You will hear a girl talking about her new school. What does she like about it?", "options": [{ "key": "A", "text": "the teachers" }, { "key": "B", "text": "the library" }, { "key": "C", "text": "the lunches" }], "answers": ["B"] },
+            { "number": 17, "promptHtml": "You will hear a boy talking to his mother. What does he want to do?", "options": [{ "key": "A", "text": "go to a friend's house" }, { "key": "B", "text": "watch a football match" }, { "key": "C", "text": "play a computer game" }], "answers": ["A"] },
+            { "number": 18, "promptHtml": "You will hear a teacher talking to a class. Why is the lesson different today?", "options": [{ "key": "A", "text": "They are having a test." }, { "key": "B", "text": "They are going outside." }, { "key": "C", "text": "They are watching a video." }], "answers": ["C"] },
+            { "number": 19, "promptHtml": "You will hear two friends talking about a book. What did the boy think of it?", "options": [{ "key": "A", "text": "It was too long." }, { "key": "B", "text": "It was funny." }, { "key": "C", "text": "It was easy to read." }], "answers": ["B"] },
+            { "number": 20, "promptHtml": "You will hear a girl talking about a sports club. When does the club meet?", "options": [{ "key": "A", "text": "on Monday evenings" }, { "key": "B", "text": "on Wednesday afternoons" }, { "key": "C", "text": "on Saturday mornings" }], "answers": ["C"] }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 5,
+      "layout": "Single",
+      "audio": "audio/part5.mp3",
+      "groups": [
+        {
+          "interactionType": "DragDropMatch",
+          "instructions": "For each question, choose the correct answer. You will hear Leo talking to his aunt about what each person will bring to a picnic. What will each person bring?",
+          "optionPool": [
+            { "key": "A", "text": "cake" },
+            { "key": "B", "text": "drinks" },
+            { "key": "C", "text": "fruit" },
+            { "key": "D", "text": "games" },
+            { "key": "E", "text": "music" },
+            { "key": "F", "text": "plates" },
+            { "key": "G", "text": "sandwiches" },
+            { "key": "H", "text": "a blanket" }
+          ],
+          "questions": [
+            { "number": 21, "promptHtml": "Grandma", "answers": ["A"] },
+            { "number": 22, "promptHtml": "Uncle Rob", "answers": ["E"] },
+            { "number": 23, "promptHtml": "Lily", "answers": ["C"] },
+            { "number": 24, "promptHtml": "Mark", "answers": ["H"] },
+            { "number": 25, "promptHtml": "Dad", "answers": ["G"] }
+          ]
+        }
+      ]
+    }
+  ]
+}

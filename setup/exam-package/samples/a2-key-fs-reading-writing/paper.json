@@ -1,0 +1,233 @@
+{
+  "formatVersion": 1,
+  "examType": "A2_KEY_FS",
+  "section": 1,
+  "title": "A2 Key for Schools – Victory sample test 1 – Reading & Writing",
+  "parts": [
+    {
+      "partNo": 1,
+      "layout": "Single",
+      "groups": [
+        {
+          "interactionType": "SingleChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "questions": [
+            {
+              "number": 1,
+              "stimulusHtml": "<img src='asset:images/rw-p1-q1.png' alt='Notice on the library door'>",
+              "options": [
+                { "key": "A", "text": "Students can borrow books on Saturday morning." },
+                { "key": "B", "text": "The library is closed all weekend." },
+                { "key": "C", "text": "Students must return books before Friday." }
+              ],
+              "answers": ["A"]
+            },
+            {
+              "number": 2,
+              "stimulusHtml": "<img src='asset:images/rw-p1-q2.png' alt='Text message from Mia'>",
+              "options": [
+                { "key": "A", "text": "Mia wants Tom to bring his football to the park." },
+                { "key": "B", "text": "Mia is asking Tom to meet her later than planned." },
+                { "key": "C", "text": "Mia cannot go to the park today." }
+              ],
+              "answers": ["B"]
+            },
+            {
+              "number": 3,
+              "stimulusHtml": "<img src='asset:images/rw-p1-q3.png' alt='Sign in the school canteen'>",
+              "options": [
+                { "key": "A", "text": "You can only pay with cash in the canteen." },
+                { "key": "B", "text": "The canteen sells hot food until two o'clock." },
+                { "key": "C", "text": "You should put your tray in the right place." }
+              ],
+              "answers": ["C"]
+            },
+            {
+              "number": 4,
+              "stimulusHtml": "<img src='asset:images/rw-p1-q4.png' alt='Email from the swimming coach'>",
+              "options": [
+                { "key": "A", "text": "The swimming lesson will start earlier on Thursday." },
+                { "key": "B", "text": "Students need to bring a new swimming hat." },
+                { "key": "C", "text": "The pool will be closed for one week." }
+              ],
+              "answers": ["A"]
+            },
+            {
+              "number": 5,
+              "stimulusHtml": "<img src='asset:images/rw-p1-q5.png' alt='Poster for the school concert'>",
+              "options": [
+                { "key": "A", "text": "Tickets for the concert are free for students." },
+                { "key": "B", "text": "Anyone who wants to sing should speak to Mr Lee." },
+                { "key": "C", "text": "The concert will take place in the sports hall." }
+              ],
+              "answers": ["B"]
+            },
+            {
+              "number": 6,
+              "stimulusHtml": "<img src='asset:images/rw-p1-q6.png' alt='Note on the classroom board'>",
+              "options": [
+                { "key": "A", "text": "Homework must be finished in the classroom." },
+                { "key": "B", "text": "The class will visit the museum on Monday." },
+                { "key": "C", "text": "Students should bring a pen to the test." }
+              ],
+              "answers": ["C"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 2,
+      "layout": "Split",
+      "title": "Three young musicians",
+      "stimulusHtml": "<h3>Ben</h3><p>Ben started playing the guitar when he was eight. His uncle gave him an old guitar for his birthday and showed him a few songs. Now Ben plays in a band with two friends from school. They practise in Ben's garage every Friday evening, and his neighbours sometimes complain about the noise.</p><h3>Carla</h3><p>Carla plays the piano. She has lessons twice a week with a teacher who lives in the same street. Carla finds it difficult to play in front of other people, so she only plays at home. One day she would like to write music for films.</p><h3>Dan</h3><p>Dan learned to play the drums from videos on the internet. He practises for an hour every day after school. Last summer he won a music competition in his town, and the prize was a weekend at a music camp, where he met lots of other young drummers.</p>",
+      "groups": [
+        {
+          "interactionType": "SingleChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "questions": [
+            { "number": 7, "promptHtml": "Who learned to play without a teacher?", "options": [{ "key": "A", "text": "Ben" }, { "key": "B", "text": "Carla" }, { "key": "C", "text": "Dan" }], "answers": ["C"] },
+            { "number": 8, "promptHtml": "Who got an instrument as a present?", "options": [{ "key": "A", "text": "Ben" }, { "key": "B", "text": "Carla" }, { "key": "C", "text": "Dan" }], "answers": ["A"] },
+            { "number": 9, "promptHtml": "Who feels nervous when people are listening?", "options": [{ "key": "A", "text": "Ben" }, { "key": "B", "text": "Carla" }, { "key": "C", "text": "Dan" }], "answers": ["B"] },
+            { "number": 10, "promptHtml": "Who has won a prize for their music?", "options": [{ "key": "A", "text": "Ben" }, { "key": "B", "text": "Carla" }, { "key": "C", "text": "Dan" }], "answers": ["C"] },
+            { "number": 11, "promptHtml": "Who plays music with other people from school?", "options": [{ "key": "A", "text": "Ben" }, { "key": "B", "text": "Carla" }, { "key": "C", "text": "Dan" }], "answers": ["A"] },
+            { "number": 12, "promptHtml": "Who has a plan for a future job?", "options": [{ "key": "A", "text": "Ben" }, { "key": "B", "text": "Carla" }, { "key": "C", "text": "Dan" }], "answers": ["B"] },
+            { "number": 13, "promptHtml": "Who sometimes makes people living nearby unhappy?", "options": [{ "key": "A", "text": "Ben" }, { "key": "B", "text": "Carla" }, { "key": "C", "text": "Dan" }], "answers": ["A"] }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 3,
+      "layout": "Split",
+      "title": "My year at a school in the mountains",
+      "stimulusHtml": "<p><em>by Lucy Grant, aged 14</em></p><p>Last year my family moved to a small village in the mountains because my mum got a new job at the hospital there. I was worried at first, because my new school only had eighty students and I didn't know anyone.</p><p>On my first day, a girl called Rosa showed me around. She told me that in winter the students go skiing every Wednesday afternoon instead of having sports lessons. I had never skied before, and the first time I fell over about twenty times! By the end of the winter, though, I could ski down the hill behind the school without falling.</p><p>The thing I liked most was that the teachers knew every student's name. In my old school there were so many students that some teachers never remembered mine. The worst thing was the bus journey: it took fifty minutes each way, and the bus was often late when it snowed.</p><p>Now we have moved back to the city, but Rosa and I still talk online every weekend, and next February I am going to visit her for a week.</p>",
+      "groups": [
+        {
+          "interactionType": "SingleChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "questions": [
+            {
+              "number": 14,
+              "promptHtml": "Why did Lucy's family move to the village?",
+              "options": [
+                { "key": "A", "text": "Lucy's mother started working there." },
+                { "key": "B", "text": "Lucy wanted to go to a smaller school." },
+                { "key": "C", "text": "The family wanted to live near the mountains." }
+              ],
+              "answers": ["A"]
+            },
+            {
+              "number": 15,
+              "promptHtml": "What did Lucy learn from Rosa on her first day?",
+              "options": [
+                { "key": "A", "text": "There were no sports lessons at the school." },
+                { "key": "B", "text": "Students went skiing once a week in winter." },
+                { "key": "C", "text": "Rosa could teach her how to ski." }
+              ],
+              "answers": ["B"]
+            },
+            {
+              "number": 16,
+              "promptHtml": "How did Lucy feel about skiing at the end of the winter?",
+              "options": [
+                { "key": "A", "text": "She still fell over a lot." },
+                { "key": "B", "text": "She preferred skiing to other sports." },
+                { "key": "C", "text": "She had become good enough to ski without problems." }
+              ],
+              "answers": ["C"]
+            },
+            {
+              "number": 17,
+              "promptHtml": "What did Lucy like best about the school?",
+              "options": [
+                { "key": "A", "text": "The teachers knew who she was." },
+                { "key": "B", "text": "It was close to her home." },
+                { "key": "C", "text": "The classes were very easy." }
+              ],
+              "answers": ["A"]
+            },
+            {
+              "number": 18,
+              "promptHtml": "What is Lucy going to do next February?",
+              "options": [
+                { "key": "A", "text": "Move back to the village." },
+                { "key": "B", "text": "Stay with her friend for a few days." },
+                { "key": "C", "text": "Start a new school in the city." }
+              ],
+              "answers": ["B"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 4,
+      "layout": "Single",
+      "title": "The school garden",
+      "groups": [
+        {
+          "interactionType": "InlineChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "bodyHtml": "<p>Two years ago, the students at Hillside School decided to {{q:19}} a garden next to the playground. At first, there was nothing there {{q:20}} grass and a few old trees. The students asked their parents for help, and some of them {{q:21}} tools and plants from home.</p><p>Now the garden is full of vegetables and flowers. Every week, a different class looks {{q:22}} the garden. The vegetables are {{q:23}} in the school kitchen, and the students say the soup tastes much better than before. Next year they {{q:24}} to build a small pond for frogs and fish.</p>",
+          "questions": [
+            { "number": 19, "options": [{ "key": "A", "text": "make" }, { "key": "B", "text": "do" }, { "key": "C", "text": "take" }], "answers": ["A"] },
+            { "number": 20, "options": [{ "key": "A", "text": "except" }, { "key": "B", "text": "without" }, { "key": "C", "text": "instead" }], "answers": ["A"] },
+            { "number": 21, "options": [{ "key": "A", "text": "carried" }, { "key": "B", "text": "brought" }, { "key": "C", "text": "sent" }], "answers": ["B"] },
+            { "number": 22, "options": [{ "key": "A", "text": "at" }, { "key": "B", "text": "for" }, { "key": "C", "text": "after" }], "answers": ["C"] },
+            { "number": 23, "options": [{ "key": "A", "text": "used" }, { "key": "B", "text": "spent" }, { "key": "C", "text": "kept" }], "answers": ["A"] },
+            { "number": 24, "options": [{ "key": "A", "text": "hope" }, { "key": "B", "text": "wish" }, { "key": "C", "text": "think" }], "answers": ["A"] }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 5,
+      "layout": "Single",
+      "groups": [
+        {
+          "interactionType": "InlineText",
+          "instructions": "For each question, write the correct answer. Write ONE word for each gap.",
+          "maxWordsPerAnswer": 1,
+          "bodyHtml": "<p><strong>From:</strong> Sam<br><strong>To:</strong> Alex</p><p>Hi Alex,</p><p>Thanks {{q:25}} your email. I'm really happy you're coming to stay with us next month! My mum says you can sleep in my room, so we can talk {{q:26}} late as we want.</p><p>On Saturday there's a festival in the town centre. There {{q:27}} be music and lots of food, so I think we should go. Do you {{q:28}} any special food you don't eat? Please tell me before you come.</p><p>Don't forget to bring {{q:29}} coat because it's often cold here in the evenings. Write back soon and tell me what time {{q:30}} train arrives.</p><p>Sam</p>",
+          "questions": [
+            { "number": 25, "answers": ["for"] },
+            { "number": 26, "answers": ["as"] },
+            { "number": 27, "answers": ["will", "'ll"] },
+            { "number": 28, "answers": ["have"] },
+            { "number": 29, "answers": ["a", "your"] },
+            { "number": 30, "answers": ["your", "the"] }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 6,
+      "layout": "Split",
+      "stimulusHtml": "<p>You want to go to the cinema with your English friend Jo next weekend.</p><p>Write an email to Jo.</p><p>In your email:</p><ul><li>say which film you want to see</li><li>suggest a day to go</li><li>explain how you will get to the cinema.</li></ul>",
+      "groups": [
+        {
+          "interactionType": "Essay",
+          "instructions": "Write 25 words or more.",
+          "questions": [
+            { "number": 31, "points": 15, "minWords": 25 }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 7,
+      "layout": "Single",
+      "stimulusHtml": "<p>Look at the three pictures. Write the story shown in the pictures.</p><p><img src='asset:images/rw-p7-1.png' alt='Picture 1'> <img src='asset:images/rw-p7-2.png' alt='Picture 2'> <img src='asset:images/rw-p7-3.png' alt='Picture 3'></p>",
+      "groups": [
+        {
+          "interactionType": "Essay",
+          "instructions": "Write 35 words or more.",
+          "questions": [
+            { "number": 32, "points": 15, "minWords": 35 }
+          ]
+        }
+      ]
+    }
+  ]
+}

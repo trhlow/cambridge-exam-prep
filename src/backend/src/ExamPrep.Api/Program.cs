@@ -4,7 +4,7 @@ using ExamPrep.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, Path.Combine(builder.Environment.ContentRootPath, "App_Data", "assets"));
 builder.Services.AddStaffAuthentication(builder.Environment);
 builder.Services.AddCandidateAuthentication(builder.Environment);
 builder.Services.AddProblemDetails();

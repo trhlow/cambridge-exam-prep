@@ -51,6 +51,9 @@ public static class StaffAuthenticationSetup
         return new ClaimsPrincipal(identity);
     }
 
+    public static int GetStaffId(this ClaimsPrincipal principal) =>
+        int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
     private static async Task ValidateAccountAsync(CookieValidatePrincipalContext context)
     {
         var principal = context.Principal;
