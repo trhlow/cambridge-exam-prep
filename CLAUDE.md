@@ -8,7 +8,7 @@ Vietnamese university capstone ("Đồ án chuyên ngành", class DA23TTA) built
 
 - **Scope:** A2 Key for Schools first (demo due Fri 16/10/2026), then B1 Preliminary for Schools, then IELTS (no fixed format; later). B2/C1/C2 are out of scope.
 - **Everything is built from scratch**, including question authoring: Victory's old exam-entry system is gone (decided 10/10/2026). Victory supplies the exam content (questions, answer keys, audio split into one track per Listening part).
-- **Done so far:** database schema (EF Core migrations on MySQL, reviewed 10/10 — see `.planning/2026-10-10-sprint-plan/findings.md`), the server-side exam clock (`AttemptClock`), staff sign-in (VE-3), candidate sign-in with session PIN (VE-4), exam package import (VE-5), the candidate screen for A2 Reading & Writing (VE-6/7, awaiting the user's review); 129 backend + 21 frontend tests. Next: VE-8 (server clock, autosave, auto-submit), VE-56 (PDF converter), Listening (VE-10). Not yet: admin/invigilator portals, SignalR.
+- **Done so far:** database schema (EF Core migrations on MySQL, reviewed 10/10 — see `.planning/2026-10-10-sprint-plan/findings.md`), the server-side exam clock (`AttemptClock`), staff sign-in (VE-3), candidate sign-in with session PIN (VE-4), exam package import (VE-5), the candidate screen for A2 Reading & Writing (VE-6/7), server clock + autosave + time-up submission (VE-8); 144 backend + 39 frontend tests. Next: Listening (VE-10), PDF converter (VE-56), auto-marking (VE-11). Not yet: admin/invigilator portals, SignalR.
 - **Planning:** sprint backlog in `.planning/2026-10-10-sprint-plan/` (source of truth `sprints.py`), mirrored on Jira https://victoryexam.atlassian.net project `SCRUM` (story VE-n = SCRUM-(n+17)).
 
 Deadline: final report submitted 31/12/2026. Faculty check-in weeks: 19–25/10, 09–15/11, 30/11–06/12, 21–27/12/2026.
@@ -54,6 +54,7 @@ The schema has 21 tables in four groups: **content** (`exam_types → section_te
 
 Key modelling decisions:
 - Exam types and their ordered sections are **data** (`section_templates`), so A2 (2 sections), B1 (3) and later IELTS share one engine. Never hard-code a section list.
+- Candidate delivery API (`Api/Delivery`): `POST/GET /api/candidate/sections/{id}/attempt` start or resume through `AttemptClock` and return the clock plus saved answers; `PUT .../responses` upserts answers (409 when not running; 5 s grace). `AttemptExpiryWorker` sweeps every 5 s and submits expired attempts (TimeExpired) so offline candidates still end on time. There is deliberately no candidate submit (Cambridge: wait for time to expire or the invigilator to end the test).
 - Sections run strictly in order (Cambridge: each component ends before the next; Listening is last). `CandidateSectionsController` reports a later section as `Locked` and refuses its paper (403) until every earlier section has an attempt with status `Submitted` (candidate submit, time expired or invigilator End now).
 - `question_groups.interaction_type` drives the candidate UI: `SingleChoice`, `ImageChoice`, `InlineChoice` (word picker over a gap), `InlineText` (typed gap), `DragDropMatch` (word cards), `Essay` (word counter). Inline gaps live in `body_html` as `{{q:19}}`.
 - Listening audio is one track per part (`paper_parts.audio_asset_id`); the player chains them into one continuous recording, as Inspera does.

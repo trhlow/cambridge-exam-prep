@@ -80,3 +80,13 @@
 ### Sửa theo góp ý giao diện (11/10)
 - TDD: backend 3 test (khoá Listening, mở khi R&W Submitted, 403 lấy đề section bị khoá) → 132/132; frontend 3 test (cờ trên ô part đóng, cờ trên số câu, danh sách phần thi bị khoá) → 24/24
 - Kiểm tra lại trên Chrome: Listening hiện "Locked"; cờ Part 1 vẫn thấy khi ở Part 2; cờ căn giữa trên số câu
+
+### Sprint 1 — VE-8: đồng hồ server, tự lưu, hết giờ tự nộp
+- **Status:** complete (Jira SCRUM-25 → Done; VE-6/VE-7 Done sau khi người dùng duyệt)
+- Skill: `test-driven-development` (backend 13 test, frontend 15 test, đều RED trước), `security-review` (không có lỗ hổng độ tin cậy cao), `planning-with-files`
+- Backend: start/resume attempt bằng AttemptClock (+ giờ ưu tiên), GET attempt (giờ + đáp án đã lưu), PUT responses (upsert, ân hạn 5 s), AttemptExpiryWorker quét 5 s/lần tự nộp bài hết giờ kể cả khi thí sinh offline → mở section sau
+- Frontend: useAttempt + AutosaveQueue (0,8 s sau thay đổi, thử lại 3 s, biểu tượng wifi đỏ khi offline), "59 minutes left", lớp phủ tạm dừng, màn "The test has now finished"; bỏ nút Submit (Cambridge: chờ hết giờ hoặc giám thị kết thúc)
+- Lỗi thật phát hiện khi chạy thử: React StrictMode gửi 2 lần start → trùng khoá attempts → test tái hiện rồi sửa; thời gian lệch tick khi đọc lại từ MySQL → làm tròn mili giây
+- Kiểm tra trên Chrome: chọn đáp án → tải lại vẫn còn; đẩy giờ bắt đầu lùi 1 tiếng → worker nộp trong < 8 s → màn kết thúc → Listening mở
+- DemoSeeder ResetOnStart: mỗi lần bật API dev tạo lại kỳ thi demo
+- Toàn bộ: backend 144/144, frontend 39/39; commit `8d6b490`, `853165c`
