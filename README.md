@@ -135,7 +135,9 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Cơ sở dữ liệu: 21 bảng (EF Core + MySQL), migration, dữ liệu mẫu A2/B1, 16 test tích hợp
 - [ ] Đặc tả yêu cầu, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API
 - [x] Backend: đăng nhập nhân viên (admin, giám thị) và thí sinh (username/password + PIN phòng thi), phân quyền, đồng hồ server — 78 test
-- [ ] Backend: nhập đề, quản lý kỳ thi/thí sinh, làm bài, chấm tự động
+- [x] Nhập đề: định dạng gói đề (`setup/exam-package/FORMAT.md`), import có kiểm tra lỗi, đề mẫu A2 tự soạn — 116 test
+- [ ] Bộ chuyển đề PDF → gói đề (đề mẫu A2 2022)
+- [ ] Backend: quản lý kỳ thi/thí sinh, làm bài, chấm tự động
 - [ ] Màn hình thí sinh & cổng giám thị
 - [ ] Tích hợp Safe Exam Browser, đóng gói
 - [ ] Kiểm thử tình huống, kiểm thử tải, buổi thi thử

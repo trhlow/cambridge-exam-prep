@@ -60,3 +60,11 @@
 - Cookie "Candidate" tách khỏi "Staff"; đăng nhập đổi `security_stamp` (máy cũ bị đăng xuất); chỉ vào được khi kỳ thi Active; PIN so sánh thời gian hằng
 - Lỗi phát hiện nhờ test: provider MySQL của Oracle không đọc được cột `date` thành `DateOnly` → thêm converter trong `ModelConventions` (test DB tái hiện trước khi sửa)
 - Toàn bộ 78/78 test đạt; commit `fb1a821`
+
+### Sprint 1 — VE-5 phần 1: định dạng gói đề + import
+- **Status:** complete (Jira SCRUM-22 → Done); phần 2 (bộ chuyển PDF) tách thành VE-56 (SCRUM-73)
+- Skill: `test-driven-development` (38 test RED đúng lý do: NotImplemented + 404 → GREEN), `security-review` (không có lỗ hổng độ tin cậy cao), `planning-with-files`, `full-output-enforcement`
+- Gói đề = 1 zip/1 paper (`paper.json` + images/ + audio/); tài liệu `setup/exam-package/FORMAT.md`; đề mẫu tự soạn A2 R&W 32 câu + Listening 25 câu (vừa là tài liệu, vừa là dữ liệu test); `pack.py` đóng gói
+- Reader (zip, JSON chặt, chặn tên file ra ngoài gói, giới hạn 500 file/300 MB), Validator (báo mọi lỗi bằng câu dễ hiểu), Importer (lưu file theo SHA-256, đổi `asset:` → `/api/assets/{id}`, lọc HTML bằng HtmlSanitizer, 1 transaction, đề ở Draft)
+- `POST /api/admin/papers/import` (Admin); 116/116 test đạt; commit `49e47de`
+- Người dùng gửi đề mẫu chính thức A2 2022 (PDF + 1 mp3 31 phút) vào `đề thi A2/` → đã git-ignore; PDF trích được chữ (không phải scan), ảnh nhúng sẵn; có ffmpeg để tách audio

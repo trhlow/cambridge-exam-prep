@@ -34,6 +34,7 @@ SPRINTS = [
         ("VE-3", "E2", 5, "Đăng nhập nhân viên (admin, giám thị) bằng cookie, phân quyền theo vai trò", "Sai mật khẩu bị từ chối; API quản trị trả 403 với giám thị"),
         ("VE-4", "E2", 5, "Đăng nhập thí sinh bằng username/password + mã PIN phòng thi", "Sai PIN không vào được; đúng PIN thấy danh sách phần thi"),
         ("VE-5", "E3", 5, "Định dạng gói đề JSON (+audio, hình) và import đề A2", "Import gói mẫu tạo đủ part, nhóm câu, câu hỏi, đáp án; gói sai báo lỗi rõ ràng"),
+        ("VE-56", "E3", 3, "Bộ chuyển đề PDF → gói đề JSON (A2) và tách audio Listening thành 5 track", "Đề mẫu A2 2022 chuyển ra gói import được; người duyệt sửa ít; đề thật không vào git"),
         ("VE-6", "E5", 3, "Dựng frontend React + TypeScript (Vite), khung màn hình kiểu Inspera", "Thanh trên (logo, Candidate ID, 4 biểu tượng), thanh part 'n of m', nút ← →"),
         ("VE-7", "E5", 8, "Reading & Writing A2: 4 kiểu câu (chọn đáp án, chọn từ trên ô trống, gõ từ, viết bài)", "7 part hiển thị đúng bố cục một cột / chia đôi có thanh kéo; đếm từ ở Part 6–7"),
         ("VE-8", "E5", 5, "Đồng hồ do server nắm, tự lưu câu trả lời, hết giờ tự nộp", "Tải lại trang vẫn đúng giờ còn lại và đáp án; hết giờ chuyển Submitted"),
