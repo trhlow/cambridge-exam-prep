@@ -109,3 +109,15 @@
 - `GET /api/staff/exams/{id}/results` (Staff: điểm từng thí sinh, từng phần), `GET /api/staff/attempts/{id}/marking` (chỉ Admin: đáp án thí sinh, đáp án đúng, điểm từng câu); thí sinh không xem điểm
 - Chạy thật với kỳ thi demo: R&W hết giờ → 3/60, NeedsManualMarking
 - Toàn bộ: backend 182/182, frontend 48/48; commit `7eb85e9` + sửa phân quyền
+
+### Sprint 1 — VE-9 đóng (11/10)
+- Người dùng duyệt: cờ và "Part n  x of y" đã làm trong VE-6/7 (+ sửa góp ý 11/10); Jira SCRUM-26 → Done
+
+### Sprint 1 — VE-56 phần 1: bộ chuyển PDF → gói đề, Reading & Writing A2
+- **Status:** R&W xong; Listening làm sau theo yêu cầu người dùng (Jira SCRUM-73 vẫn In Progress)
+- Skill: `test-driven-development` (35 test pytest, RED trước: thiếu module → lỗi header trang 2 của đáp án → ảnh dính chữ → BLANK PAGE → kích thước ảnh → nháy đơn trong alt), `security-review` (alt đặt trong nháy đơn nhưng chưa thoát nháy → sửa), `planning-with-files`
+- `setup/exam-package/pdf2package.py` + gói `converter/` (model, text, answer_key, parts, a2_reading_writing, output); test dùng dòng chữ tự soạn đúng toạ độ bố cục Cambridge, test đề thật chỉ chạy khi có PDF trong sources/
+- Đề mẫu A2 2022: 7 part, 32 câu, 12 hình, khớp đáp án, 0 lỗi; 2 mục cần xem (q21 mất dấu chấm — người duyệt sửa; q28 trước chữ viết tắt viết hoa — đúng)
+- Import qua `POST /api/admin/papers/import`: 201, Draft, 7 part, 32 câu; `Demo:ReadingWritingFolder` cho kỳ thi demo dùng đề thật (2 test DemoSeeder) → backend 184/184
+- Xem trên trình duyệt (Playwright, Chrome extension không kết nối): đủ 7 part; sửa ảnh Part 2 quá to và 3 tranh Part 7 bị xuống dòng bằng `width` theo kích thước in
+- .gitignore thêm `__pycache__/`, `.pytest_cache/`, `.playwright-mcp/` (ảnh chụp có nội dung đề)

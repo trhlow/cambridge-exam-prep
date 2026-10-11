@@ -4,7 +4,7 @@
 Giao hệ thống thi máy cho phòng thi của Victory, tái hiện trải nghiệm Cambridge/Inspera: A2 Key for Schools chạy đầy đủ trước (demo 16/10/2026), rồi B1 Preliminary for Schools, IELTS nếu kịp, và nộp quyển báo cáo ngày 31/12/2026.
 
 ## Next Step
-VE-56 (chuyển đề mẫu A2 2022 từ PDF), VE-9 (cờ + đếm câu, phần lớn đã có trong VE-6/7 — rà soát rồi đóng) hoặc VE-12 (báo cáo tiến độ tuần) — hỏi người dùng thứ tự.
+VE-56 phần Listening (tách mp3 31 phút thành 5 track theo tapescript, chuyển đề Listening) khi người dùng cho làm; VE-12 (báo cáo tiến độ tuần, kiểm tra 19–25/10).
 
 ## Current Phase
 Phase 1 (Sprint 1, 12/10 – 18/10)
@@ -44,11 +44,11 @@ Tổng: 10 story, 42 điểm.
 - [x] VE-3 [E2] (5đ) Đăng nhập nhân viên (admin, giám thị) bằng cookie, phân quyền theo vai trò
 - [x] VE-4 [E2] (5đ) Đăng nhập thí sinh bằng username/password + mã PIN phòng thi
 - [x] VE-5 [E3] (5đ) Định dạng gói đề JSON (+audio, hình) và import đề A2
-- [ ] VE-56 [E3] (3đ) Bộ chuyển đề PDF → gói đề JSON (A2) và tách audio Listening thành 5 track
+- [ ] VE-56 [E3] (3đ) Bộ chuyển đề PDF → gói đề JSON (A2) và tách audio Listening thành 5 track — R&W xong 11/10, còn Listening
 - [x] VE-6 [E5] (3đ) Dựng frontend React + TypeScript (Vite), khung màn hình kiểu Inspera
 - [x] VE-7 [E5] (8đ) Reading & Writing A2: 4 kiểu câu (chọn đáp án, chọn từ trên ô trống, gõ từ, viết bài)
 - [x] VE-8 [E5] (5đ) Đồng hồ do server nắm, tự lưu câu trả lời, hết giờ tự nộp
-- [ ] VE-9 [E5] (2đ) Đánh dấu câu hỏi (cờ) và đếm câu đã làm trên thanh part
+- [x] VE-9 [E5] (2đ) Đánh dấu câu hỏi (cờ) và đếm câu đã làm trên thanh part
 - [x] VE-10 [E6] (5đ) Listening A2: phát nối 5 track một lần, chọn tranh, kéo thả
 - [x] VE-11 [E8] (3đ) Chấm tự động Reading Part 1–5 và Listening theo đáp án
 - [ ] VE-12 [E12] (1đ) Báo cáo tiến độ tuần 1 (progress-report)

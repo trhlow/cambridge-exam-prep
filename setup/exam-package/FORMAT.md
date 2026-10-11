@@ -102,13 +102,45 @@ curl -k -c cookies.txt -H "Content-Type: application/json" \
 curl -k -b cookies.txt -F "package=@a2-key-fs-reading-writing.zip" https://localhost:7015/api/admin/papers/import
 ```
 
-## Đề thật từ Victory (giai đoạn 2)
+## Chuyển đề PDF thành gói đề (VE-56)
 
-Victory gửi đề dạng PDF. Bộ chuyển PDF → `paper.json` sẽ làm khi có file thật:
+Victory gửi đề dạng PDF theo bố cục của Cambridge. `pdf2package.py` chuyển **đề Reading & Writing A2** và file đáp án thành một thư mục gói đề nháp. Listening sẽ làm sau, khi có audio tách theo part.
 
-1. Tách chữ theo part.
-2. Gán `interactionType` theo số part (bảng trên).
-3. Cắt hình.
-4. Ghép đáp án theo số câu.
+```bash
+python -I setup/exam-package/pdf2package.py "<đề>.pdf" "<đáp án>.pdf" --title "A2 Key for Schools – Test 1 – Reading & Writing" [-o <thư mục>]
+```
 
-Bản nháp sinh ra **phải được người duyệt** trước khi import. Không bao giờ commit đề thật vào repo.
+Bộ chuyển làm các việc sau:
+
+1. Đọc chữ kèm vị trí trên trang (PyMuPDF) và tách part theo dòng "Part n".
+2. Bỏ số trang, "Turn over ►", "BLANK PAGE" và dòng "… on your answer sheet".
+3. Lấy dòng "Questions a – b" và câu hướng dẫn.
+4. Đọc từng part theo bố cục A2:
+   - Part 1: thông báo bên trái, phương án bên phải.
+   - Part 2: ba người có ảnh, các cột A/B/C nằm dưới tên.
+   - Part 3: bài đọc có tiêu đề và tác giả.
+   - Part 4: `(19) ......` → `{{q:19}}` kèm hàng ba từ để chọn.
+   - Part 5: email From/To, có ví dụ `(0)`, giới hạn "Write one word".
+   - Part 6–7: đề viết, gạch đầu dòng, ba tranh, số từ tối thiểu.
+5. Lưu hình gốc nhúng trong PDF vào `images/`. Không chụp vùng trang, nên chữ xung quanh không lẫn vào hình. Mỗi hình có `width` bằng 2 px cho mỗi pt in.
+6. Ghép đáp án theo số câu. `your / the` thành hai đáp án được chấp nhận.
+
+Thư mục ra có:
+
+- `paper.json`;
+- `images/`;
+- `REVIEW.md`, gồm lỗi phải sửa (nếu có lỗi, lệnh trả mã 1), các mục cần xem lại, và bảng từng câu với phương án và đáp án để người duyệt đối chiếu.
+
+Một mục cần xem lại hay gặp: ô trống đứng ngay trước chữ hoa, ví dụ `at the shop (21) ........ The owner`. Dấu chấm câu có thể đã bị dãy chấm "nuốt" mất, và chỉ người đọc mới phân biệt được với `(26) ..... BBC`.
+
+Sau khi duyệt và sửa `paper.json`, đóng gói bằng `pack.py` rồi import. **Bản nháp là nội dung đề thật**, nên phải để trong `sources/` (đã git-ignore) và không bao giờ commit.
+
+Kiểm thử bộ chuyển:
+
+```bash
+cd setup/exam-package && python -I -m pytest tests
+```
+
+Các test dùng dòng chữ tự soạn theo đúng toạ độ của bố cục Cambridge. Test chạy trên đề mẫu thật chỉ chạy khi có PDF trong `sources/`.
+
+Kỳ thi demo (Development) dùng gói đề đã chuyển nếu `Demo:ReadingWritingFolder` trỏ tới thư mục có `paper.json`. Nếu không, nó dùng đề mẫu tự soạn.
