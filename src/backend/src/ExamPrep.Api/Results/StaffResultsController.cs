@@ -1,4 +1,5 @@
 using ExamPrep.Api.Auth;
+using ExamPrep.Api.Exams;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Domain.Marking;
 using ExamPrep.Infrastructure.Persistence;
@@ -25,11 +26,11 @@ public sealed record AttemptMarking(int AttemptId, string SectionTitle, string G
 [Authorize(Policy = StaffAuthDefaults.StaffPolicy)]
 public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBase
 {
-    /// <summary>One row per candidate with every section's status and score.</summary>
+    /// <summary>One row per candidate with every section's status and score; invigilators see their own sessions only.</summary>
     [HttpGet("exams/{examId:int}/results")]
     public async Task<ActionResult<IReadOnlyList<CandidateResult>>> Results(int examId, CancellationToken cancellationToken)
     {
-        if (!await db.Exams.AnyAsync(e => e.Id == examId, cancellationToken))
+        if (!await db.Exams.VisibleTo(User).AnyAsync(e => e.Id == examId, cancellationToken))
         {
             return NotFound();
         }

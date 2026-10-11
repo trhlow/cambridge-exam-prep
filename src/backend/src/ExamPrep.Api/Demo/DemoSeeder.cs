@@ -3,6 +3,7 @@ using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Content;
 using ExamPrep.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExamPrep.Api.Demo;
@@ -25,6 +26,10 @@ public sealed record DemoOptions
     public string CandidateUsername { get; init; } = string.Empty;
     public string CandidatePassword { get; init; } = string.Empty;
     public string SessionPin { get; init; } = string.Empty;
+
+    /// <summary>Optional invigilator account created (if missing) and assigned to the demo exam.</summary>
+    public string? InvigilatorUsername { get; init; }
+    public string? InvigilatorPassword { get; init; }
 
     /// <summary>Delete the demo exam (and its papers, attempts and answers) and create it again on every start.</summary>
     public bool ResetOnStart { get; init; }
@@ -79,6 +84,7 @@ public static class DemoSeeder
             .ToDictionaryAsync(t => t.Id, cancellationToken);
 
         var candidate = CreateCandidate(provider, options);
+        var invigilatorId = await EnsureInvigilatorAsync(provider, db, options, cancellationToken);
         var exam = new Exam
         {
             Name = options.ExamName,
@@ -92,6 +98,7 @@ public static class DemoSeeder
             CreatedAt = DateTime.UtcNow,
             Sections = [Section(templates[readingWriting.SectionTemplateId], readingWriting), Section(templates[listening.SectionTemplateId], listening)],
             Candidates = [candidate],
+            Invigilators = invigilatorId is { } id ? [new ExamInvigilator { UserId = id, AssignedAt = DateTime.UtcNow }] : [],
         };
         db.Exams.Add(exam);
         await db.SaveChangesAsync(cancellationToken);
@@ -149,6 +156,34 @@ public static class DemoSeeder
         OrderNo = template.OrderNo,
         DurationMinutes = template.DurationMinutes,
     };
+
+    /// <summary>The demo invigilator's id, creating the account the first time; null when none is configured.</summary>
+    private static async Task<int?> EnsureInvigilatorAsync(IServiceProvider provider, ExamPrepDbContext db, DemoOptions options, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(options.InvigilatorUsername) || string.IsNullOrWhiteSpace(options.InvigilatorPassword))
+        {
+            return null;
+        }
+
+        var existing = await db.Users.Where(u => u.Username == options.InvigilatorUsername).Select(u => (int?)u.Id).SingleOrDefaultAsync(cancellationToken);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var user = new User
+        {
+            Username = options.InvigilatorUsername,
+            FullName = "Demo Invigilator",
+            Role = UserRole.Invigilator,
+            PasswordHash = string.Empty,
+            CreatedAt = DateTime.UtcNow,
+        };
+        user.PasswordHash = provider.GetRequiredService<IPasswordHasher<User>>().HashPassword(user, options.InvigilatorPassword);
+        db.Users.Add(user);
+        await db.SaveChangesAsync(cancellationToken);
+        return user.Id;
+    }
 
     private static Candidate CreateCandidate(IServiceProvider provider, DemoOptions options)
     {

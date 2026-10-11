@@ -177,7 +177,7 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task Marking_WithTheAnswerKey_IsNotAvailableToInvigilators()
+    public async Task Marking_WithTheAnswerKey_IsNotAvailableToInvigilators_AndResultsOnlyForTheirSessions()
     {
         api.SkipIfUnavailable();
         var (client, candidate) = await CandidateAsync();
@@ -190,9 +190,13 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
         (await staff.PostAsJsonAsync("/api/staff/auth/login", new LoginRequest(invigilator.Username, password), ct)).EnsureSuccessStatusCode();
 
         var marking = await staff.GetAsync($"/api/staff/attempts/{attemptId}/marking", ct);
+        var resultsBeforeAssignment = await staff.GetAsync($"/api/staff/exams/{candidate.ExamId}/results", ct);
+        using var admin = await api.AdminClientAsync();
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{candidate.ExamId}/invigilators", new { userIds = new[] { invigilator.Id } }, ct)).EnsureSuccessStatusCode();
         var results = await staff.GetAsync($"/api/staff/exams/{candidate.ExamId}/results", ct);
 
         Assert.Equal(HttpStatusCode.Forbidden, marking.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, resultsBeforeAssignment.StatusCode);
         Assert.Equal(HttpStatusCode.OK, results.StatusCode);
     }
 
