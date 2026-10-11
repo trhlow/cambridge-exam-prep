@@ -125,6 +125,21 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task Seed_CreatesADemoInvigilatorWhoSeesTheDemoExam()
+    {
+        api.SkipIfUnavailable();
+        var username = $"invdemo{Guid.NewGuid():N}"[..14];
+        var options = Options() with { InvigilatorUsername = username, InvigilatorPassword = "demo-invig-1" };
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+        await DemoSeeder.SeedAsync(api.Factory.Services, options with { ResetOnStart = true }, ct);
+
+        using var client = await api.StaffClientAsync(username, "demo-invig-1");
+        var exams = await client.GetFromJsonAsync<List<JsonObject>>("/api/staff/exams", ct);
+        Assert.Equal([options.ExamName], exams!.Select(e => (string)e["name"]!));
+    }
+
+    [Fact]
     public async Task Seed_DoesNothingWhenDisabled()
     {
         api.SkipIfUnavailable();
