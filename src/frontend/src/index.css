@@ -1,0 +1,733 @@
+/* Candidate screen modelled on the Inspera player used for Cambridge A2 Key for Schools
+   (measured from the official sample test, see thesis/refs/inspera-ui-a2.md). */
+:root {
+  --font: Arial, Helvetica, sans-serif;
+  --text: #000;
+  --text-muted: #535353;
+  --text-faint: #757575;
+  --page: #f7fafa;
+  --surface: #fff;
+  --rule: #d5d5d5;
+  --rule-strong: #8c8c8c;
+  --teal: #007e86;
+  --teal-dark: #00666d;
+  --number-ring: #418ec8;
+  --selected: #c4dcf0;
+  --tile: #efefef;
+  --nav-disabled: #dddddd;
+  --nav-enabled: #5c5c5c;
+  --picker: #333;
+  --flag: #e07b00;
+  --error: #b00020;
+
+  --header-height: 72px;
+  --bar-height: 53px;
+  --gutter: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 16px;
+  color: var(--text);
+  background: var(--page);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.screen-message {
+  padding: 48px;
+  text-align: center;
+}
+
+/* ── Logo ─────────────────────────────────────────── */
+.logo {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1;
+}
+
+.logo-name {
+  font-size: 21px;
+  letter-spacing: 0.02em;
+}
+
+.logo-sub {
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+/* ── Exam layout ─────────────────────────────────── */
+.exam {
+  display: grid;
+  grid-template-rows: var(--header-height) 1fr var(--bar-height);
+  height: 100%;
+}
+
+.top-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 14px var(--gutter) 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+}
+
+.candidate {
+  padding-top: 0;
+}
+
+.candidate-name {
+  font-weight: 600;
+}
+
+.candidate-number {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.top-icons {
+  margin-left: auto;
+  display: flex;
+  gap: 22px;
+  padding-top: 6px;
+}
+
+.top-icon {
+  display: inline-flex;
+  background: none;
+  border: 0;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.exam-main {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.part-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--gutter) var(--gutter) 0;
+}
+
+.instructions {
+  background: var(--surface);
+  border: 0.8px solid var(--rule);
+  border-radius: 4px;
+  padding: 9.6px;
+  margin-bottom: 16px;
+}
+
+.instructions-range {
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+
+.single {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 88px 96px 0;
+}
+
+.part-title {
+  font-size: 22px;
+  margin: 18px 0 20px;
+}
+
+.passage p {
+  line-height: 1.35;
+  margin: 0 0 16px;
+}
+
+.passage h3 {
+  font-size: 16px;
+  margin: 18px 0 2px;
+}
+
+.passage img {
+  max-width: 100%;
+  margin-right: 12px;
+}
+
+/* ── Split pane ──────────────────────────────────── */
+.split {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  margin: 0 calc(-1 * var(--gutter));
+}
+
+.split-pane {
+  overflow-y: auto;
+  padding: 0 var(--gutter) 96px;
+}
+
+.split-pane--right {
+  padding-right: 88px;
+}
+
+.split-divider {
+  position: relative;
+  width: 2px;
+  background: #555;
+  margin: 0 10px;
+}
+
+.split-handle {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid #555;
+  border-radius: 2px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+/* ── Questions ───────────────────────────────────── */
+.question {
+  margin-bottom: 28px;
+  max-width: 1160px;
+}
+
+.q-stimulus img {
+  display: block;
+  max-width: 100%;
+  margin-bottom: 8px;
+}
+
+.q-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.q-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 4px 2px 3px;
+  border: 1.6px solid var(--number-ring);
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.q-prompt {
+  font-weight: 700;
+  flex: 1;
+}
+
+.q-prompt p {
+  margin: 0;
+}
+
+.bookmark {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+  color: #333;
+  cursor: pointer;
+}
+
+.bookmark.is-flagged {
+  color: var(--flag);
+}
+
+.with-bookmark {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.with-bookmark > :first-child {
+  flex: 1;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.option {
+  display: block;
+  background: var(--surface);
+  padding: 12.8px 8px 12.8px 12px;
+  cursor: pointer;
+}
+
+.option:first-child {
+  border-radius: 3px 3px 0 0;
+}
+
+.option.is-selected {
+  background: var(--selected);
+}
+
+.option-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.option input {
+  margin: 0;
+  accent-color: #1a4d7a;
+}
+
+.options--pictures {
+  flex-direction: row;
+  gap: 24px;
+}
+
+.options--pictures .option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+
+.option-picture {
+  width: 200px;
+  height: auto;
+}
+
+/* ── Gaps ────────────────────────────────────────── */
+.gap-text .html p {
+  line-height: 2.8;
+  margin: 0 0 12px;
+}
+
+.gap-text .html table td {
+  padding: 6px 12px 6px 0;
+}
+
+.gap {
+  position: relative;
+  display: inline-block;
+}
+
+.gap-box {
+  display: inline-block;
+  min-width: 100px;
+  height: 26px;
+  line-height: 24px;
+  margin: 0 6px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.gap-box.is-answered {
+  font-weight: 400;
+}
+
+.gap-box.is-open {
+  background: var(--picker);
+  border-color: var(--picker);
+  color: #fff;
+}
+
+.gap--text {
+  width: 150px;
+  font-weight: 400;
+  cursor: text;
+}
+
+.gap--text::placeholder {
+  color: var(--text);
+  font-weight: 700;
+  opacity: 1;
+}
+
+.gap-picker {
+  position: absolute;
+  bottom: calc(100% - 4px);
+  left: 6px;
+  z-index: 5;
+  display: inline-flex;
+  white-space: nowrap;
+  background: var(--picker);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.gap-picker > * {
+  padding: 5px 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.gap-choice + .gap-choice {
+  border-left: 1px solid #666;
+}
+
+.gap-choice:hover,
+.gap-choice:focus-visible,
+.gap-clear:hover {
+  background: #555;
+}
+
+.gap-choice[aria-selected='true'] {
+  background: var(--teal);
+}
+
+/* ── Essay ───────────────────────────────────────── */
+.essay {
+  display: flex;
+  flex-direction: column;
+  padding-top: 32px;
+}
+
+.essay-box {
+  min-height: 340px;
+  resize: vertical;
+  padding: 10px;
+  font: inherit;
+  line-height: 1.4;
+  border: 1px solid #555;
+  background: var(--surface);
+}
+
+.essay-count {
+  align-self: flex-end;
+  margin-top: 4px;
+}
+
+.not-yet {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Arrows ──────────────────────────────────────── */
+.nav-arrows {
+  position: absolute;
+  right: 32px;
+  bottom: 32px;
+  display: flex;
+  gap: 2px;
+}
+
+.nav-arrow {
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 3px;
+  color: #fff;
+  background: var(--nav-enabled);
+  cursor: pointer;
+}
+
+.nav-arrow--next {
+  background: var(--teal);
+}
+
+.nav-arrow--next:hover {
+  background: var(--teal-dark);
+}
+
+.nav-arrow:disabled {
+  background: var(--nav-disabled);
+  cursor: default;
+}
+
+/* ── Bottom bar ──────────────────────────────────── */
+.bottom-bar {
+  display: flex;
+  background: var(--surface);
+  color: var(--text-muted);
+  border-top: 1px solid var(--rule);
+}
+
+.part-tile {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 12px;
+  background: var(--tile);
+  border: 0;
+  border-left: 2.4px solid var(--surface);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.part-tile.is-active {
+  flex: 0 0 auto;
+  background: var(--surface);
+  cursor: default;
+}
+
+.part-label {
+  font-weight: 600;
+}
+
+.part-tile.is-active .part-label {
+  color: var(--text);
+}
+
+.part-count {
+  color: var(--text-faint);
+}
+
+.part-numbers {
+  display: flex;
+  gap: 2px;
+}
+
+.q-link {
+  position: relative;
+  min-width: 22px;
+  height: 26px;
+  padding: 0 3px;
+  background: none;
+  border: 1.6px solid transparent;
+  border-radius: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.q-link.is-current {
+  border-color: var(--teal);
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Answered questions get the black bar above the number, as in Inspera. */
+.q-link.is-answered::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 3px;
+  right: 3px;
+  height: 3px;
+  background: #222;
+}
+
+.q-link.is-flagged::after {
+  content: '';
+  position: absolute;
+  top: -11px;
+  right: -3px;
+  border: 5px solid transparent;
+  border-top-color: var(--flag);
+}
+
+.review-tile {
+  flex: 0 0 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tile);
+  border: 0;
+  border-left: 2.4px solid var(--surface);
+  color: #333;
+  cursor: pointer;
+}
+
+/* ── Review page ─────────────────────────────────── */
+.review {
+  padding: 32px var(--gutter);
+  overflow-y: auto;
+}
+
+.review h2 {
+  font-size: 22px;
+  margin: 0 0 20px;
+}
+
+.review-table {
+  border-collapse: collapse;
+  background: var(--surface);
+  min-width: 560px;
+}
+
+.review-table th,
+.review-table td {
+  border: 1px solid var(--rule);
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.review-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* ── Buttons and sign-in ─────────────────────────── */
+.btn {
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn--primary {
+  background: var(--teal);
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--teal-dark);
+}
+
+.btn--primary:disabled {
+  background: var(--nav-disabled);
+  color: #777;
+  cursor: default;
+}
+
+.btn--secondary {
+  background: var(--surface);
+  border-color: var(--rule-strong);
+}
+
+.signin {
+  min-height: 100%;
+}
+
+.signin-header {
+  padding: 14px var(--gutter);
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+}
+
+.signin-card {
+  max-width: 460px;
+  margin: 72px auto;
+  padding: 32px;
+  background: var(--surface);
+  border: 0.8px solid var(--rule);
+  border-radius: 4px;
+}
+
+.signin-card h1 {
+  font-size: 22px;
+  margin: 0 0 20px;
+}
+
+.signin-who {
+  color: var(--text-muted);
+  margin: -8px 0 20px;
+}
+
+.signin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.signin-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.signin-form input {
+  height: 40px;
+  padding: 0 10px;
+  font: inherit;
+  font-weight: 400;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+}
+
+.signin-form input:focus,
+.gap-box:focus-visible,
+.essay-box:focus {
+  outline: 2px solid var(--number-ring);
+  outline-offset: 1px;
+}
+
+.form-error {
+  color: var(--error);
+  margin: 0;
+}
+
+.section-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.section-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.section-title {
+  font-weight: 700;
+}
+
+.section-meta {
+  color: var(--text-faint);
+  margin-top: 2px;
+}
