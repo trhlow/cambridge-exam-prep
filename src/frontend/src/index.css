@@ -936,3 +936,96 @@ button {
   border: 0;
   cursor: default;
 }
+
+/* VE-17: invigilator messages under the bell, and a pop-up for a new one. */
+.messages {
+  position: relative;
+  display: inline-flex;
+}
+
+.messages-count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--error);
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 18px;
+  text-align: center;
+}
+
+.messages-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: 340px;
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.messages-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.messages-panel li {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.messages-time {
+  display: block;
+  color: var(--text-faint);
+  font-size: 13px;
+}
+
+.messages-empty {
+  margin: 0;
+  padding: 14px;
+  color: var(--text-muted);
+}
+
+.message-popup {
+  position: fixed;
+  top: calc(var(--header-height) + 24px);
+  left: 50%;
+  z-index: 40;
+  width: min(460px, calc(100vw - 32px));
+  padding: 20px 24px;
+  transform: translateX(-50%);
+  border: 2px solid var(--teal);
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.message-popup p {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.message-popup .message-popup-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--teal-dark);
+}
+
+.audio-notice {
+  position: fixed;
+  top: calc(var(--header-height) + 12px);
+  left: 50%;
+  z-index: 35;
+  padding: 10px 18px;
+  transform: translateX(-50%);
+  background: var(--picker);
+  color: #fff;
+}
