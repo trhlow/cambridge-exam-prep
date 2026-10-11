@@ -94,3 +94,12 @@ Quyết định: đáp án tạm giữ trong sessionStorage của tab cho tới 
 | Cờ lệch, không nằm ngay trên số câu | Cờ là icon căn giữa phía trên số (nằm trên vạch "đã làm") |
 | Chưa có menu cài đặt | Thuộc VE-18 (Sprint 2): tương phản, cỡ chữ, ẩn giờ |
 | Mở được Listening khi chưa xong R&W là sai | Đúng: tài liệu Cambridge — các component chạy lần lượt, Listening cuối. Server khoá section sau (`Locked`, 403) tới khi section trước Submitted |
+
+## VE-8 — quyết định (11/10)
+| Quyết định | Lý do |
+|---|---|
+| Không có nút Submit cho thí sinh | Booklet Cambridge: thí sinh xong sớm ẩn màn hình, chờ hết giờ hoặc giám thị kết thúc |
+| Client đếm ngược từ `remainingSeconds` của server, chỉ tin thời gian trôi trên máy | Đồng hồ máy thí sinh có thể sai (CED Test Day Tips: lỗi lệch giờ) |
+| Worker nền nộp bài hết giờ mỗi 5 s | Thí sinh mất mạng/tắt máy vẫn kết thúc đúng giờ, section sau mở cho cả phòng |
+| Ân hạn 5 s khi lưu | Không mất câu trả lời gõ ngay trước khi hết giờ do trễ mạng |
+| Cờ (bookmark) vẫn lưu trong tab | Chỉ là ghi nhớ của thí sinh; lưu server khi làm cổng giám thị nếu cần |
