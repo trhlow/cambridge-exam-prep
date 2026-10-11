@@ -1,6 +1,8 @@
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
+using ExamPrep.Infrastructure.Content;
 using ExamPrep.Infrastructure.Persistence;
+using ExamPrep.Tests.Infrastructure.Content;
 using ExamPrep.Tests.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -62,13 +64,13 @@ public sealed class ApiFixture : IAsyncLifetime
         return user;
     }
 
-    public sealed record SeededCandidate(int CandidateId, int ExamId, string Username, string SessionPin);
+    public sealed record SeededCandidate(int CandidateId, int ExamId, string Username, string SessionPin, int ReadingWritingSectionId, int ListeningSectionId);
 
     /// <summary>
     /// Creates an A2 Key for Schools exam session (Reading &amp; Writing, then Listening) in the given status,
     /// with one candidate whose password is hashed the way the API expects.
     /// </summary>
-    public async Task<SeededCandidate> CreateCandidateAsync(string password, ExamStatus status = ExamStatus.Active)
+    public async Task<SeededCandidate> CreateCandidateAsync(string password, ExamStatus status = ExamStatus.Active, bool withSamplePapers = false)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
@@ -77,11 +79,22 @@ public sealed class ApiFixture : IAsyncLifetime
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var now = DateTime.UtcNow;
 
-        // Listening is added first on purpose: the API must order sections by OrderNo, not by insertion.
-        var listening = new TestPaper { SectionTemplateId = 2, Title = $"A2 L {suffix}", CreatedByUserId = adminId, CreatedAt = now };
-        var readingWriting = new TestPaper { SectionTemplateId = 1, Title = $"A2 RW {suffix}", CreatedByUserId = adminId, CreatedAt = now };
-        db.TestPapers.AddRange(listening, readingWriting);
-        await db.SaveChangesAsync();
+        TestPaper listening, readingWriting;
+        if (withSamplePapers)
+        {
+            // The real sample packages from setup/exam-package, imported the way an administrator would.
+            var importer = scope.ServiceProvider.GetRequiredService<PaperPackageImporter>();
+            readingWriting = (await importer.ImportAsync(new MemoryStream(SamplePackages.Zip(SamplePackages.ReadingWriting)), adminId, default)).Paper!;
+            listening = (await importer.ImportAsync(new MemoryStream(SamplePackages.Zip(SamplePackages.Listening)), adminId, default)).Paper!;
+        }
+        else
+        {
+            // Listening is added first on purpose: the API must order sections by OrderNo, not by insertion.
+            listening = new TestPaper { SectionTemplateId = 2, Title = $"A2 L {suffix}", CreatedByUserId = adminId, CreatedAt = now };
+            readingWriting = new TestPaper { SectionTemplateId = 1, Title = $"A2 RW {suffix}", CreatedByUserId = adminId, CreatedAt = now };
+            db.TestPapers.AddRange(listening, readingWriting);
+            await db.SaveChangesAsync();
+        }
 
         var candidate = new Candidate
         {
@@ -113,7 +126,8 @@ public sealed class ApiFixture : IAsyncLifetime
         };
         db.Exams.Add(exam);
         await db.SaveChangesAsync();
-        return new SeededCandidate(candidate.Id, exam.Id, candidate.Username, exam.SessionPin);
+        var sectionIds = exam.Sections.ToDictionary(s => s.SectionTemplateId, s => s.Id);
+        return new SeededCandidate(candidate.Id, exam.Id, candidate.Username, exam.SessionPin, sectionIds[1], sectionIds[2]);
     }
 
     public async Task RotateSecurityStampAsync(int userId)
