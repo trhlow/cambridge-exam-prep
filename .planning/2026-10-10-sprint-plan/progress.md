@@ -100,3 +100,12 @@
 - Kiểm tra trên Chrome (tắt tiếng): Play → "Audio is Playing"; sang Part 5 audio vẫn chạy; tải lại → Continue listening tiếp ở giây 85 (không phát lại từ đầu); thử pause → tự phát tiếp; kéo "cake" vào ô 21 thành công
 - Đổi cách kéo thả: HTML5 drag-and-drop không nhận chuột tự động/cảm ứng → pointer events
 - Toàn bộ: backend 149/149, frontend 48/48; commit `51f5ae4`, `6cff1fc`
+
+### Sprint 1 — VE-11: chấm tự động
+- **Status:** complete (Jira SCRUM-28 → Done)
+- Skill: `test-driven-development` (25 test AnswerMatcher + 8 test chấm/kết quả, RED trước), `security-review` (phát hiện giám thị xem được đáp án → test RED → chỉ Admin), `planning-with-files`
+- AnswerMatcher (Domain): câu chọn so khoá đáp án; câu gõ bỏ qua hoa/thường (trừ khi khoá phân biệt), khoảng trắng thừa, nháy cong, dấu chấm cuối — sai chính tả vẫn sai như Cambridge; nhiều dòng answer_keys = nhiều đáp án chấp nhận; Writing không chấm tự động
+- AttemptMarker: chấm attempt Submitted + NotGraded, ghi is_correct/auto_score từng câu, raw_score/max_score; đề có Writing → NeedsManualMarking, còn lại AutoGraded; worker chạy ngay sau lượt nộp bài hết giờ
+- `GET /api/staff/exams/{id}/results` (Staff: điểm từng thí sinh, từng phần), `GET /api/staff/attempts/{id}/marking` (chỉ Admin: đáp án thí sinh, đáp án đúng, điểm từng câu); thí sinh không xem điểm
+- Chạy thật với kỳ thi demo: R&W hết giờ → 3/60, NeedsManualMarking
+- Toàn bộ: backend 182/182, frontend 48/48; commit `7eb85e9` + sửa phân quyền

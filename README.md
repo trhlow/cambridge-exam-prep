@@ -137,9 +137,10 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Backend: đăng nhập nhân viên (admin, giám thị) và thí sinh (username/password + PIN phòng thi), phân quyền, đồng hồ server — 78 test
 - [x] Nhập đề: định dạng gói đề (`setup/exam-package/FORMAT.md`), import có kiểm tra lỗi, đề mẫu A2 tự soạn — 116 test
 - [ ] Bộ chuyển đề PDF → gói đề (đề mẫu A2 2022)
-- [ ] Backend: quản lý kỳ thi/thí sinh, làm bài, chấm tự động
 - [x] Màn hình thí sinh A2 Reading & Writing kiểu Inspera (React + TS), kỳ thi demo — 21 test frontend
-- [ ] Đồng hồ server, tự lưu, Listening; cổng giám thị
+- [x] Đồng hồ server, tự lưu, hết giờ tự nộp; Listening phát một lần, kéo thả
+- [x] Chấm tự động Reading Part 1–5 và Listening theo đáp án; API kết quả cho nhân viên — 182 test backend, 48 test frontend
+- [ ] Backend: quản lý kỳ thi/thí sinh; cổng giám thị, cổng quản trị
 - [ ] Tích hợp Safe Exam Browser, đóng gói
 - [ ] Kiểm thử tình huống, kiểm thử tải, buổi thi thử
 - [ ] Quyển báo cáo
