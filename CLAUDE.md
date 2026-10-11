@@ -8,7 +8,7 @@ Vietnamese university capstone ("Đồ án chuyên ngành", class DA23TTA) built
 
 - **Scope:** A2 Key for Schools first (demo due Fri 16/10/2026), then B1 Preliminary for Schools, then IELTS (no fixed format; later). B2/C1/C2 are out of scope.
 - **Everything is built from scratch**, including question authoring: Victory's old exam-entry system is gone (decided 10/10/2026). Victory supplies the exam content (questions, answer keys, audio split into one track per Listening part).
-- **Done so far:** database schema (EF Core migrations on MySQL, reviewed 10/10 — see `.planning/2026-10-10-sprint-plan/findings.md`), the server-side exam clock (`AttemptClock`), staff sign-in (VE-3), candidate sign-in with session PIN (VE-4), exam package import (VE-5); 116 tests. Next: PDF → package converter for the official A2 2022 sample (VE-56), then the frontend. Not yet: frontend, SignalR.
+- **Done so far:** database schema (EF Core migrations on MySQL, reviewed 10/10 — see `.planning/2026-10-10-sprint-plan/findings.md`), the server-side exam clock (`AttemptClock`), staff sign-in (VE-3), candidate sign-in with session PIN (VE-4), exam package import (VE-5), the candidate screen for A2 Reading & Writing (VE-6/7, awaiting the user's review); 129 backend + 21 frontend tests. Next: VE-8 (server clock, autosave, auto-submit), VE-56 (PDF converter), Listening (VE-10). Not yet: admin/invigilator portals, SignalR.
 - **Planning:** sprint backlog in `.planning/2026-10-10-sprint-plan/` (source of truth `sprints.py`), mirrored on Jira https://victoryexam.atlassian.net project `SCRUM` (story VE-n = SCRUM-(n+17)).
 
 Deadline: final report submitted 31/12/2026. Faculty check-in weeks: 19–25/10, 09–15/11, 30/11–06/12, 21–27/12/2026.
@@ -37,6 +37,10 @@ ConnectionStrings__ExamPrep="<conn>" dotnet ef database update -p src/ExamPrep.I
 EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_PASSWORD>" dotnet test
 dotnet test --filter-method "*SnakeCase*"      # single test / pattern
 ```
+
+## Frontend (`src/frontend`)
+
+React 19 + TypeScript + Vite; `npm run dev` (port 5173, `/api` proxied to the API on 5180, launch profile `http`), `npm test` (Vitest + Testing Library), `npm run build`, `npm run lint` (oxlint). The candidate screen copies the Inspera player measured from the official A2 sample (colours and sizes in `src/index.css` `:root`, notes in `.planning/2026-10-10-sprint-plan/findings.md`). `exam/paperLogic.ts` holds paging (A2 Reading Part 1 one notice per page, other parts whole), `{{q:n}}` gap slots and word counting; gap controls are portalled into the passage HTML. Exam HTML is sanitised on import (HtmlSanitizer) and again in the browser (DOMPurify). Development runs a `DemoSeeder` (section `Demo` in `appsettings.Development.json`) that opens an A2 exam from the samples; the dev admin login lives in user-secrets (`Bootstrap:*`).
 
 ## Backend architecture (`src/backend`)
 

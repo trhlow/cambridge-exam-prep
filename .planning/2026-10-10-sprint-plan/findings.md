@@ -73,3 +73,16 @@
 - Thư mục `setup/exam-package/sources/a2-key-fs-2022-sample/` (git-ignored): R&W questions (12 trang, 13 ảnh), R&W answer key, Listening question paper (8 trang, 11 ảnh), answer key, tapescript, Speaking (ngoài phạm vi), 1 file mp3 1875 s (cả 5 part).
 - `pypdf` trích được chữ → bộ chuyển đọc text theo part; Part 3 R&W trang 6 trích ra rất ít chữ → bài đọc có thể là ảnh hoặc bố cục cột, cần xem kỹ khi làm VE-56.
 - Audio một file → tách 5 track bằng ffmpeg theo mốc thời gian (dò khoảng lặng + đối chiếu tapescript "Part 1/2/…").
+
+## VE-6/VE-7 — số đo giao diện Inspera (11/10)
+| Thành phần | Giá trị đo trên bài mẫu |
+|---|---|
+| Nền trang / hộp | `#F7FAFA` / trắng, viền 0.8px `#D5D5D5`, bo 4px, padding 9.6px; Arial 16px |
+| Số câu | viền 1.6px `#418EC8`, bo 3px; câu hỏi in đậm |
+| Phương án | hàng trắng, padding 12.8/8/12.8/32; đã chọn nền xanh nhạt |
+| Nút ← → | 56×56, bo 3px; → `#007E86`; ← tắt `#DDD`, bật xám đậm |
+| Thanh part | cao 53px; part đang mở trắng, part khác `#EFEFEF`, viền trắng 2.4px; chữ `#535353`, "0 of 7" `#757575` |
+| Phân trang | Part 1 mỗi câu một trang; các part khác cả part một trang |
+| Ô trống chọn từ | bấm → ô nền đen, thanh đen phía trên "× từ1 từ2 từ3" |
+
+Quyết định: đáp án tạm giữ trong sessionStorage của tab cho tới VE-8 (lưu server); câu đang làm = câu vừa trả lời hoặc vừa chọn trên thanh dưới.
