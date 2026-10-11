@@ -67,4 +67,4 @@
 - Gói đề = 1 zip/1 paper (`paper.json` + images/ + audio/); tài liệu `setup/exam-package/FORMAT.md`; đề mẫu tự soạn A2 R&W 32 câu + Listening 25 câu (vừa là tài liệu, vừa là dữ liệu test); `pack.py` đóng gói
 - Reader (zip, JSON chặt, chặn tên file ra ngoài gói, giới hạn 500 file/300 MB), Validator (báo mọi lỗi bằng câu dễ hiểu), Importer (lưu file theo SHA-256, đổi `asset:` → `/api/assets/{id}`, lọc HTML bằng HtmlSanitizer, 1 transaction, đề ở Draft)
 - `POST /api/admin/papers/import` (Admin); 116/116 test đạt; commit `49e47de`
-- Người dùng gửi đề mẫu chính thức A2 2022 (PDF + 1 mp3 31 phút) vào `đề thi A2/` → đã git-ignore; PDF trích được chữ (không phải scan), ảnh nhúng sẵn; có ffmpeg để tách audio
+- Người dùng gửi đề mẫu chính thức A2 2022 (PDF + 1 mp3 31 phút) vào `setup/exam-package/sources/a2-key-fs-2022-sample/` → đã git-ignore; PDF trích được chữ (không phải scan), ảnh nhúng sẵn; có ffmpeg để tách audio

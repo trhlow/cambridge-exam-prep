@@ -85,4 +85,4 @@ Read `.docx` with `python-docx`, `.pdf` with `pypdf`; legacy `.doc` needs UTF-16
 - At least one commit per week — commit history is graded.
 - `README.md` must stay current and include author contact info.
 - Report: Times New Roman 13pt, 1.5 spacing, IEEE references; chapters Mở đầu, Tổng quan, Cơ sở lý thuyết, Hiện thực hóa, Kết quả, Kết luận. Documentation and report are in Vietnamese.
-- Never commit Cambridge or Victory exam content, `docker/.env`, or `.agents/` (local AI tooling with an API key). Real papers live in `đề thi*/` (git-ignored); uploaded files in `App_Data/` (git-ignored). Stage files by path, never `git add -A`.
+- Never commit Cambridge or Victory exam content, `docker/.env`, or `.agents/` (local AI tooling with an API key). Real papers live in `setup/exam-package/sources/<set>/` (git-ignored except its README; the official A2 2022 sample is `a2-key-fs-2022-sample/`); uploaded files in `App_Data/` (git-ignored). Stage files by path, never `git add -A`.
