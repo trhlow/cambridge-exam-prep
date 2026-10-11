@@ -86,3 +86,11 @@
 | Ô trống chọn từ | bấm → ô nền đen, thanh đen phía trên "× từ1 từ2 từ3" |
 
 Quyết định: đáp án tạm giữ trong sessionStorage của tab cho tới VE-8 (lưu server); câu đang làm = câu vừa trả lời hoặc vừa chọn trên thanh dưới.
+
+## Góp ý của người dùng sau khi xem giao diện (11/10)
+| Góp ý | Xử lý |
+|---|---|
+| Đánh dấu (cờ) ở Part 1 không thấy khi sang Part 2 | Ô part đang đóng hiện cờ cam khi có câu được đánh dấu; cờ lưu theo tab cùng đáp án |
+| Cờ lệch, không nằm ngay trên số câu | Cờ là icon căn giữa phía trên số (nằm trên vạch "đã làm") |
+| Chưa có menu cài đặt | Thuộc VE-18 (Sprint 2): tương phản, cỡ chữ, ẩn giờ |
+| Mở được Listening khi chưa xong R&W là sai | Đúng: tài liệu Cambridge — các component chạy lần lượt, Listening cuối. Server khoá section sau (`Locked`, 403) tới khi section trước Submitted |

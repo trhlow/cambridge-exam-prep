@@ -13,22 +13,22 @@ type Props = {
   section: CandidateSection
 }
 
-/** Until autosave (VE-8) keeps answers on the server, they survive a page reload in this tab only. */
-function useTabAnswers(sectionId: number): [Answers, (number: number, value: string) => void] {
-  const key = `victory.answers.${sectionId}`
-  const [answers, setAnswers] = useState<Answers>(() => {
+/** Until autosave (VE-8) keeps them on the server, answers and flags survive a page reload in this tab only. */
+function useTabState<T>(key: string, initial: T): [T, (update: (current: T) => T) => void] {
+  const [value, setValue] = useState<T>(() => {
     try {
-      return JSON.parse(sessionStorage.getItem(key) ?? '{}') as Answers
+      const stored = sessionStorage.getItem(key)
+      return stored === null ? initial : (JSON.parse(stored) as T)
     } catch {
-      return {}
+      return initial
     }
   })
 
   useEffect(() => {
-    sessionStorage.setItem(key, JSON.stringify(answers))
-  }, [key, answers])
+    sessionStorage.setItem(key, JSON.stringify(value))
+  }, [key, value])
 
-  return [answers, (number, value) => setAnswers((current) => ({ ...current, [number]: value }))]
+  return [value, setValue]
 }
 
 export function ExamScreen({ profile, section }: Props) {
@@ -36,9 +36,10 @@ export function ExamScreen({ profile, section }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [pageIndex, setPageIndex] = useState(0)
   const [isReviewing, setIsReviewing] = useState(false)
-  const [flagged, setFlagged] = useState<ReadonlySet<number>>(new Set())
+  const [flaggedList, setFlaggedList] = useTabState<number[]>(`victory.flags.${section.id}`, [])
+  const flagged = useMemo<ReadonlySet<number>>(() => new Set(flaggedList), [flaggedList])
   const [activeNumber, setActiveNumber] = useState<number | undefined>(undefined)
-  const [answers, setAnswer] = useTabAnswers(section.id)
+  const [answers, setAnswers] = useTabState<Answers>(`victory.answers.${section.id}`, {})
   const pages = useMemo(() => (paper ? buildPages(paper) : []), [paper])
 
   useEffect(() => {
@@ -66,14 +67,10 @@ export function ExamScreen({ profile, section }: Props) {
   }
   const answer = (number: number, value: string) => {
     setActiveNumber(number)
-    setAnswer(number, value)
+    setAnswers((current) => ({ ...current, [number]: value }))
   }
   const toggleFlag = (number: number) =>
-    setFlagged((current) => {
-      const next = new Set(current)
-      if (!next.delete(number)) next.add(number)
-      return next
-    })
+    setFlaggedList((current) => (current.includes(number) ? current.filter((n) => n !== number) : [...current, number]))
 
   return (
     <div className="exam">

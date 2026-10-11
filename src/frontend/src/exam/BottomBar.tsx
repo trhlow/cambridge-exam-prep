@@ -1,5 +1,5 @@
 import type { Answers, Paper } from '../api/types'
-import { CheckIcon } from '../ui/icons'
+import { BookmarkIcon, CheckIcon } from '../ui/icons'
 import { answeredCount, isAnswered, questionsOf, type Page } from './paperLogic'
 
 export interface BottomBarProps {
@@ -30,12 +30,19 @@ export function BottomBar({ paper, pages, pageIndex, answers, onGoTo, onReview, 
         const firstPage = pages.findIndex((p) => p.partIndex === partIndex)
 
         if (current?.partIndex !== partIndex) {
+          const flaggedHere = questions.filter((q) => flagged.has(q.number)).length
+          const flagLabel = `${flaggedHere} flagged question${flaggedHere > 1 ? 's' : ''}`
           return (
             <button key={part.partNo} type="button" className="part-tile" onClick={() => onGoTo(firstPage)}>
               <span className="part-label">Part {part.partNo}</span>
               <span className="part-count">
                 {answeredCount(part, answers)} of {questions.length}
               </span>
+              {flaggedHere > 0 && (
+                <span className="part-flag" role="img" aria-label={flagLabel}>
+                  <BookmarkIcon filled />
+                </span>
+              )}
             </button>
           )
         }
@@ -46,19 +53,25 @@ export function BottomBar({ paper, pages, pageIndex, answers, onGoTo, onReview, 
             <span className="part-numbers">
               {questions.map((q) => {
                 const isCurrent = q.number === active
-                const classes = ['q-link', isCurrent && 'is-current', isAnswered(answers, q.number) && 'is-answered', flagged.has(q.number) && 'is-flagged']
+                const isFlagged = flagged.has(q.number)
+                const classes = ['q-link', isCurrent && 'is-current', isAnswered(answers, q.number) && 'is-answered']
                 return (
                   <button
                     key={q.number}
                     type="button"
                     className={classes.filter(Boolean).join(' ')}
-                    aria-label={`Question ${q.number}`}
+                    aria-label={isFlagged ? `Question ${q.number}, flagged` : `Question ${q.number}`}
                     aria-current={isCurrent ? 'true' : undefined}
                     onClick={() => {
                       onGoTo(pages.findIndex((p) => p.questionNumbers.includes(q.number)))
                       onFocusQuestion?.(q.number)
                     }}
                   >
+                    {isFlagged && (
+                      <span className="q-flag" aria-hidden="true">
+                        <BookmarkIcon filled />
+                      </span>
+                    )}
                     {q.number}
                   </button>
                 )

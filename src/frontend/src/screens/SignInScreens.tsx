@@ -111,17 +111,25 @@ export function SectionsScreen({ profile, onStart }: { profile: CandidateProfile
       </p>
       {error && <p className="form-error" role="alert">{error}</p>}
       <ul className="section-list">
-        {(sections ?? []).map((section) => (
-          <li key={section.id} className="section-item">
-            <div>
-              <div className="section-title">{section.title}</div>
-              <div className="section-meta">{section.durationMinutes} minutes</div>
-            </div>
-            <button type="button" className="btn btn--primary" onClick={() => onStart(section)} disabled={section.status === 'Submitted'}>
-              {section.status === 'Submitted' ? 'Submitted' : 'Open'}
-            </button>
-          </li>
-        ))}
+        {(sections ?? []).map((section, i) => {
+          const isLocked = section.status === 'Locked'
+          const isDone = section.status === 'Submitted'
+          const previous = sections?.[i - 1]
+          const label = isLocked ? `${section.title} is locked` : isDone ? `${section.title} submitted` : `Open ${section.title}`
+          return (
+            <li key={section.id} className={isLocked ? 'section-item is-locked' : 'section-item'}>
+              <div>
+                <div className="section-title">{section.title}</div>
+                <div className="section-meta">
+                  {isLocked && previous ? `Opens when ${previous.title} has finished` : `${section.durationMinutes} minutes`}
+                </div>
+              </div>
+              <button type="button" className="btn btn--primary" aria-label={label} onClick={() => onStart(section)} disabled={isLocked || isDone}>
+                {isLocked ? 'Locked' : isDone ? 'Submitted' : 'Open'}
+              </button>
+            </li>
+          )
+        })}
       </ul>
     </Frame>
   )
