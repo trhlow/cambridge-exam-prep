@@ -8,6 +8,7 @@ Người dùng (11/10) yêu cầu làm cổng admin và giám thị ngay, kéo v
 1. API admin (VE-21 kỳ thi + gắn đề + PIN/mật khẩu giám thị, danh sách đề + xuất bản; VE-22 thí sinh + phiếu đăng nhập; VE-23 tài khoản giám thị + phân công).
 2. Giao diện admin `/staff` (đăng nhập nhân viên, Đề thi, Kỳ thi, Thí sinh, Giám thị, Kết quả).
 3. API + màn hình giám thị theo Inspera "child test monitoring": bảng thí sinh theo phần thi, chọn nhiều → Pause/Resume, Incident extra time, Edit End Time, Rewind audio, thông báo (VE-13…17); làm mới bằng polling trước, SignalR sau.
+Xong 11/10: 1–3 (VE-14…17, VE-21…23); VE-13 SignalR chưa làm (đang polling 3–5 s).
 Còn treo: VE-56 Listening, VE-12 báo cáo tuần.
 
 ## Current Phase
@@ -61,10 +62,10 @@ Tổng: 10 story, 42 điểm.
 ### Phase 2: Sprint 2 (19/10 – 25/10) — Cổng giám thị thời gian thực (tuần gặp GV 1)
 Tổng: 8 story, 29 điểm.
 - [ ] VE-13 [E7] (5đ) SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì
-- [ ] VE-14 [E7] (5đ) Tạm dừng / cho làm tiếp một, nhiều hoặc cả phòng
-- [ ] VE-15 [E7] (5đ) Cộng giờ bù sự cố và Edit End Time (End now / End at / End in, Disregard extra time)
-- [ ] VE-16 [E7] (3đ) Tua audio Listening N phút (chỉ khi không tạm dừng, tối đa số phút đã phát)
-- [ ] VE-17 [E7] (2đ) Thông báo từ giám thị (biểu tượng chuông)
+- [x] VE-14 [E7] (5đ) Tạm dừng / cho làm tiếp một, nhiều hoặc cả phòng
+- [x] VE-15 [E7] (5đ) Cộng giờ bù sự cố và Edit End Time (End now / End at / End in, Disregard extra time)
+- [x] VE-16 [E7] (3đ) Tua audio Listening N phút (chỉ khi không tạm dừng, tối đa số phút đã phát)
+- [x] VE-17 [E7] (2đ) Thông báo từ giám thị (biểu tượng chuông)
 - [ ] VE-18 [E5] (3đ) Menu Options: độ tương phản, cỡ chữ, ẩn/hiện giờ, trang nộp bài
 - [ ] VE-19 [E5] (5đ) Ghi chú và highlight khi bôi đen chữ, bảng Notes bên phải
 - [ ] VE-20 [E12] (1đ) Báo cáo tiến độ tuần 2
@@ -72,9 +73,9 @@ Tổng: 8 story, 29 điểm.
 
 ### Phase 3: Sprint 3 (26/10 – 01/11) — Quản trị A2 hoàn chỉnh
 Tổng: 7 story, 28 điểm.
-- [ ] VE-21 [E4] (5đ) Tạo / sửa kỳ thi, gắn đề cho từng phần thi, mã PIN, mật khẩu giám thị
-- [ ] VE-22 [E4] (5đ) Nhập danh sách thí sinh từ Excel, sinh username kiểu Cambridge, in phiếu đăng nhập
-- [ ] VE-23 [E4] (2đ) Phân công giám thị cho kỳ thi
+- [x] VE-21 [E4] (5đ) Tạo / sửa kỳ thi, gắn đề cho từng phần thi, mã PIN, mật khẩu giám thị
+- [x] VE-22 [E4] (5đ) Nhập danh sách thí sinh từ Excel, sinh username kiểu Cambridge, in phiếu đăng nhập
+- [x] VE-23 [E4] (2đ) Phân công giám thị cho kỳ thi
 - [ ] VE-24 [E4] (2đ) Đổi tên trung tâm và logo (tải PNG)
 - [ ] VE-25 [E3] (8đ) Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)
 - [ ] VE-26 [E8] (5đ) Chấm Writing cho giáo viên và bảng kết quả theo kỳ thi
