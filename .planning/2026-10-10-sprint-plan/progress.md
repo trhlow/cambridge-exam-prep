@@ -76,3 +76,7 @@
 - Frontend `src/frontend` (React 19 + TS + Vite): đăng nhập → PIN → chọn phần thi → làm bài; thanh trên, hộp hướng dẫn, nút ← →, thanh part "n of m", Part 1 từng câu, chia đôi có thanh kéo, chọn từ trên ô trống, gõ chữ, viết bài đếm từ, cờ, trang xem lại
 - Kiểm tra trên Chrome với kỳ thi demo; sửa sau khi xem: chỉ đóng khung câu đang làm, căn giữa số trong ô trống
 - Toàn bộ: backend 129/129, frontend 21/21; commit `48d63cd`, `df4ee52`, `e1d225d`
+
+### Sửa theo góp ý giao diện (11/10)
+- TDD: backend 3 test (khoá Listening, mở khi R&W Submitted, 403 lấy đề section bị khoá) → 132/132; frontend 3 test (cờ trên ô part đóng, cờ trên số câu, danh sách phần thi bị khoá) → 24/24
+- Kiểm tra lại trên Chrome: Listening hiện "Locked"; cờ Part 1 vẫn thấy khi ở Part 2; cờ căn giữa trên số câu

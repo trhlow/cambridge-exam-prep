@@ -149,6 +149,20 @@ describe('BottomBar', () => {
     expect(onFocusQuestion).toHaveBeenCalledWith(5)
   })
 
+  it('keeps showing flagged questions on the tile of a part that is not open', () => {
+    render(<BottomBar paper={paper} pages={pages} pageIndex={0} flagged={new Set([4])} answers={{}} onGoTo={() => {}} onReview={() => {}} />)
+
+    const part2 = screen.getByRole('button', { name: /Part 2/ })
+    expect(within(part2).getByRole('img', { name: '1 flagged question' })).toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: /flagged/ })).toHaveLength(1)
+  })
+
+  it('marks a flagged question in the open part', () => {
+    render(<BottomBar paper={paper} pages={pages} pageIndex={2} flagged={new Set([4])} answers={{}} onGoTo={() => {}} onReview={() => {}} />)
+
+    expect(screen.getByRole('button', { name: 'Question 4, flagged' })).toBeInTheDocument()
+  })
+
   it('goes to the page of a question or the first page of a part', async () => {
     const onGoTo = vi.fn()
     render(<BottomBar paper={paper} pages={pages} pageIndex={0} answers={{}} onGoTo={onGoTo} onReview={() => {}} />)

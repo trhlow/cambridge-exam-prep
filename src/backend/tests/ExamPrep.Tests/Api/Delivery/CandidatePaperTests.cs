@@ -99,6 +99,7 @@ public sealed partial class CandidatePaperTests(ApiFixture api) : IClassFixture<
         api.SkipIfUnavailable();
         var (client, candidate) = await CandidateWithPinAsync();
         using var _ = client;
+        await api.SubmitSectionAsync(candidate.CandidateId, candidate.ReadingWritingSectionId);
 
         var paper = await GetPaperAsync(client, candidate.ListeningSectionId);
 
@@ -132,6 +133,45 @@ public sealed partial class CandidatePaperTests(ApiFixture api) : IClassFixture<
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    private sealed record Section(int Id, int OrderNo, string Title, int DurationMinutes, string Status);
+
+    [Fact]
+    public async Task Sections_LockListening_UntilReadingAndWritingHasEnded()
+    {
+        api.SkipIfUnavailable();
+        var (client, _) = await CandidateWithPinAsync();
+        using var __ = client;
+
+        var sections = (await client.GetFromJsonAsync<List<Section>>("/api/candidate/sections", ct))!;
+
+        Assert.Equal(["NotStarted", "Locked"], sections.Select(s => s.Status));
+    }
+
+    [Fact]
+    public async Task Sections_UnlockListening_OnceReadingAndWritingHasEnded()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await CandidateWithPinAsync();
+        using var _ = client;
+        await api.SubmitSectionAsync(candidate.CandidateId, candidate.ReadingWritingSectionId);
+
+        var sections = (await client.GetFromJsonAsync<List<Section>>("/api/candidate/sections", ct))!;
+
+        Assert.Equal(["Submitted", "NotStarted"], sections.Select(s => s.Status));
+    }
+
+    [Fact]
+    public async Task Paper_Returns403_ForASectionThatIsStillLocked()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await CandidateWithPinAsync();
+        using var _ = client;
+
+        var response = await client.GetAsync($"/api/candidate/sections/{candidate.ListeningSectionId}/paper", ct);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     [Fact]
     public async Task Asset_ServesPictureUsedInTheCandidatesPaper()
     {
@@ -155,6 +195,7 @@ public sealed partial class CandidatePaperTests(ApiFixture api) : IClassFixture<
         api.SkipIfUnavailable();
         var (client, candidate) = await CandidateWithPinAsync();
         using var _ = client;
+        await api.SubmitSectionAsync(candidate.CandidateId, candidate.ReadingWritingSectionId);
         var paper = await GetPaperAsync(client, candidate.ListeningSectionId);
 
         var response = await client.GetAsync((string)paper["parts"]![0]!["audioUrl"]!, ct);

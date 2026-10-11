@@ -54,6 +54,7 @@ The schema has 21 tables in four groups: **content** (`exam_types → section_te
 
 Key modelling decisions:
 - Exam types and their ordered sections are **data** (`section_templates`), so A2 (2 sections), B1 (3) and later IELTS share one engine. Never hard-code a section list.
+- Sections run strictly in order (Cambridge: each component ends before the next; Listening is last). `CandidateSectionsController` reports a later section as `Locked` and refuses its paper (403) until every earlier section has an attempt with status `Submitted` (candidate submit, time expired or invigilator End now).
 - `question_groups.interaction_type` drives the candidate UI: `SingleChoice`, `ImageChoice`, `InlineChoice` (word picker over a gap), `InlineText` (typed gap), `DragDropMatch` (word cards), `Essay` (word counter). Inline gaps live in `body_html` as `{{q:19}}`.
 - Listening audio is one track per part (`paper_parts.audio_asset_id`); the player chains them into one continuous recording, as Inspera does.
 - Server-authoritative timer on `attempts`: change it only through `AttemptClock`, which recomputes `ends_at` from `started_at`, section duration, `paused_seconds`, `end_adjust_seconds` (signed; End now / End at / End in — relative so a later pause still moves the end), `planned_extra_seconds` + `incident_extra_seconds` (dropped when `disregard_extra_time`), capped by `candidates.parent_end_override_at`. Listening position = time since `audio_started_at` minus `audio_adjust_ms` (pauses and rewinds).

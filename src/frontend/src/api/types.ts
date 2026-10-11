@@ -20,7 +20,8 @@ export interface CandidateSection {
   orderNo: number
   title: string
   durationMinutes: number
-  status: 'NotStarted' | 'InProgress' | 'Paused' | 'Submitted'
+  /** Locked: an earlier section has not ended yet (sections run one after another, Listening last). */
+  status: 'NotStarted' | 'InProgress' | 'Paused' | 'Submitted' | 'Locked'
 }
 
 export interface Option {

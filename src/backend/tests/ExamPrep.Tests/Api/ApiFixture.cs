@@ -130,6 +130,25 @@ public sealed class ApiFixture : IAsyncLifetime
         return new SeededCandidate(candidate.Id, exam.Id, candidate.Username, exam.SessionPin, sectionIds[1], sectionIds[2]);
     }
 
+    /// <summary>Marks a section as finished for the candidate (submitted, or its time ran out).</summary>
+    public async Task SubmitSectionAsync(int candidateId, int sectionId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var now = DateTime.UtcNow;
+        db.Attempts.Add(new Attempt
+        {
+            CandidateId = candidateId,
+            ExamSectionId = sectionId,
+            Status = AttemptStatus.Submitted,
+            StartedAt = now.AddMinutes(-60),
+            EndsAt = now,
+            SubmittedAt = now,
+            SubmitReason = SubmitReason.TimeExpired,
+        });
+        await db.SaveChangesAsync();
+    }
+
     public async Task RotateSecurityStampAsync(int userId)
     {
         using var scope = Factory.Services.CreateScope();
