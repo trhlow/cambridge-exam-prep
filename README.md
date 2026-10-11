@@ -138,7 +138,8 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Nhập đề: định dạng gói đề (`setup/exam-package/FORMAT.md`), import có kiểm tra lỗi, đề mẫu A2 tự soạn — 116 test
 - [ ] Bộ chuyển đề PDF → gói đề (đề mẫu A2 2022)
 - [ ] Backend: quản lý kỳ thi/thí sinh, làm bài, chấm tự động
-- [ ] Màn hình thí sinh & cổng giám thị
+- [x] Màn hình thí sinh A2 Reading & Writing kiểu Inspera (React + TS), kỳ thi demo — 21 test frontend
+- [ ] Đồng hồ server, tự lưu, Listening; cổng giám thị
 - [ ] Tích hợp Safe Exam Browser, đóng gói
 - [ ] Kiểm thử tình huống, kiểm thử tải, buổi thi thử
 - [ ] Quyển báo cáo

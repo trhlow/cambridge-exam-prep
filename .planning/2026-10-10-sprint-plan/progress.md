@@ -68,3 +68,11 @@
 - Reader (zip, JSON chặt, chặn tên file ra ngoài gói, giới hạn 500 file/300 MB), Validator (báo mọi lỗi bằng câu dễ hiểu), Importer (lưu file theo SHA-256, đổi `asset:` → `/api/assets/{id}`, lọc HTML bằng HtmlSanitizer, 1 transaction, đề ở Draft)
 - `POST /api/admin/papers/import` (Admin); 116/116 test đạt; commit `49e47de`
 - Người dùng gửi đề mẫu chính thức A2 2022 (PDF + 1 mp3 31 phút) vào `setup/exam-package/sources/a2-key-fs-2022-sample/` → đã git-ignore; PDF trích được chữ (không phải scan), ảnh nhúng sẵn; có ffmpeg để tách audio
+
+### Sprint 1 — VE-6/VE-7: giao diện thí sinh A2 Reading & Writing
+- **Status:** chờ người dùng đánh giá (Jira SCRUM-23, SCRUM-24 → In Review)
+- Skill: `image-to-code` (ảnh tham chiếu = màn hình thật của bài mẫu Inspera A2, chụp và đo CSS bằng Chrome trước khi code), `test-driven-development` (backend 13 test, frontend 21 test, đều RED trước), `security-review` (không có lỗ hổng độ tin cậy cao), `planning-with-files`
+- Backend: `GET /api/candidate/sections/{id}/paper` (không có đáp án), `GET /api/assets/{id}` (thí sinh chỉ đọc file của kỳ thi mình), DemoSeeder (Development) + hình đề mẫu vẽ bằng PIL
+- Frontend `src/frontend` (React 19 + TS + Vite): đăng nhập → PIN → chọn phần thi → làm bài; thanh trên, hộp hướng dẫn, nút ← →, thanh part "n of m", Part 1 từng câu, chia đôi có thanh kéo, chọn từ trên ô trống, gõ chữ, viết bài đếm từ, cờ, trang xem lại
+- Kiểm tra trên Chrome với kỳ thi demo; sửa sau khi xem: chỉ đóng khung câu đang làm, căn giữa số trong ô trống
+- Toàn bộ: backend 129/129, frontend 21/21; commit `48d63cd`, `df4ee52`, `e1d225d`
