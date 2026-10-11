@@ -103,3 +103,8 @@ Quyết định: đáp án tạm giữ trong sessionStorage của tab cho tới 
 | Worker nền nộp bài hết giờ mỗi 5 s | Thí sinh mất mạng/tắt máy vẫn kết thúc đúng giờ, section sau mở cho cả phòng |
 | Ân hạn 5 s khi lưu | Không mất câu trả lời gõ ngay trước khi hết giờ do trễ mạng |
 | Cờ (bookmark) vẫn lưu trong tab | Chỉ là ghi nhớ của thí sinh; lưu server khi làm cổng giám thị nếu cần |
+| Bộ chuyển đọc dòng chữ có toạ độ (PyMuPDF), không đọc chữ thuần | Thứ tự chữ thuần sai (From/To của Part 5 ra cuối); vị trí cột phân biệt thông báo/phương án, tên/cột A-B-C |
+| Hình lưu từ ảnh gốc nhúng trong PDF (xref), không chụp vùng trang | Tên người thứ hai bắt đầu 1 pt trên mép dưới ảnh người thứ nhất → chụp vùng sẽ dính chữ |
+| `width` ảnh = 2 px / pt in | Ảnh gốc 228–493 px làm ảnh Part 2 quá to, 3 tranh Part 7 xuống dòng |
+| Ô trống trước chữ hoa chỉ báo "cần xem", không tự thêm dấu chấm | Một ô trống mất dấu chấm câu, ô khác đứng trước chữ viết tắt viết hoa là đúng — máy không phân biệt được |
+| Đáp án Cambridge: số câu/đáp án xen kẽ sau "KEY"; header trang lặp lại kết thúc một KEY | Trang 2 của đáp án R&W lặp "EXAM / PAPER …" ngay sau Part 3 |

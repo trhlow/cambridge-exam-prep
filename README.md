@@ -136,7 +136,8 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [ ] Đặc tả yêu cầu, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API
 - [x] Backend: đăng nhập nhân viên (admin, giám thị) và thí sinh (username/password + PIN phòng thi), phân quyền, đồng hồ server — 78 test
 - [x] Nhập đề: định dạng gói đề (`setup/exam-package/FORMAT.md`), import có kiểm tra lỗi, đề mẫu A2 tự soạn — 116 test
-- [ ] Bộ chuyển đề PDF → gói đề (đề mẫu A2 2022)
+- [x] Bộ chuyển đề PDF → gói đề cho Reading & Writing A2 (đề mẫu A2 2022: 32 câu, 12 hình, import được) — 35 test Python
+- [ ] Bộ chuyển đề Listening (tách audio theo part)
 - [x] Màn hình thí sinh A2 Reading & Writing kiểu Inspera (React + TS), kỳ thi demo — 21 test frontend
 - [x] Đồng hồ server, tự lưu, hết giờ tự nộp; Listening phát một lần, kéo thả
 - [x] Chấm tự động Reading Part 1–5 và Listening theo đáp án; API kết quả cho nhân viên — 182 test backend, 48 test frontend
