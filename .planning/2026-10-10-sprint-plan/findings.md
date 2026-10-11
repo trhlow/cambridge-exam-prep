@@ -70,6 +70,6 @@
 | Khi làm `/api/assets/{id}` phải gửi `X-Content-Type-Options: nosniff` | Nội dung file không được kiểm tra, chỉ đuôi file |
 
 ## Đề mẫu A2 2022 (Cambridge, do người dùng cung cấp 11/10)
-- Thư mục `đề thi A2/` (git-ignored): R&W questions (12 trang, 13 ảnh), R&W answer key, Listening question paper (8 trang, 11 ảnh), answer key, tapescript, Speaking (ngoài phạm vi), 1 file mp3 1875 s (cả 5 part).
+- Thư mục `setup/exam-package/sources/a2-key-fs-2022-sample/` (git-ignored): R&W questions (12 trang, 13 ảnh), R&W answer key, Listening question paper (8 trang, 11 ảnh), answer key, tapescript, Speaking (ngoài phạm vi), 1 file mp3 1875 s (cả 5 part).
 - `pypdf` trích được chữ → bộ chuyển đọc text theo part; Part 3 R&W trang 6 trích ra rất ít chữ → bài đọc có thể là ảnh hoặc bố cục cột, cần xem kỹ khi làm VE-56.
 - Audio một file → tách 5 track bằng ffmpeg theo mốc thời gian (dò khoảng lặng + đối chiếu tapescript "Part 1/2/…").

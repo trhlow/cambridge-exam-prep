@@ -4,7 +4,7 @@
 Giao hệ thống thi máy cho phòng thi của Victory, tái hiện trải nghiệm Cambridge/Inspera: A2 Key for Schools chạy đầy đủ trước (demo 16/10/2026), rồi B1 Preliminary for Schools, IELTS nếu kịp, và nộp quyển báo cáo ngày 31/12/2026.
 
 ## Next Step
-VE-56: bộ chuyển đề mẫu A2 2022 (PDF + 1 mp3 trong `đề thi A2/`, git-ignored) → gói đề theo `setup/exam-package/FORMAT.md`; sau đó VE-6/VE-7 (frontend Inspera).
+VE-56: bộ chuyển đề mẫu A2 2022 (PDF + 1 mp3 trong `setup/exam-package/sources/a2-key-fs-2022-sample/`, git-ignored) → gói đề theo `setup/exam-package/FORMAT.md`; sau đó VE-6/VE-7 (frontend Inspera).
 
 ## Current Phase
 Phase 1 (Sprint 1, 12/10 – 18/10)

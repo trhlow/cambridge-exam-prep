@@ -32,6 +32,7 @@ build/
 # Uploaded exam pictures and audio (never commit exam content)
 App_Data/
 
-# Real exam papers from Cambridge/Victory (never commit)
+# Real exam papers from Cambridge/Victory (never commit); only the README is tracked
+setup/exam-package/sources/*
+!setup/exam-package/sources/README.md
 đề thi*/
-/de-thi*/
