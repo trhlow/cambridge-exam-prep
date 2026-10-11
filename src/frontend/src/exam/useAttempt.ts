@@ -17,9 +17,13 @@ export interface AttemptView {
   answers: Answers
   saveStatus: SaveStatus
   setAnswer: (number: number, value: string) => void
+  /** Listening: where the recording should be now (server figure plus time elapsed here); null before Play. */
+  audioPositionNow: () => number | null
+  /** Listening: tells the server the candidate pressed Play; resolves to the recording position. */
+  playAudio: () => Promise<number>
 }
 
-type Clock = { status: AttemptState['status']; remaining: number; receivedAt: number }
+type Clock = { status: AttemptState['status']; remaining: number; audioPositionMs: number | null; receivedAt: number }
 
 /**
  * The candidate's attempt at one section: starts (or resumes) it on the server, counts down from the server's
@@ -34,7 +38,7 @@ export function useAttempt(sectionId: number): AttemptView {
   const queueRef = useRef<AutosaveQueue | null>(null)
 
   const apply = useCallback((state: AttemptState) => {
-    setClock({ status: state.status, remaining: state.remainingSeconds, receivedAt: Date.now() })
+    setClock({ status: state.status, remaining: state.remainingSeconds, audioPositionMs: state.audioPositionMs, receivedAt: Date.now() })
   }, [])
 
   const sync = useCallback(() => {
@@ -84,5 +88,19 @@ export function useAttempt(sectionId: number): AttemptView {
     queueRef.current?.push(number, value)
   }, [])
 
-  return { isLoaded: clock !== null, error, status: clock?.status ?? null, remainingSeconds, answers, saveStatus, setAnswer }
+  const audioPositionNow = useCallback(() => {
+    if (!clock || clock.audioPositionMs === null) {
+      return null
+    }
+
+    return clock.status === 'InProgress' ? clock.audioPositionMs + (Date.now() - clock.receivedAt) : clock.audioPositionMs
+  }, [clock])
+
+  const playAudio = useCallback(async () => {
+    const state = await candidateApi.playAudio(sectionId)
+    apply(state)
+    return state.audioPositionMs ?? 0
+  }, [sectionId, apply])
+
+  return { isLoaded: clock !== null, error, status: clock?.status ?? null, remainingSeconds, answers, saveStatus, setAnswer, audioPositionNow, playAudio }
 }

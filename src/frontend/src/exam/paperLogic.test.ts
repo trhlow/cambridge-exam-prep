@@ -47,6 +47,15 @@ describe('buildPages', () => {
     ])
   })
 
+  it('gives each picture question its own page (A2 Listening Part 1)', () => {
+    const pictures = part(1, [group('ImageChoice', [question(1), question(2)])])
+
+    expect(buildPages(paper([pictures]))).toEqual([
+      { partIndex: 0, questionNumbers: [1] },
+      { partIndex: 0, questionNumbers: [2] },
+    ])
+  })
+
   it('shows a whole part on one page otherwise', () => {
     const split = part(2, [group('SingleChoice', [question(7), question(8)])], { layout: 'Split', stimulusHtml: '<p>Text</p>' })
     const gaps = part(4, [group('InlineChoice', [question(19), question(20)], { bodyHtml: '{{q:19}} {{q:20}}' })])

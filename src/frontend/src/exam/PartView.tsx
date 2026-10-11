@@ -1,5 +1,6 @@
 import type { Answers, Part, QuestionGroup } from '../api/types'
 import { HtmlContent } from '../ui/HtmlContent'
+import { DragDropMatch } from './listening/DragDropMatch'
 import { questionRange } from './paperLogic'
 import { ChoiceQuestion } from './questions/ChoiceQuestion'
 import { EssayQuestion } from './questions/EssayQuestion'
@@ -102,6 +103,11 @@ function GroupBody({ group, visible, answers, onAnswer, flagged, onToggleFlag }:
         </>
       )
     case 'DragDropMatch':
-      return <p className="not-yet">Drag-and-drop matching arrives with the Listening screen (VE-10).</p>
+      return (
+        <div className="with-bookmark">
+          <DragDropMatch group={group} answers={answers} onAnswer={onAnswer} />
+          <BookmarkButton number={group.questions[0].number} flagged={flagged.has(group.questions[0].number)} onToggle={onToggleFlag} />
+        </div>
+      )
   }
 }

@@ -3,6 +3,8 @@ import { candidateApi } from '../api/client'
 import type { CandidateProfile, CandidateSection, Paper } from '../api/types'
 import { ArrowIcon } from '../ui/icons'
 import { BottomBar } from './BottomBar'
+import { ListeningIntro } from './listening/ListeningIntro'
+import { useRecordingPlayer } from './listening/useRecordingPlayer'
 import { buildPages } from './paperLogic'
 import { PartView } from './PartView'
 import { ReviewPage } from './ReviewPage'
@@ -46,6 +48,16 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
   const [flagged, toggleFlag] = useTabFlags(section.id)
   const attempt = useAttempt(section.id)
   const pages = useMemo(() => (paper ? buildPages(paper) : []), [paper])
+  const audioUrls = useMemo(() => paper?.parts.map((p) => p.audioUrl).filter((url): url is string => url !== null) ?? [], [paper])
+  const player = useRecordingPlayer(audioUrls)
+  const { stop: stopRecording } = player
+
+  // An invigilator pause stops the recording; the server moves its position back by the paused time.
+  useEffect(() => {
+    if (attempt.status !== 'InProgress') {
+      stopRecording()
+    }
+  }, [attempt.status, stopRecording])
 
   useEffect(() => {
     candidateApi.paper(section.id).then(setPaper, (e: Error) => setPaperError(e.message))
@@ -79,10 +91,17 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
     setActiveNumber(number)
     attempt.setAnswer(number, value)
   }
+  const isListening = audioUrls.length > 0
+  const needsPlay = isListening && attempt.status === 'InProgress' && player.state === 'idle'
+  const isResumingAudio = attempt.audioPositionNow() !== null
+  const play = async () => {
+    const position = isResumingAudio ? (attempt.audioPositionNow() ?? 0) : await attempt.playAudio()
+    await player.start(position)
+  }
 
   return (
     <div className="exam">
-      <TopBar profile={profile} timeLeft={timeLeftText(attempt.remainingSeconds)} saveStatus={attempt.saveStatus} />
+      <TopBar profile={profile} timeLeft={timeLeftText(attempt.remainingSeconds)} saveStatus={attempt.saveStatus} isAudioPlaying={player.state === 'playing'} />
       <main className="exam-main">
         {isReviewing ? (
           <ReviewPage paper={paper} answers={attempt.answers} onBack={() => setIsReviewing(false)} />
@@ -112,6 +131,7 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
             </button>
           </div>
         )}
+        {needsPlay && <ListeningIntro isResuming={isResumingAudio} onPlay={() => void play()} />}
         {attempt.status === 'Paused' && (
           <div className="paused" role="alertdialog" aria-label="Test paused">
             <p>Your test has been paused by the invigilator.</p>
