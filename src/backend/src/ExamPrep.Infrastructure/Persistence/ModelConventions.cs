@@ -22,7 +22,21 @@ internal static class ModelConventions
         builder.Properties<decimal>().HavePrecision(8, 2);
         builder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
         builder.Properties<DateTime?>().HaveConversion<NullableUtcDateTimeConverter>();
+        builder.Properties<DateOnly>().HaveConversion<DateOnlyConverter>().HaveColumnType("date");
+        builder.Properties<DateOnly?>().HaveConversion<NullableDateOnlyConverter>().HaveColumnType("date");
     }
+
+    /// <summary>
+    /// Oracle's MySQL provider reads DATE columns as <see cref="DateTime"/> and cannot materialise
+    /// <see cref="DateOnly"/> itself, so the conversion is done here.
+    /// </summary>
+    private sealed class DateOnlyConverter() : ValueConverter<DateOnly, DateTime>(
+        v => v.ToDateTime(TimeOnly.MinValue),
+        v => DateOnly.FromDateTime(v));
+
+    private sealed class NullableDateOnlyConverter() : ValueConverter<DateOnly?, DateTime?>(
+        v => v.HasValue ? v.Value.ToDateTime(TimeOnly.MinValue) : null,
+        v => v.HasValue ? DateOnly.FromDateTime(v.Value) : null);
 
     /// <summary>MySQL DATETIME has no time zone; every value is written and read back as UTC.</summary>
     private sealed class UtcDateTimeConverter() : ValueConverter<DateTime, DateTime>(

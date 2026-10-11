@@ -58,6 +58,60 @@ public sealed class ApiFixture : IAsyncLifetime
         return user;
     }
 
+    public sealed record SeededCandidate(int CandidateId, int ExamId, string Username, string SessionPin);
+
+    /// <summary>
+    /// Creates an A2 Key for Schools exam session (Reading &amp; Writing, then Listening) in the given status,
+    /// with one candidate whose password is hashed the way the API expects.
+    /// </summary>
+    public async Task<SeededCandidate> CreateCandidateAsync(string password, ExamStatus status = ExamStatus.Active)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<Candidate>>();
+        var adminId = db.Users.Where(u => u.Username == AdminUsername).Select(u => u.Id).Single();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var now = DateTime.UtcNow;
+
+        // Listening is added first on purpose: the API must order sections by OrderNo, not by insertion.
+        var listening = new TestPaper { SectionTemplateId = 2, Title = $"A2 L {suffix}", CreatedByUserId = adminId, CreatedAt = now };
+        var readingWriting = new TestPaper { SectionTemplateId = 1, Title = $"A2 RW {suffix}", CreatedByUserId = adminId, CreatedAt = now };
+        db.TestPapers.AddRange(listening, readingWriting);
+        await db.SaveChangesAsync();
+
+        var candidate = new Candidate
+        {
+            CandidateNumber = "0001",
+            FirstName = "An",
+            LastName = "Nguyen",
+            Username = $"nguyea{suffix}",
+            PasswordHash = string.Empty,
+            PasswordProtected = "not-used-in-tests",
+            CreatedAt = now,
+        };
+        candidate.PasswordHash = hasher.HashPassword(candidate, password);
+        var exam = new Exam
+        {
+            Name = $"A2 Key fS {suffix}",
+            ExamTypeId = 1,
+            ScheduledDate = DateOnly.FromDateTime(now),
+            Status = status,
+            SessionPin = "4821",
+            InvigilatorPassword = "invig-pass",
+            CreatedByUserId = adminId,
+            CreatedAt = now,
+            Sections =
+            [
+                new ExamSection { SectionTemplateId = 2, TestPaperId = listening.Id, OrderNo = 2, DurationMinutes = 30 },
+                new ExamSection { SectionTemplateId = 1, TestPaperId = readingWriting.Id, OrderNo = 1, DurationMinutes = 60 },
+            ],
+            Candidates = [candidate],
+        };
+        db.Exams.Add(exam);
+        await db.SaveChangesAsync();
+        return new SeededCandidate(candidate.Id, exam.Id, candidate.Username, exam.SessionPin);
+    }
+
     public async Task RotateSecurityStampAsync(int userId)
     {
         using var scope = Factory.Services.CreateScope();
