@@ -20,6 +20,9 @@ public sealed record DemoOptions
     public string CandidateUsername { get; init; } = string.Empty;
     public string CandidatePassword { get; init; } = string.Empty;
     public string SessionPin { get; init; } = string.Empty;
+
+    /// <summary>Delete the demo exam (and its papers, attempts and answers) and create it again on every start.</summary>
+    public bool ResetOnStart { get; init; }
 }
 
 /// <summary>
@@ -43,6 +46,11 @@ public static class DemoSeeder
         var provider = scope.ServiceProvider;
         var db = provider.GetRequiredService<ExamPrepDbContext>();
         var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(DemoSeeder));
+
+        if (options.ResetOnStart)
+        {
+            await DeleteDemoExamAsync(db, options.ExamName, cancellationToken);
+        }
 
         if (await db.Exams.AnyAsync(e => e.Name == options.ExamName, cancellationToken))
         {
@@ -83,6 +91,26 @@ public static class DemoSeeder
         await db.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("Demo exam {ExamName} is open; candidate {Username} can sign in (see the Demo section of appsettings.Development.json).", exam.Name, candidate.Username);
+    }
+
+    /// <summary>Removes the demo exam with its candidates, attempts and answers, then the papers only it used.</summary>
+    private static async Task DeleteDemoExamAsync(ExamPrepDbContext db, string examName, CancellationToken cancellationToken)
+    {
+        var exam = await db.Exams.Include(e => e.Sections).SingleOrDefaultAsync(e => e.Name == examName, cancellationToken);
+        if (exam is null)
+        {
+            return;
+        }
+
+        var paperIds = exam.Sections.Select(s => s.TestPaperId).ToList();
+        db.Exams.Remove(exam);
+        await db.SaveChangesAsync(cancellationToken);
+
+        var unusedPapers = await db.TestPapers
+            .Where(p => paperIds.Contains(p.Id) && !db.ExamSections.Any(s => s.TestPaperId == p.Id))
+            .ToListAsync(cancellationToken);
+        db.TestPapers.RemoveRange(unusedPapers);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private static async Task<TestPaper> ImportAsync(PaperPackageImporter importer, string folder, int adminId, CancellationToken cancellationToken)

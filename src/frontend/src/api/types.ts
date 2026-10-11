@@ -67,3 +67,13 @@ export interface Paper {
 
 /** The candidate's answer per question number: an option key, a typed word or a piece of writing. */
 export type Answers = Record<number, string>
+
+/** The server's view of the candidate's section: its clock and every saved answer. */
+export interface AttemptState {
+  sectionId: number
+  status: 'InProgress' | 'Paused' | 'Submitted'
+  endsAt: string | null
+  remainingSeconds: number
+  serverNow: string
+  answers: Answers
+}

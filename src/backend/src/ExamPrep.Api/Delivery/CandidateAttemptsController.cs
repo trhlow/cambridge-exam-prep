@@ -45,20 +45,42 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
 
         var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);
         var now = Now();
-        var attempt = await FindAttemptAsync(sectionId, cancellationToken);
+        var attempt = await FindAttemptAsync(sectionId, cancellationToken) ?? await TryCreateAttemptAsync(section, candidate, now, cancellationToken);
         if (attempt is null)
         {
-            attempt = new Attempt { CandidateId = candidate.Id, ExamSectionId = section.Id };
-            AttemptExpiry.ClockFor(attempt, section, candidate).Start(candidate.PlannedExtraPercent, now);
-            db.Attempts.Add(attempt);
-        }
-        else
-        {
-            AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now);
+            // Another request (double click, second tab) created it a moment ago: carry on with that one.
+            attempt = await FindAttemptAsync(sectionId, cancellationToken) ?? throw new InvalidOperationException("Attempt vanished after a duplicate insert.");
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        if (AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now))
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         return await StateAsync(attempt, section, candidate, now, cancellationToken);
+    }
+
+    /// <summary>Starts the clock; null when a concurrent request has already started this section.</summary>
+    private async Task<Attempt?> TryCreateAttemptAsync(ExamSection section, Candidate candidate, DateTime now, CancellationToken cancellationToken)
+    {
+        var attempt = new Attempt { CandidateId = candidate.Id, ExamSectionId = section.Id };
+        AttemptExpiry.ClockFor(attempt, section, candidate).Start(candidate.PlannedExtraPercent, now);
+        db.Attempts.Add(attempt);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return attempt;
+        }
+        catch (DbUpdateException)
+        {
+            db.Entry(attempt).State = EntityState.Detached;
+            if (await db.Attempts.AnyAsync(a => a.CandidateId == candidate.Id && a.ExamSectionId == section.Id, cancellationToken))
+            {
+                return null;
+            }
+
+            throw;
+        }
     }
 
     /// <summary>The clock and saved answers; ends the section first if its time is up.</summary>
@@ -172,5 +194,10 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         return (section, candidate);
     }
 
-    private DateTime Now() => clock.GetUtcNow().UtcDateTime;
+    /// <summary>Now, to the millisecond, so times read back from MySQL equal the ones just written.</summary>
+    private DateTime Now()
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
+        return now.AddTicks(-(now.Ticks % TimeSpan.TicksPerMillisecond));
+    }
 }

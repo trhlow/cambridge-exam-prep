@@ -64,6 +64,30 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task Seed_WithResetOnStart_GivesTheDemoCandidateAFreshExam()
+    {
+        api.SkipIfUnavailable();
+        var options = Options();
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+        int firstExamId;
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var exam = await db.Exams.Include(e => e.Sections).Include(e => e.Candidates).SingleAsync(e => e.Name == options.ExamName, ct);
+            firstExamId = exam.Id;
+            await api.SubmitSectionAsync(exam.Candidates.Single().Id, exam.Sections.Single(s => s.OrderNo == 1).Id);
+        }
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options with { ResetOnStart = true }, ct);
+
+        using var check = api.Factory.Services.CreateScope();
+        var checkDb = check.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var fresh = await checkDb.Exams.Include(e => e.Candidates).ThenInclude(c => c.Attempts).SingleAsync(e => e.Name == options.ExamName, ct);
+        Assert.NotEqual(firstExamId, fresh.Id);
+        Assert.Empty(fresh.Candidates.Single().Attempts);
+    }
+
+    [Fact]
     public async Task Seed_DoesNothingWhenDisabled()
     {
         api.SkipIfUnavailable();

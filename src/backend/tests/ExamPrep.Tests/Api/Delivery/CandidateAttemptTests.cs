@@ -92,6 +92,21 @@ public sealed class CandidateAttemptTests(ApiFixture api) : IClassFixture<ApiFix
     }
 
     [Fact]
+    public async Task Start_TwiceAtTheSameMoment_GivesOneAttempt()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await SignedInAsync();
+        using var _ = client;
+        var url = $"/api/candidate/sections/{candidate.ReadingWritingSectionId}/attempt";
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => client.PostAsync(url, null, ct)));
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
+        var states = await Task.WhenAll(responses.Select(r => r.Content.ReadFromJsonAsync<AttemptState>(ct)));
+        Assert.Single(states.Select(s => s!.EndsAt).Distinct());
+    }
+
+    [Fact]
     public async Task Start_Returns403_ForASectionThatIsStillLocked()
     {
         api.SkipIfUnavailable();

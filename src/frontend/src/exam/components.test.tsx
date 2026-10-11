@@ -173,3 +173,15 @@ describe('BottomBar', () => {
     expect(onGoTo.mock.calls).toEqual([[1], [2]])
   })
 })
+
+describe('ReviewPage', () => {
+  it('has no submit button: the section ends when the time is up, as in the Cambridge exam room', async () => {
+    const { ReviewPage } = await import('./ReviewPage')
+    const paper: Paper = { sectionId: 1, title: 'Reading & Writing', durationMinutes: 60, parts: [] }
+
+    render(<ReviewPage paper={paper} answers={{}} onBack={() => {}} />)
+
+    expect(screen.queryByRole('button', { name: /submit/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/saved automatically/)).toBeInTheDocument()
+  })
+})

@@ -35,6 +35,6 @@ export default function App() {
     case 'sections':
       return <SectionsScreen profile={stage.profile} onStart={(section) => setStage({ kind: 'exam', profile: stage.profile, section })} />
     case 'exam':
-      return <ExamScreen profile={stage.profile} section={stage.section} />
+      return <ExamScreen profile={stage.profile} section={stage.section} onFinished={() => setStage({ kind: 'sections', profile: stage.profile })} />
   }
 }
