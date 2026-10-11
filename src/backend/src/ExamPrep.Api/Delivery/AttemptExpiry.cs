@@ -1,6 +1,7 @@
 using ExamPrep.Domain.Delivery;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
+using ExamPrep.Infrastructure.Marking;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -60,7 +61,7 @@ public sealed class AttemptExpiry(ExamPrepDbContext db, TimeProvider clock, ILog
     }
 }
 
-/// <summary>Runs <see cref="AttemptExpiry.SubmitExpiredAsync"/> every few seconds.</summary>
+/// <summary>Every few seconds: ends sections whose time is up, then marks submitted attempts from the answer keys.</summary>
 public sealed class AttemptExpiryWorker(IServiceScopeFactory scopes, ILogger<AttemptExpiryWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(5);
@@ -74,6 +75,7 @@ public sealed class AttemptExpiryWorker(IServiceScopeFactory scopes, ILogger<Att
             {
                 using var scope = scopes.CreateScope();
                 await scope.ServiceProvider.GetRequiredService<AttemptExpiry>().SubmitExpiredAsync(stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<AttemptMarker>().MarkPendingAsync(stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
