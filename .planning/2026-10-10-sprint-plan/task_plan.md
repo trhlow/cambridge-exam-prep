@@ -4,7 +4,7 @@
 Giao hệ thống thi máy cho phòng thi của Victory, tái hiện trải nghiệm Cambridge/Inspera: A2 Key for Schools chạy đầy đủ trước (demo 16/10/2026), rồi B1 Preliminary for Schools, IELTS nếu kịp, và nộp quyển báo cáo ngày 31/12/2026.
 
 ## Next Step
-VE-10 (Listening A2: phát nối 5 track, chọn tranh, kéo thả) hoặc VE-56 (chuyển đề mẫu A2 2022 trong `setup/exam-package/sources/a2-key-fs-2022-sample/`) — hỏi người dùng thứ tự; sau đó VE-11 (chấm tự động).
+VE-11 (chấm tự động Reading Part 1–5 và Listening theo đáp án) hoặc VE-56 (chuyển đề mẫu A2 2022) — hỏi người dùng thứ tự; VE-9 (cờ + đếm câu) phần lớn đã có trong VE-6/7.
 
 ## Current Phase
 Phase 1 (Sprint 1, 12/10 – 18/10)
@@ -49,7 +49,7 @@ Tổng: 10 story, 42 điểm.
 - [x] VE-7 [E5] (8đ) Reading & Writing A2: 4 kiểu câu (chọn đáp án, chọn từ trên ô trống, gõ từ, viết bài)
 - [x] VE-8 [E5] (5đ) Đồng hồ do server nắm, tự lưu câu trả lời, hết giờ tự nộp
 - [ ] VE-9 [E5] (2đ) Đánh dấu câu hỏi (cờ) và đếm câu đã làm trên thanh part
-- [ ] VE-10 [E6] (5đ) Listening A2: phát nối 5 track một lần, chọn tranh, kéo thả
+- [x] VE-10 [E6] (5đ) Listening A2: phát nối 5 track một lần, chọn tranh, kéo thả
 - [ ] VE-11 [E8] (3đ) Chấm tự động Reading Part 1–5 và Listening theo đáp án
 - [ ] VE-12 [E12] (1đ) Báo cáo tiến độ tuần 1 (progress-report)
 - **Status:** in_progress
