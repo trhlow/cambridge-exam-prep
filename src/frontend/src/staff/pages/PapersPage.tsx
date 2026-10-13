@@ -87,6 +87,7 @@ function PaperTable({ papers, onPublish, onDelete }: { papers: PaperListItem[]; 
         <tr>
           <th>Paper</th>
           <th>Section</th>
+          <th>Imported</th>
           <th className="st-num">Parts</th>
           <th className="st-num">Questions</th>
           <th className="st-num">Used by</th>
@@ -101,7 +102,8 @@ function PaperTable({ papers, onPublish, onDelete }: { papers: PaperListItem[]; 
               <strong>{paper.title}</strong>
               <div className="st-faint">{paper.examType}</div>
             </td>
-            <td>{paper.section}</td>
+            <td className="st-nowrap">{paper.section}</td>
+            <td className="st-nowrap">{new Date(paper.createdAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
             <td className="st-num">{paper.parts}</td>
             <td className="st-num">{paper.questions}</td>
             <td className="st-num">{paper.usedByExams > 0 ? `${paper.usedByExams} exam${paper.usedByExams === 1 ? '' : 's'}` : '–'}</td>

@@ -1,5 +1,23 @@
 // Staff portal calls (src/backend/src/ExamPrep.Api: Auth, Admin, Exams, Monitoring, Content, Results).
-import { del, post, put, request } from '../api/client'
+import { ApiError, del as rawDel, post as rawPost, put as rawPut, request as rawRequest } from '../api/client'
+
+/** Fired when the staff session has ended (expired, signed out elsewhere, password reset): the portal shows the sign-in. */
+export const SESSION_ENDED_EVENT = 'victory:staff-session-ended'
+
+function watch<T>(call: Promise<T>): Promise<T> {
+  return call.catch((error: unknown) => {
+    if (error instanceof ApiError && error.status === 401) {
+      window.dispatchEvent(new Event(SESSION_ENDED_EVENT))
+    }
+
+    throw error
+  })
+}
+
+const request = <T>(path: string, init?: RequestInit) => watch(rawRequest<T>(path, init))
+const post = <T>(path: string, body?: unknown) => watch(rawPost<T>(path, body))
+const put = <T>(path: string, body: unknown) => watch(rawPut<T>(path, body))
+const del = (path: string) => watch(rawDel(path))
 
 export type Role = 'Admin' | 'Invigilator'
 
@@ -207,9 +225,10 @@ export interface CandidateResult {
 const exam = (id: number) => `/api/staff/exams/${id}`
 
 export const staffApi = {
-  me: () => request<StaffProfile>('/api/staff/auth/me'),
-  login: (username: string, password: string) => post<StaffProfile>('/api/staff/auth/login', { username, password }),
-  logout: () => post<void>('/api/staff/auth/logout'),
+  // Sign-in calls answer 401 on purpose (not signed in, wrong password): they never mean "session ended".
+  me: () => rawRequest<StaffProfile>('/api/staff/auth/me'),
+  login: (username: string, password: string) => rawPost<StaffProfile>('/api/staff/auth/login', { username, password }),
+  logout: () => rawPost<void>('/api/staff/auth/logout'),
 
   exams: () => request<ExamListItem[]>('/api/staff/exams'),
   exam: (id: number) => request<ExamDetail>(exam(id)),
@@ -234,6 +253,7 @@ export const adminApi = {
   addCandidates: (examId: number, candidates: NewCandidate[]) => post<CandidateView[]>(`/api/admin/exams/${examId}/candidates`, { candidates }),
   updateCandidate: (id: number, body: Required<Omit<NewCandidate, 'candidateNumber'>>) => put<CandidateView>(`/api/admin/candidates/${id}`, body),
   deleteCandidate: (id: number) => del(`/api/admin/candidates/${id}`),
+  resetCandidatePassword: (id: number) => post<LoginSlip>(`/api/admin/candidates/${id}/reset-password`),
 
   papers: () => request<PaperListItem[]>('/api/admin/papers'),
   importPaper: (file: File) => {

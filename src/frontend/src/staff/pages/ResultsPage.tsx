@@ -1,6 +1,7 @@
 import { staffApi } from '../api'
 import { Link } from '../Link'
 import { Badge, ErrorBox, PageHeader } from '../ui'
+import { resultsCsv } from '../resultsCsv'
 import { useLoad } from '../useLoad'
 
 const GRADING_TEXT: Record<string, string> = {
@@ -15,10 +16,30 @@ export function ResultsPage({ examId }: { examId: number }) {
   const { data: exam } = useLoad(() => staffApi.exam(examId), `exam-${examId}`)
   const { data: results, error } = useLoad(() => staffApi.results(examId), examId)
   const sections = results?.[0]?.sections ?? []
+  const download = () => {
+    if (!results) {
+      return
+    }
+
+    const url = URL.createObjectURL(new Blob([resultsCsv(results)], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `results-${(exam?.name ?? `exam-${examId}`).replace(/[^\p{L}\p{N}]+/gu, '-')}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <>
-      <PageHeader title="Results" meta={<Link to={`/staff/exams/${examId}`}>{exam?.name ?? 'Exam'}</Link>} />
+      <PageHeader
+        title="Results"
+        meta={<Link to={`/staff/exams/${examId}`}>{exam?.name ?? 'Exam'}</Link>}
+        actions={
+          <button type="button" className="st-btn" onClick={download} disabled={!results || results.length === 0}>
+            Download for Excel (.csv)
+          </button>
+        }
+      />
       <p className="st-faint">Reading and Listening are marked automatically when a section ends. Writing waits for a teacher.</p>
       <ErrorBox error={error} />
       {results && results.length === 0 && <p className="st-empty">No candidates.</p>}
