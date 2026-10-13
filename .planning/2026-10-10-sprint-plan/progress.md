@@ -131,3 +131,15 @@
 - Thí sinh: chuông thông báo + cửa sổ bật lên; Listening theo kịp khi giám thị tua
 - Kiểm tra trên Chrome: thêm 2 thí sinh bằng dán, Pause → máy thí sinh hiện màn hình tạm dừng trong vài giây, Resume, +5 phút (59:37 → 1:04:26), thông báo hiện ngay; giám thị demo chỉ thấy kỳ thi của mình; phiếu đăng nhập in được
 - Toàn bộ: backend 218/218, frontend 60/60; commit `8c11202`, `8f541fa`, `f127ba5`, `fbcafed`
+
+### Rà soát tổng thể trước báo cáo (13/10)
+- **Status:** complete — VE-18, VE-19, VE-26, VE-30 → Done
+- Skill: `planning-with-files`, `test-driven-development` (RED trước cho mọi sửa đổi), `minimalist-ui` (cổng nhân viên), `security-review`
+- Mốc ban đầu xanh (218/60/35), npm audit + NuGet sạch; phát hiện và sửa:
+  - Bảo mật: khoá tài khoản 5 phút sau 10 lần sai mật khẩu / PIN (PIN 4 số trước đây dò được); khoá Data Protection lưu App_Data/keys (Docker khởi động lại sẽ làm mất phiên và không in lại được phiếu); security header; exception handler + HSTS ngoài Development; đặt lại mật khẩu thí sinh; CSV chống công thức Excel
+  - security-review tìm thêm: MySQL so khớp username không phân biệt hoa/thường và dấu → "àdmin" vượt được khoá → đếm theo id tài khoản (test tái hiện)
+  - Thí sinh: F5 vào lại đúng phần thi và trang; menu Options (3 độ tương phản, 3 cỡ chữ, ẩn giờ, trang nộp bài) lưu trên server; highlight + ghi chú (CSS Custom Highlight API), Notes tắt khi chữ lớn
+  - Cổng nhân viên: hết phiên → về đăng nhập; tên + badge vai trò; cột ngày import; nút xác nhận mất nền đỏ khi hover; chấm Writing (điểm + nhận xét, Final khi chấm đủ); tải kết quả CSV
+  - Test treo ngẫu nhiên: GET_LOCK('__EFMigrationsLock') toàn server + pool giữ lock → migrate tuần tự, không pool; 3 lần liên tiếp 230/230
+- Kiểm tra trên Chrome (1366×768): Options + Yellow on black + Large, highlight/note, F5, hết phiên, End now hai bước, chấm Writing 13/60 Final
+- Toàn bộ: backend 231/231, frontend 71/71, converter 35/35; commit 7594d40 … 6e9961b

@@ -16,13 +16,14 @@ Người dùng yêu cầu kiểm tra toàn bộ: source, bảo mật, giao diệ
 Mốc ban đầu: backend 218/218, frontend 60/60, converter 35/35, lint sạch, npm audit / NuGet không lỗ hổng, 2 cảnh báo null.
 
 Phát hiện (P0 = làm trước demo 16/10):
-- [ ] P0 Bảo mật: chưa giới hạn số lần đăng nhập (PIN 4 số dò được), khoá Data Protection không cố định (Docker mất khoá → phiếu không in lại được, cookie mất), chưa có xử lý lỗi chung, chưa có security header
-- [ ] P0 Thí sinh: F5 bị đẩy ra danh sách phần thi
-- [ ] P0 Thí sinh: nút ☰ Options và bút Notes chưa làm gì → làm menu Options (VE-18)
-- [ ] P0 Cổng nhân viên: hết phiên (401) không quay về màn hình đăng nhập; tiêu đề tên lặp "Administrator · Administrator"
-- [ ] P0 Sửa 2 cảnh báo null ở AdminExamsController
-- [ ] P1 Ghi chú + highlight (VE-19)
-- [ ] Rà giao diện từng trang trên trình duyệt (thí sinh + /staff), sửa lỗi hiển thị
+- [x] P0 Bảo mật: chưa giới hạn số lần đăng nhập (PIN 4 số dò được), khoá Data Protection không cố định (Docker mất khoá → phiếu không in lại được, cookie mất), chưa có xử lý lỗi chung, chưa có security header
+- [x] P0 Thí sinh: F5 bị đẩy ra danh sách phần thi
+- [x] P0 Thí sinh: nút ☰ Options và bút Notes chưa làm gì → làm menu Options (VE-18)
+- [x] P0 Cổng nhân viên: hết phiên (401) không quay về màn hình đăng nhập; tiêu đề tên lặp "Administrator · Administrator"
+- [x] P0 Sửa 2 cảnh báo null ở AdminExamsController
+- [x] P1 Ghi chú + highlight (VE-19)
+- [x] Rà giao diện từng trang trên trình duyệt (thí sinh + /staff), sửa lỗi hiển thị
+- [x] Thêm: chấm Writing + CSV (VE-26), đặt lại mật khẩu thí sinh, sửa test treo (khoá migration EF), security-review tìm lỗi vượt khoá bằng username có dấu → đã sửa
 
 ## Current Phase
 Phase 1 (Sprint 1, 12/10 – 18/10)
@@ -79,8 +80,8 @@ Tổng: 8 story, 29 điểm.
 - [x] VE-15 [E7] (5đ) Cộng giờ bù sự cố và Edit End Time (End now / End at / End in, Disregard extra time)
 - [x] VE-16 [E7] (3đ) Tua audio Listening N phút (chỉ khi không tạm dừng, tối đa số phút đã phát)
 - [x] VE-17 [E7] (2đ) Thông báo từ giám thị (biểu tượng chuông)
-- [ ] VE-18 [E5] (3đ) Menu Options: độ tương phản, cỡ chữ, ẩn/hiện giờ, trang nộp bài
-- [ ] VE-19 [E5] (5đ) Ghi chú và highlight khi bôi đen chữ, bảng Notes bên phải
+- [x] VE-18 [E5] (3đ) Menu Options: độ tương phản, cỡ chữ, ẩn/hiện giờ, trang nộp bài
+- [x] VE-19 [E5] (5đ) Ghi chú và highlight khi bôi đen chữ, bảng Notes bên phải
 - [ ] VE-20 [E12] (1đ) Báo cáo tiến độ tuần 2
 - **Status:** pending
 
@@ -91,7 +92,7 @@ Tổng: 7 story, 28 điểm.
 - [x] VE-23 [E4] (2đ) Phân công giám thị cho kỳ thi
 - [ ] VE-24 [E4] (2đ) Đổi tên trung tâm và logo (tải PNG)
 - [ ] VE-25 [E3] (8đ) Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)
-- [ ] VE-26 [E8] (5đ) Chấm Writing cho giáo viên và bảng kết quả theo kỳ thi
+- [x] VE-26 [E8] (5đ) Chấm Writing cho giáo viên và bảng kết quả theo kỳ thi
 - [ ] VE-27 [E12] (1đ) Báo cáo tiến độ tuần 3
 - **Status:** pending
 
@@ -99,7 +100,7 @@ Tổng: 7 story, 28 điểm.
 Tổng: 5 story, 17 điểm.
 - [ ] VE-28 [E9] (5đ) Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi
 - [ ] VE-29 [E9] (3đ) Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm
-- [ ] VE-30 [E9] (3đ) Giới hạn tần suất đăng nhập, xử lý lỗi an toàn, nhật ký thao tác
+- [x] VE-30 [E9] (3đ) Giới hạn tần suất đăng nhập, xử lý lỗi an toàn, nhật ký thao tác
 - [ ] VE-31 [E11] (5đ) Test đầu-cuối Playwright cho luồng thi A2 và thao tác giám thị chính
 - [ ] VE-32 [E12] (1đ) Báo cáo tiến độ tuần 4
 - **Status:** pending
