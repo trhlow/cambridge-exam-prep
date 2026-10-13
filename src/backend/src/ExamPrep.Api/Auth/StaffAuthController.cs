@@ -26,29 +26,29 @@ public sealed class StaffAuthController(
     [AllowAnonymous]
     public async Task<ActionResult<StaffProfile>> Login(StaffLoginRequest request, CancellationToken cancellationToken)
     {
-        var throttleKey = LoginThrottle.StaffKey(request.Username);
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Username == request.Username, cancellationToken);
+        var throttleKey = user is null ? LoginThrottle.UnknownKey("staff", request.Username) : LoginThrottle.StaffKey(user.Id);
         if (throttle.IsLocked(throttleKey))
         {
             logger.LogWarning("Staff sign-in refused for {Username}: too many failed attempts", request.Username);
             return LoginThrottle.Locked();
         }
 
-        var user = await db.Users.SingleOrDefaultAsync(u => u.Username == request.Username, cancellationToken);
         if (user is null)
         {
             passwordHasher.VerifyHashedPassword(new User { Username = "-", PasswordHash = "-", FullName = "-" }, TimingDummyHash.Value, request.Password);
-            return InvalidLogin(request.Username, "unknown username");
+            return InvalidLogin(throttleKey, request.Username, "unknown username");
         }
 
         var verification = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
         if (verification == PasswordVerificationResult.Failed)
         {
-            return InvalidLogin(request.Username, "wrong password");
+            return InvalidLogin(throttleKey, request.Username, "wrong password");
         }
 
         if (!user.IsActive)
         {
-            return InvalidLogin(request.Username, "account deactivated");
+            return InvalidLogin(throttleKey, request.Username, "account deactivated");
         }
 
         if (verification == PasswordVerificationResult.SuccessRehashNeeded)
@@ -80,9 +80,9 @@ public sealed class StaffAuthController(
         return StaffProfile.From(user);
     }
 
-    private UnauthorizedObjectResult InvalidLogin(string username, string reason)
+    private UnauthorizedObjectResult InvalidLogin(string throttleKey, string username, string reason)
     {
-        throttle.RecordFailure(LoginThrottle.StaffKey(username));
+        throttle.RecordFailure(throttleKey);
         logger.LogWarning("Staff sign-in failed for {Username}: {Reason}", username, reason);
         return Unauthorized(new ProblemDetails
         {

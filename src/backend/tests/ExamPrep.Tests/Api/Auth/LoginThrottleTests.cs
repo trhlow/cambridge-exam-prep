@@ -98,4 +98,21 @@ public sealed class LoginThrottleTests(ApiFixture api) : IClassFixture<ApiFixtur
 
         Assert.Equal(HttpStatusCode.TooManyRequests, right.StatusCode);
     }
+
+    [Fact]
+    public async Task StaffLogin_CannotEscapeTheLockByWritingTheUsernameWithAccents()
+    {
+        api.SkipIfUnavailable();
+        // The database compares names accent- and case-insensitively, so "ÍNV…" and "ínv…" reach the same account.
+        var target = await api.CreateStaffAsync(UserRole.Invigilator, Password);
+        var variants = new[] { "í", "Í", "ì", "î", "ï" }.Select(i => i + target.Username[1..]).ToList();
+        using var client = api.CreateClient();
+
+        for (var i = 0; i < AllowedFailures; i++)
+        {
+            await StaffLoginAsync(client, variants[i % variants.Count], "wrong");
+        }
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await StaffLoginAsync(client, target.Username, Password)).StatusCode);
+    }
 }
