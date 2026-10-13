@@ -12,6 +12,13 @@ public sealed class MySqlDatabaseFixture : IAsyncLifetime
 {
     public const string ServerConnectionVariable = "EXAMPREP_TEST_MYSQL";
 
+    /// <summary>
+    /// EF Core's MySQL migration lock (GET_LOCK('__EFMigrationsLock')) is server-wide, not per database, and a
+    /// pooled connection can keep holding it; fixtures running in parallel then wait for ever. Migrations therefore
+    /// run one at a time, on a connection that is really closed (no pooling), which always releases the lock.
+    /// </summary>
+    private static readonly SemaphoreSlim MigrationGate = new(1, 1);
+
     private readonly string? serverConnection = Environment.GetEnvironmentVariable(ServerConnectionVariable);
     private readonly string databaseName = $"examprep_test_{Guid.NewGuid():N}";
 
@@ -32,8 +39,16 @@ public sealed class MySqlDatabaseFixture : IAsyncLifetime
             return;
         }
 
-        await using var db = CreateContext();
-        await db.Database.MigrateAsync();
+        await MigrationGate.WaitAsync();
+        try
+        {
+            await using var db = new ExamPrepDbContext(new DbContextOptionsBuilder<ExamPrepDbContext>().UseMySQL($"{ConnectionString};pooling=false").Options);
+            await db.Database.MigrateAsync();
+        }
+        finally
+        {
+            MigrationGate.Release();
+        }
     }
 
     public async ValueTask DisposeAsync()
