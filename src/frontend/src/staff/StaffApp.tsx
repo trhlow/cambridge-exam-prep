@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { VictoryLogo } from '../ui/VictoryLogo'
-import { staffApi, type StaffProfile } from './api'
+import { SESSION_ENDED_EVENT, staffApi, type StaffProfile } from './api'
 import { ExamFormPage } from './pages/ExamFormPage'
 import { ExamPage } from './pages/ExamPage'
 import { ExamsPage } from './pages/ExamsPage'
@@ -12,6 +12,7 @@ import { StaffUsersPage } from './pages/StaffUsersPage'
 import { Link } from './Link'
 import { navigate, useRoute, type Route } from './router'
 import { messageOf } from './format'
+import { Badge } from './ui'
 import './staff.css'
 
 /**
@@ -21,9 +22,21 @@ import './staff.css'
  */
 export default function StaffApp() {
   const [user, setUser] = useState<StaffProfile | null | undefined>(undefined)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
+    document.title = 'Victory English – Staff portal'
     staffApi.me().then(setUser, () => setUser(null))
+  }, [])
+
+  // Any call answered 401 means the session is over: back to the sign-in, keeping the page address.
+  useEffect(() => {
+    const ended = () => {
+      setNotice('Your session has ended. Please sign in again.')
+      setUser(null)
+    }
+    window.addEventListener(SESSION_ENDED_EVENT, ended)
+    return () => window.removeEventListener(SESSION_ENDED_EVENT, ended)
   }, [])
 
   if (user === undefined) {
@@ -31,7 +44,15 @@ export default function StaffApp() {
   }
 
   if (user === null) {
-    return <StaffLogin onSignedIn={setUser} />
+    return (
+      <StaffLogin
+        notice={notice}
+        onSignedIn={(signedIn) => {
+          setNotice(null)
+          setUser(signedIn)
+        }}
+      />
+    )
   }
 
   const signOut = async () => {
@@ -72,8 +93,8 @@ function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void 
           )}
         </nav>
         <div className="st-user">
-          <span>
-            {user.fullName} <span className="st-faint">· {user.role === 'Admin' ? 'Administrator' : 'Invigilator'}</span>
+          <span className="st-user-name">
+            {user.fullName} <Badge value={user.role} />
           </span>
           <button type="button" className="st-link" onClick={onSignOut}>
             Log out
@@ -119,7 +140,7 @@ function NotAllowed() {
   )
 }
 
-function StaffLogin({ onSignedIn }: { onSignedIn: (user: StaffProfile) => void }) {
+function StaffLogin({ notice, onSignedIn }: { notice: string | null; onSignedIn: (user: StaffProfile) => void }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -144,6 +165,11 @@ function StaffLogin({ onSignedIn }: { onSignedIn: (user: StaffProfile) => void }
         <VictoryLogo />
         <h1>Staff sign in</h1>
         <p className="st-faint">Administrators and invigilators</p>
+        {notice && (
+          <p className="st-note" role="status">
+            {notice}
+          </p>
+        )}
         <label className="st-field">
           Username
           <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required />

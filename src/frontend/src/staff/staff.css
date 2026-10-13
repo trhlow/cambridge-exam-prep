@@ -83,7 +83,7 @@
 }
 
 .st-main {
-  max-width: 1180px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 36px 32px 120px;
 }
@@ -493,6 +493,10 @@
 
 .st-check {
   width: 36px;
+}
+
+.st-nowrap {
+  white-space: nowrap;
 }
 
 .st-row-actions {

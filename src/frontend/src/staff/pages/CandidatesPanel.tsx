@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { adminApi, type CandidateView, type ExamDetail } from '../api'
+import { adminApi, type CandidateView, type ExamDetail, type LoginSlip } from '../api'
 import { parseCandidateRows } from '../candidateRows'
 import { ConfirmButton, ErrorBox, Modal } from '../ui'
 import { useLoad } from '../useLoad'
@@ -12,11 +12,20 @@ export function CandidatesPanel({ exam, onChanged }: { exam: ExamDetail; onChang
   const { data: candidates, error, reload } = useLoad(() => adminApi.candidates(exam.id), exam.id)
   const [isAdding, setIsAdding] = useState(false)
   const [editing, setEditing] = useState<CandidateView | null>(null)
+  const [newSlip, setNewSlip] = useState<LoginSlip | null>(null)
   const [actionError, setActionError] = useState<unknown>(null)
 
   const changed = () => {
     reload()
     onChanged()
+  }
+  const resetPassword = async (candidate: CandidateView) => {
+    setActionError(null)
+    try {
+      setNewSlip(await adminApi.resetCandidatePassword(candidate.id))
+    } catch (e) {
+      setActionError(e)
+    }
   }
   const remove = async (candidate: CandidateView) => {
     setActionError(null)
@@ -64,6 +73,7 @@ export function CandidatesPanel({ exam, onChanged }: { exam: ExamDetail; onChang
                   <button type="button" className="st-link" onClick={() => setEditing(c)}>
                     Edit
                   </button>
+                  <ConfirmButton className="st-link" label="New password" confirmLabel="Confirm new password" onConfirm={() => void resetPassword(c)} />
                   {!c.hasStarted && (
                     <ConfirmButton className="st-link st-link--danger" label="Remove" confirmLabel="Confirm remove" onConfirm={() => void remove(c)} />
                   )}
@@ -82,6 +92,24 @@ export function CandidatesPanel({ exam, onChanged }: { exam: ExamDetail; onChang
             changed()
           }}
         />
+      )}
+      {newSlip && (
+        <Modal title="New password" onClose={() => setNewSlip(null)}>
+          <p className="st-faint">
+            Give {newSlip.fullName} ({newSlip.candidateNumber}) this login. The old password no longer works and any computer they were signed in on has been signed out.
+          </p>
+          <dl className="st-keys">
+            <div>
+              <dt>Username</dt>
+              <dd className="st-mono st-big">{newSlip.username}</dd>
+            </div>
+            <div>
+              <dt>Password</dt>
+              <dd className="st-mono st-big">{newSlip.password}</dd>
+            </div>
+          </dl>
+          <p className="st-faint">It is also on the login slips page from now on.</p>
+        </Modal>
       )}
       {editing && (
         <EditCandidate
