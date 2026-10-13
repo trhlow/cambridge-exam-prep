@@ -145,6 +145,24 @@ public sealed class CandidateAuthController(
         return CandidateProfile.From(candidate, candidate.Exam!, User.IsPinVerified());
     }
 
+    /// <summary>VE-18: saves the Options screen's text size and contrast for this candidate.</summary>
+    [HttpPut("preferences")]
+    [Authorize(Policy = CandidateAuthDefaults.SignedInPolicy)]
+    public async Task<ActionResult<CandidateProfile>> SavePreferences(CandidatePreferencesRequest request, CancellationToken cancellationToken)
+    {
+        if (!Enum.GetNames<TextSize>().Contains(request.TextSize) || !Enum.GetNames<ContrastMode>().Contains(request.Contrast))
+        {
+            return Problem(title: "Unknown text size or contrast.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var candidateId = User.GetCandidateId();
+        var candidate = await db.Candidates.Include(c => c.Exam).SingleAsync(c => c.Id == candidateId, cancellationToken);
+        candidate.TextSize = Enum.Parse<TextSize>(request.TextSize);
+        candidate.Contrast = Enum.Parse<ContrastMode>(request.Contrast);
+        await db.SaveChangesAsync(cancellationToken);
+        return CandidateProfile.From(candidate, candidate.Exam!, User.IsPinVerified());
+    }
+
     private static bool PinMatches(string entered, string expected) =>
         CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(entered.Trim()), Encoding.UTF8.GetBytes(expected));
 

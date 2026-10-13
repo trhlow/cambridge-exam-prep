@@ -5,6 +5,7 @@ import { ArrowIcon } from '../ui/icons'
 import { BottomBar } from './BottomBar'
 import { ListeningIntro } from './listening/ListeningIntro'
 import { MessageCentre } from './MessageCentre'
+import { OptionsScreen, type DisplayOptions } from './OptionsScreen'
 import { useRecordingPlayer } from './listening/useRecordingPlayer'
 import { buildPages } from './paperLogic'
 import { PartView } from './PartView'
@@ -19,8 +20,33 @@ const AUDIO_DRIFT_MS = 4_000
 type Props = {
   profile: CandidateProfile
   section: CandidateSection
+  /** The server saved new Options (text size, contrast). */
+  onProfileChange?: (profile: CandidateProfile) => void
   /** The section has ended; go back to the list, where the next section is now open. */
   onFinished: () => void
+}
+
+const HIDE_TIMER_KEY = 'victory.hideTimer'
+
+/** "Hide remaining time" lasts for this tab, like the other per-candidate screen choices. */
+function useHiddenTimer(): [boolean, () => void] {
+  const [isHidden, setIsHidden] = useState(() => {
+    try {
+      return sessionStorage.getItem(HIDE_TIMER_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggle = () =>
+    setIsHidden((current) => {
+      try {
+        sessionStorage.setItem(HIDE_TIMER_KEY, current ? '0' : '1')
+      } catch {
+        // Storage blocked: the choice simply does not survive a reload.
+      }
+      return !current
+    })
+  return [isHidden, toggle]
 }
 
 /** Flags are a reminder for the candidate only; they survive a reload of this tab. */
@@ -43,13 +69,16 @@ function useTabFlags(sectionId: number): [ReadonlySet<number>, (number: number) 
   return [flagged, toggle]
 }
 
-export function ExamScreen({ profile, section, onFinished }: Props) {
+export function ExamScreen({ profile, section, onFinished, onProfileChange }: Props) {
   const [paper, setPaper] = useState<Paper | null>(null)
   const [paperError, setPaperError] = useState<string | null>(null)
   const [pageIndex, setPageIndex] = useState(0)
   const [isReviewing, setIsReviewing] = useState(false)
   const [activeNumber, setActiveNumber] = useState<number | undefined>(undefined)
   const [flagged, toggleFlag] = useTabFlags(section.id)
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false)
+  const [display, setDisplay] = useState<DisplayOptions>({ textSize: profile.textSize ?? 'Regular', contrast: profile.contrast ?? 'BlackOnWhite' })
+  const [isTimerHidden, toggleTimer] = useHiddenTimer()
   const attempt = useAttempt(section.id)
   const pages = useMemo(() => (paper ? buildPages(paper) : []), [paper])
   const audioUrls = useMemo(() => paper?.parts.map((p) => p.audioUrl).filter((url): url is string => url !== null) ?? [], [paper])
@@ -94,6 +123,11 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
     candidateApi.paper(section.id).then(setPaper, (e: Error) => setPaperError(e.message))
   }, [section.id])
 
+  const changeDisplay = (next: DisplayOptions) => {
+    setDisplay(next)
+    candidateApi.savePreferences(next.textSize, next.contrast).then((saved) => onProfileChange?.(saved), () => undefined)
+  }
+
   const error = paperError ?? attempt.error
   if (error) {
     return <div className="screen-message">The test could not be loaded: {error}</div>
@@ -104,7 +138,7 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
   }
 
   if (attempt.status === 'Submitted') {
-    return <FinishedScreen profile={profile} title={paper.title} onContinue={onFinished} />
+    return <FinishedScreen profile={profile} title={paper.title} display={display} onContinue={onFinished} />
   }
 
   const page = pages[pageIndex]
@@ -131,10 +165,11 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
   }
 
   return (
-    <div className="exam">
+    <div className="exam" data-contrast={display.contrast} data-text-size={display.textSize}>
       <TopBar
         profile={profile}
-        timeLeft={timeLeftText(attempt.remainingSeconds)}
+        timeLeft={isTimerHidden ? null : timeLeftText(attempt.remainingSeconds)}
+        onOpenOptions={() => setIsOptionsOpen(true)}
         saveStatus={attempt.saveStatus}
         isAudioPlaying={player.state === 'playing'}
         bell={<MessageCentre sectionId={section.id} messages={attempt.messages} />}
@@ -174,6 +209,19 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
           </div>
         )}
         {needsPlay && <ListeningIntro isResuming={isResumingAudio} onPlay={() => void play()} />}
+        {isOptionsOpen && (
+          <OptionsScreen
+            {...display}
+            isTimerHidden={isTimerHidden}
+            onChange={changeDisplay}
+            onToggleTimer={toggleTimer}
+            onSubmissionPage={() => {
+              setIsOptionsOpen(false)
+              setIsReviewing(true)
+            }}
+            onClose={() => setIsOptionsOpen(false)}
+          />
+        )}
         {attempt.status === 'Paused' && (
           <div className="paused" role="alertdialog" aria-label="Test paused">
             <p>Your test has been paused by the invigilator.</p>
@@ -196,9 +244,9 @@ export function ExamScreen({ profile, section, onFinished }: Props) {
   )
 }
 
-function FinishedScreen({ profile, title, onContinue }: { profile: CandidateProfile; title: string; onContinue: () => void }) {
+function FinishedScreen({ profile, title, display, onContinue }: { profile: CandidateProfile; title: string; display: DisplayOptions; onContinue: () => void }) {
   return (
-    <div className="exam exam--finished">
+    <div className="exam exam--finished" data-contrast={display.contrast} data-text-size={display.textSize}>
       <TopBar profile={profile} timeLeft={null} saveStatus="saved" />
       <main className="finished">
         <h2>{title}</h2>

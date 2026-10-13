@@ -3,7 +3,7 @@ import { candidateApi } from '../api/client'
 import type { CandidateProfile } from '../api/types'
 import { SectionsScreen } from './SignInScreens'
 
-const profile: CandidateProfile = { candidateNumber: '0001', fullName: 'An Nguyen', examName: 'A2 Key for Schools', pinVerified: true }
+const profile: CandidateProfile = { candidateNumber: '0001', fullName: 'An Nguyen', examName: 'A2 Key for Schools', pinVerified: true, textSize: 'Regular', contrast: 'BlackOnWhite' }
 
 describe('SectionsScreen', () => {
   it('keeps Listening closed until Reading & Writing has finished', async () => {
