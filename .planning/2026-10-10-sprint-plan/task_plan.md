@@ -11,6 +11,19 @@ Người dùng (11/10) yêu cầu làm cổng admin và giám thị ngay, kéo v
 Xong 11/10: 1–3 (VE-14…17, VE-21…23); VE-13 SignalR chưa làm (đang polling 3–5 s).
 Còn treo: VE-56 Listening, VE-12 báo cáo tuần.
 
+## Rà soát tổng thể trước báo cáo (13/10)
+Người dùng yêu cầu kiểm tra toàn bộ: source, bảo mật, giao diện thí sinh và cổng quản trị.
+Mốc ban đầu: backend 218/218, frontend 60/60, converter 35/35, lint sạch, npm audit / NuGet không lỗ hổng, 2 cảnh báo null.
+
+Phát hiện (P0 = làm trước demo 16/10):
+- [ ] P0 Bảo mật: chưa giới hạn số lần đăng nhập (PIN 4 số dò được), khoá Data Protection không cố định (Docker mất khoá → phiếu không in lại được, cookie mất), chưa có xử lý lỗi chung, chưa có security header
+- [ ] P0 Thí sinh: F5 bị đẩy ra danh sách phần thi
+- [ ] P0 Thí sinh: nút ☰ Options và bút Notes chưa làm gì → làm menu Options (VE-18)
+- [ ] P0 Cổng nhân viên: hết phiên (401) không quay về màn hình đăng nhập; tiêu đề tên lặp "Administrator · Administrator"
+- [ ] P0 Sửa 2 cảnh báo null ở AdminExamsController
+- [ ] P1 Ghi chú + highlight (VE-19)
+- [ ] Rà giao diện từng trang trên trình duyệt (thí sinh + /staff), sửa lỗi hiển thị
+
 ## Current Phase
 Phase 1 (Sprint 1, 12/10 – 18/10)
 

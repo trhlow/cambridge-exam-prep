@@ -143,4 +143,29 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
         Assert.Equal(HttpStatusCode.NotFound, (await outsiderClient.GetAsync($"/api/staff/exams/{examId}/login-slips", ct)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await assignedClient.GetAsync($"/api/admin/exams/{examId}/candidates", ct)).StatusCode);
     }
+
+    [Fact]
+    public async Task ResetPassword_GivesANewPasswordForTheSlipAndSignsOutTheOldSession()
+    {
+        api.SkipIfUnavailable();
+        using var admin = await api.AdminClientAsync();
+        var examId = await CreateOpenExamAsync(admin);
+        var added = await admin.PostAsJsonAsync($"/api/admin/exams/{examId}/candidates", new { candidates = new[] { new NewCandidate(Number(), "Giang", "Vu") } }, ct);
+        var candidate = (await added.Content.ReadFromJsonAsync<List<CandidateView>>(ct))![0];
+        var before = (await admin.GetFromJsonAsync<List<LoginSlip>>($"/api/staff/exams/{examId}/login-slips", ct))!.Single(s => s.CandidateId == candidate.Id);
+        using var oldSession = api.CreateClient();
+        (await oldSession.PostAsJsonAsync("/api/candidate/auth/login", new LoginRequest(before.Username, before.Password!), ct)).EnsureSuccessStatusCode();
+
+        var reset = await admin.PostAsync($"/api/admin/candidates/{candidate.Id}/reset-password", null, ct);
+        var slip = await reset.Content.ReadFromJsonAsync<LoginSlip>(ct);
+        using var fresh = api.CreateClient();
+        var oldPassword = await fresh.PostAsJsonAsync("/api/candidate/auth/login", new LoginRequest(before.Username, before.Password!), ct);
+        var newPassword = await fresh.PostAsJsonAsync("/api/candidate/auth/login", new LoginRequest(slip!.Username, slip.Password!), ct);
+
+        Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
+        Assert.NotEqual(before.Password, slip.Password);
+        Assert.Equal(HttpStatusCode.Unauthorized, oldPassword.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, newPassword.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await oldSession.GetAsync("/api/candidate/auth/me", ct)).StatusCode);
+    }
 }
