@@ -6,6 +6,7 @@ import { ChoiceQuestion } from './questions/ChoiceQuestion'
 import { EssayQuestion } from './questions/EssayQuestion'
 import { GapText } from './questions/GapText'
 import { BookmarkButton } from './questions/QuestionHead'
+import { ROOT_ATTRIBUTE } from './annotations/useAnnotations'
 import { SplitPane } from './SplitPane'
 
 type Props = {
@@ -35,7 +36,7 @@ export function PartView({ part, questionNumbers, answers, onAnswer, flagged, on
   ))
 
   return (
-    <div className="part-page">
+    <div className="part-page" {...{ [ROOT_ATTRIBUTE]: `${part.partNo}:${questionNumbers.join(',')}` }}>
       {part.groups.map((group) => (
         <InstructionBox key={group.questions[0].number} group={group} />
       ))}

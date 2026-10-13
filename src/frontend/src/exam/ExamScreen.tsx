@@ -4,6 +4,10 @@ import type { CandidateProfile, CandidateSection, Paper } from '../api/types'
 import { ArrowIcon } from '../ui/icons'
 import { BottomBar } from './BottomBar'
 import { ListeningIntro } from './listening/ListeningIntro'
+import { NotesPanel } from './annotations/NotesPanel'
+import { SelectionMenu } from './annotations/SelectionMenu'
+import { addHighlight, addNote, removeHighlights, removeNote, updateNote } from './annotations/store'
+import { useAnnotations, usePaintedAnnotations } from './annotations/useAnnotations'
 import { MessageCentre } from './MessageCentre'
 import { OptionsScreen, type DisplayOptions } from './OptionsScreen'
 import { useRecordingPlayer } from './listening/useRecordingPlayer'
@@ -24,6 +28,27 @@ type Props = {
   onProfileChange?: (profile: CandidateProfile) => void
   /** The section has ended; go back to the list, where the next section is now open. */
   onFinished: () => void
+}
+
+/** The page shown, kept for this tab so a reload (F5) opens the same page. */
+function useStoredPage(sectionId: number): [number, (index: number) => void] {
+  const key = `victory.page.${sectionId}`
+  const [index, setIndex] = useState(() => {
+    try {
+      return Math.max(0, Number(sessionStorage.getItem(key) ?? 0) || 0)
+    } catch {
+      return 0
+    }
+  })
+  const set = (next: number) => {
+    setIndex(next)
+    try {
+      sessionStorage.setItem(key, String(next))
+    } catch {
+      // Storage blocked: a reload opens the first page.
+    }
+  }
+  return [index, set]
 }
 
 const HIDE_TIMER_KEY = 'victory.hideTimer'
@@ -72,15 +97,23 @@ function useTabFlags(sectionId: number): [ReadonlySet<number>, (number: number) 
 export function ExamScreen({ profile, section, onFinished, onProfileChange }: Props) {
   const [paper, setPaper] = useState<Paper | null>(null)
   const [paperError, setPaperError] = useState<string | null>(null)
-  const [pageIndex, setPageIndex] = useState(0)
+  const [storedPage, setPageIndex] = useStoredPage(section.id)
   const [isReviewing, setIsReviewing] = useState(false)
   const [activeNumber, setActiveNumber] = useState<number | undefined>(undefined)
   const [flagged, toggleFlag] = useTabFlags(section.id)
   const [isOptionsOpen, setIsOptionsOpen] = useState(false)
   const [display, setDisplay] = useState<DisplayOptions>({ textSize: profile.textSize ?? 'Regular', contrast: profile.contrast ?? 'BlackOnWhite' })
   const [isTimerHidden, toggleTimer] = useHiddenTimer()
+  const [annotations, updateAnnotations] = useAnnotations(section.id)
+  const [isNotesOpen, setIsNotesOpen] = useState(false)
+  const [newNoteId, setNewNoteId] = useState<string | null>(null)
+  // Cambridge booklet: notes are switched off with large text sizes.
+  const canNote = display.textSize === 'Regular'
   const attempt = useAttempt(section.id)
+  usePaintedAnnotations(annotations, `${storedPage}:${isReviewing}:${paper ? 'paper' : ''}:${attempt.isLoaded}:${display.textSize}`)
   const pages = useMemo(() => (paper ? buildPages(paper) : []), [paper])
+  // A stored page from before a reload, kept within the paper.
+  const pageIndex = pages.length > 0 ? Math.min(storedPage, pages.length - 1) : 0
   const audioUrls = useMemo(() => paper?.parts.map((p) => p.audioUrl).filter((url): url is string => url !== null) ?? [], [paper])
   const player = useRecordingPlayer(audioUrls)
   const { stop: stopRecording, start: startRecording, positionMs: recordingPosition, state: playerState } = player
@@ -170,6 +203,8 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange }: Pr
         profile={profile}
         timeLeft={isTimerHidden ? null : timeLeftText(attempt.remainingSeconds)}
         onOpenOptions={() => setIsOptionsOpen(true)}
+        onToggleNotes={() => setIsNotesOpen((open) => !open)}
+        isNotesDisabled={!canNote}
         saveStatus={attempt.saveStatus}
         isAudioPlaying={player.state === 'playing'}
         bell={<MessageCentre sectionId={section.id} messages={attempt.messages} />}
@@ -179,7 +214,7 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange }: Pr
           {audioNotice}
         </div>
       )}
-      <main className="exam-main">
+      <main className={isNotesOpen && canNote && !isReviewing ? 'exam-main has-notes' : 'exam-main'}>
         {isReviewing ? (
           <ReviewPage paper={paper} answers={attempt.answers} onBack={() => setIsReviewing(false)} />
         ) : (
@@ -209,6 +244,29 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange }: Pr
           </div>
         )}
         {needsPlay && <ListeningIntro isResuming={isResumingAudio} onPlay={() => void play()} />}
+        {isNotesOpen && canNote && !isReviewing && (
+          <NotesPanel
+            notes={annotations.notes}
+            focusId={newNoteId}
+            onChange={(id, text) => updateAnnotations((state) => updateNote(state, id, text))}
+            onDelete={(id) => updateAnnotations((state) => removeNote(state, id))}
+            onClose={() => setIsNotesOpen(false)}
+          />
+        )}
+        {!isReviewing && !isOptionsOpen && attempt.status === 'InProgress' && (
+          <SelectionMenu
+            canNote={canNote}
+            isHighlighted={(span) => annotations.highlights.some((h) => h.root === span.root && h.start < span.end && span.start < h.end)}
+            onHighlight={(span) => updateAnnotations((state) => addHighlight(state, span))}
+            onRemoveHighlight={(span) => updateAnnotations((state) => removeHighlights(state, span))}
+            onNote={(span, quote) => {
+              const id = crypto.randomUUID()
+              updateAnnotations((state) => addNote(state, span, quote, id))
+              setNewNoteId(id)
+              setIsNotesOpen(true)
+            }}
+          />
+        )}
         {isOptionsOpen && (
           <OptionsScreen
             {...display}

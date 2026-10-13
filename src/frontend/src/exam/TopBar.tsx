@@ -15,13 +15,16 @@ type Props = {
   bell?: ReactNode
   /** Opens the Options screen (☰). */
   onOpenOptions?: () => void
+  /** Opens or closes the Notes panel (pen); off with large text, as in the Cambridge booklet. */
+  onToggleNotes?: () => void
+  isNotesDisabled?: boolean
 }
 
 /**
  * Inspera header: logo, candidate name and number, the countdown, then connection, messages, options and
  * notes. The connection icon turns red while answers cannot reach the server (they are kept and retried).
  */
-export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, bell, onOpenOptions }: Props) {
+export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, bell, onOpenOptions, onToggleNotes, isNotesDisabled = false }: Props) {
   const isOffline = saveStatus === 'offline'
 
   return (
@@ -58,7 +61,14 @@ export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, 
         <button type="button" className="top-icon" aria-label="Options" onClick={onOpenOptions} disabled={!onOpenOptions}>
           <MenuIcon />
         </button>
-        <button type="button" className="top-icon" aria-label="Show notes">
+        <button
+          type="button"
+          className="top-icon"
+          aria-label="Show notes"
+          title={isNotesDisabled ? 'Notes are not available with large text sizes' : 'Notes'}
+          onClick={onToggleNotes}
+          disabled={!onToggleNotes || isNotesDisabled}
+        >
           <NotesIcon />
         </button>
       </div>
