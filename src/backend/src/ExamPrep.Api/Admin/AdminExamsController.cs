@@ -131,7 +131,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExam
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         logger.LogInformation("Staff {UserId} updated exam {ExamId}", User.GetStaffId(), examId);
-        return await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken);
+        return (await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken))!;
     }
 
     /// <summary>Draft → Scheduled → Active (candidates can sign in) → Closed.</summary>
@@ -152,7 +152,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExam
         exam.Status = Enum.Parse<ExamStatus>(request.Status);
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Staff {UserId} set exam {ExamId} to {Status}", User.GetStaffId(), examId, exam.Status);
-        return await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken);
+        return (await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken))!;
     }
 
     [HttpDelete("exams/{examId:int}")]

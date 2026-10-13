@@ -27,6 +27,9 @@ public sealed class ApiFixture : IAsyncLifetime
     /// <summary>Throw-away folder for uploaded images and audio, deleted with the fixture.</summary>
     public string AssetsRoot { get; } = Path.Combine(Path.GetTempPath(), $"examprep_assets_{Guid.NewGuid():N}");
 
+    /// <summary>Throw-away folder for the Data Protection key ring, deleted with the fixture.</summary>
+    public string KeysPath { get; } = Path.Combine(Path.GetTempPath(), $"examprep_keys_{Guid.NewGuid():N}");
+
     public WebApplicationFactory<Program> Factory =>
         factory ?? throw new InvalidOperationException("The API fixture is not initialised.");
 
@@ -40,6 +43,7 @@ public sealed class ApiFixture : IAsyncLifetime
             builder.UseSetting("Bootstrap:AdminUsername", AdminUsername);
             builder.UseSetting("Bootstrap:AdminPassword", AdminPassword);
             builder.UseSetting("Storage:AssetsRoot", AssetsRoot);
+            builder.UseSetting("DataProtection:KeysPath", KeysPath);
         });
 
     public HttpClient CreateClient() => Factory.CreateClient();
@@ -289,9 +293,9 @@ public sealed class ApiFixture : IAsyncLifetime
 
         await database.DisposeAsync();
 
-        if (Directory.Exists(AssetsRoot))
+        foreach (var folder in new[] { AssetsRoot, KeysPath }.Where(Directory.Exists))
         {
-            Directory.Delete(AssetsRoot, recursive: true);
+            Directory.Delete(folder, recursive: true);
         }
     }
 }

@@ -13,6 +13,7 @@ namespace ExamPrep.Api.Auth;
 public sealed class StaffAuthController(
     ExamPrepDbContext db,
     IPasswordHasher<User> passwordHasher,
+    LoginThrottle throttle,
     ILogger<StaffAuthController> logger) : ControllerBase
 {
     private const string InvalidCredentials = "Invalid username or password.";
@@ -25,6 +26,13 @@ public sealed class StaffAuthController(
     [AllowAnonymous]
     public async Task<ActionResult<StaffProfile>> Login(StaffLoginRequest request, CancellationToken cancellationToken)
     {
+        var throttleKey = LoginThrottle.StaffKey(request.Username);
+        if (throttle.IsLocked(throttleKey))
+        {
+            logger.LogWarning("Staff sign-in refused for {Username}: too many failed attempts", request.Username);
+            return LoginThrottle.Locked();
+        }
+
         var user = await db.Users.SingleOrDefaultAsync(u => u.Username == request.Username, cancellationToken);
         if (user is null)
         {
@@ -49,6 +57,7 @@ public sealed class StaffAuthController(
             await db.SaveChangesAsync(cancellationToken);
         }
 
+        throttle.Reset(throttleKey);
         await HttpContext.SignInAsync(StaffAuthDefaults.Scheme, StaffAuthenticationSetup.CreatePrincipal(user));
         logger.LogInformation("Staff {UserId} signed in", user.Id);
         return StaffProfile.From(user);
@@ -73,6 +82,7 @@ public sealed class StaffAuthController(
 
     private UnauthorizedObjectResult InvalidLogin(string username, string reason)
     {
+        throttle.RecordFailure(LoginThrottle.StaffKey(username));
         logger.LogWarning("Staff sign-in failed for {Username}: {Reason}", username, reason);
         return Unauthorized(new ProblemDetails
         {

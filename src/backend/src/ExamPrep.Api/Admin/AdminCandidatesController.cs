@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Common;
+using ExamPrep.Api.Exams;
 using ExamPrep.Domain.Candidates;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Infrastructure.Persistence;
@@ -130,6 +131,29 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
 
         var hasStarted = await db.Attempts.AnyAsync(a => a.CandidateId == candidateId, cancellationToken);
         return CandidateView.From(candidate, hasStarted);
+    }
+
+    /// <summary>
+    /// A new password for a lost slip (or one that can no longer be printed). Any computer the candidate is signed in
+    /// on is signed out; the username does not change.
+    /// </summary>
+    [HttpPost("candidates/{candidateId:int}/reset-password")]
+    public async Task<ActionResult<LoginSlip>> ResetPassword(int candidateId, CancellationToken cancellationToken)
+    {
+        var candidate = await db.Candidates.Include(c => c.Exam).SingleOrDefaultAsync(c => c.Id == candidateId, cancellationToken);
+        if (candidate is null)
+        {
+            return NotFound();
+        }
+
+        var password = CandidateCredentials.NewPassword();
+        credentials.SetPassword(candidate, password);
+        candidate.SecurityStamp = Guid.NewGuid();
+        await db.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Staff {UserId} reset the password of candidate {CandidateId}", User.GetStaffId(), candidateId);
+
+        var exam = candidate.Exam!;
+        return new LoginSlip(candidate.Id, candidate.CandidateNumber, $"{candidate.FirstName} {candidate.LastName}", candidate.Username, password, exam.Name, exam.ScheduledDate, exam.Room);
     }
 
     [HttpDelete("candidates/{candidateId:int}")]

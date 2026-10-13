@@ -20,6 +20,7 @@ namespace ExamPrep.Api.Auth;
 public sealed class CandidateAuthController(
     ExamPrepDbContext db,
     IPasswordHasher<Candidate> passwordHasher,
+    LoginThrottle throttle,
     ILogger<CandidateAuthController> logger) : ControllerBase
 {
     private const string InvalidCredentials = "Invalid username or password.";
@@ -44,6 +45,13 @@ public sealed class CandidateAuthController(
     [AllowAnonymous]
     public async Task<ActionResult<CandidateProfile>> Login(CandidateLoginRequest request, CancellationToken cancellationToken)
     {
+        var throttleKey = LoginThrottle.CandidateKey(request.Username);
+        if (throttle.IsLocked(throttleKey))
+        {
+            logger.LogWarning("Candidate sign-in refused for {Username}: too many failed attempts", request.Username);
+            return LoginThrottle.Locked();
+        }
+
         var candidate = await db.Candidates
             .Include(c => c.Exam)
             .SingleOrDefaultAsync(c => c.Username == request.Username, cancellationToken);
@@ -71,6 +79,8 @@ public sealed class CandidateAuthController(
             candidate.PasswordHash = passwordHasher.HashPassword(candidate, request.Password);
         }
 
+        throttle.Reset(throttleKey);
+
         // A new stamp signs out any other computer this candidate was using.
         candidate.SecurityStamp = Guid.NewGuid();
         await db.SaveChangesAsync(cancellationToken);
@@ -96,12 +106,21 @@ public sealed class CandidateAuthController(
             return Problem(title: ExamNotOpen, statusCode: StatusCodes.Status403Forbidden);
         }
 
+        var pinKey = LoginThrottle.PinKey(candidate.Id);
+        if (throttle.IsLocked(pinKey))
+        {
+            logger.LogWarning("Candidate {CandidateId} PIN entry refused: too many wrong PINs", candidate.Id);
+            return LoginThrottle.Locked();
+        }
+
         if (!PinMatches(request.Pin, exam.SessionPin))
         {
+            throttle.RecordFailure(pinKey);
             logger.LogWarning("Candidate {CandidateId} entered an incorrect PIN for exam {ExamId}", candidate.Id, exam.Id);
             return Problem(title: IncorrectPin, statusCode: StatusCodes.Status400BadRequest);
         }
 
+        throttle.Reset(pinKey);
         await HttpContext.SignInAsync(CandidateAuthDefaults.Scheme, CandidateAuthenticationSetup.CreatePrincipal(candidate, pinVerified: true));
         return CandidateProfile.From(candidate, exam, pinVerified: true);
     }
@@ -131,6 +150,7 @@ public sealed class CandidateAuthController(
 
     private UnauthorizedObjectResult InvalidLogin(string username, string reason)
     {
+        throttle.RecordFailure(LoginThrottle.CandidateKey(username));
         logger.LogWarning("Candidate sign-in failed for {Username}: {Reason}", username, reason);
         return Unauthorized(new ProblemDetails
         {

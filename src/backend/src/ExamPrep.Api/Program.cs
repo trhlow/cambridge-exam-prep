@@ -5,6 +5,7 @@ using ExamPrep.Api.Delivery;
 using ExamPrep.Api.Demo;
 using ExamPrep.Infrastructure;
 using ExamPrep.Infrastructure.Persistence;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,16 @@ builder.Services.AddCandidateAuthentication(builder.Environment);
 builder.Services.AddAssetAccess();
 builder.Services.AddScoped<CandidateSectionQuery>();
 builder.Services.AddScoped<CandidateCredentials>();
+builder.Services.AddSingleton<LoginThrottle>();
+
+// Sign-in cookies and the re-printable candidate passwords are encrypted with this key ring; it must outlive a
+// restart or a new container, so it lives in App_Data (git-ignored) unless DataProtection:KeysPath says otherwise.
+var keysPath = builder.Configuration["DataProtection:KeysPath"];
+builder.Services.AddDataProtection()
+    .SetApplicationName("ExamPrep")
+    .PersistKeysToFileSystem(new DirectoryInfo(string.IsNullOrWhiteSpace(keysPath)
+        ? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys")
+        : Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, keysPath))));
 builder.Services.AddScoped<AttemptExpiry>();
 builder.Services.AddHostedService<AttemptExpiryWorker>();
 builder.Services.AddProblemDetails();
@@ -39,6 +50,24 @@ if (app.Environment.IsDevelopment())
     };
     await DemoSeeder.SeedAsync(app.Services, demo, CancellationToken.None);
 }
+
+if (!app.Environment.IsDevelopment())
+{
+    // Unhandled errors become a plain ProblemDetails 500: no stack trace, SQL or path reaches the browser.
+    app.UseExceptionHandler();
+    app.UseHsts();
+}
+
+app.Use((context, next) =>
+{
+    // The API only returns JSON and exam files: nothing here may be framed, sniffed or leak a referrer.
+    var headers = context.Response.Headers;
+    headers.XContentTypeOptions = "nosniff";
+    headers.XFrameOptions = "DENY";
+    headers["Referrer-Policy"] = "no-referrer";
+    headers.ContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'";
+    return next(context);
+});
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
