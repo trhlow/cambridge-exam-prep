@@ -1181,3 +1181,139 @@ button {
   color: var(--text);
   border-color: var(--rule-strong);
 }
+
+/* VE-19: highlights and notes (CSS Custom Highlight API: the exam text itself is never rewritten). */
+::highlight(exam-highlight) {
+  background-color: #ffe066;
+  color: #000;
+}
+
+::highlight(exam-note) {
+  background-color: #cfe8ff;
+  color: #000;
+  text-decoration: underline 2px #2b6cb0;
+}
+
+.selection-menu {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  transform: translate(-50%, calc(-100% - 8px));
+  background: var(--picker);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.selection-menu button {
+  padding: 8px 14px;
+  border: 0;
+  background: none;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.selection-menu button + button {
+  border-left: 1px solid #666;
+}
+
+.selection-menu button:hover,
+.selection-menu button:focus-visible {
+  background: #555;
+}
+
+.notes-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  width: min(340px, 40vw);
+  border-left: 1px solid var(--rule);
+  background: var(--surface);
+  box-shadow: -4px 0 14px rgba(0, 0, 0, 0.08);
+}
+
+.notes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.notes-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.notes-close {
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.notes-empty {
+  margin: 0;
+  padding: 16px 14px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.notes-list {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.notes-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.notes-list blockquote {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 3px solid var(--number-ring);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.notes-list textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--rule-strong);
+  font: inherit;
+  resize: vertical;
+}
+
+.notes-delete {
+  align-self: flex-end;
+  border: 0;
+  background: none;
+  color: var(--error);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.top-icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* The open Notes panel takes the right edge; the arrows and the text move clear of it. */
+.exam-main.has-notes .nav-arrows {
+  right: calc(min(340px, 40vw) + 24px);
+}
+
+.exam-main.has-notes .part-page {
+  padding-right: calc(min(340px, 40vw) + var(--gutter));
+}
