@@ -5,6 +5,7 @@ import { ExamFormPage } from './pages/ExamFormPage'
 import { ExamPage } from './pages/ExamPage'
 import { ExamsPage } from './pages/ExamsPage'
 import { LoginSlipsPage } from './pages/LoginSlipsPage'
+import { MarkingPage } from './pages/MarkingPage'
 import { MonitorPage } from './pages/MonitorPage'
 import { PapersPage } from './pages/PapersPage'
 import { ResultsPage } from './pages/ResultsPage'
@@ -121,7 +122,9 @@ function Page({ route, isAdmin, currentUserId }: { route: Route; isAdmin: boolea
     case 'monitor':
       return <MonitorPage examId={route.examId} sectionId={route.sectionId} />
     case 'results':
-      return <ResultsPage examId={route.examId} />
+      return <ResultsPage examId={route.examId} isAdmin={isAdmin} />
+    case 'marking':
+      return isAdmin ? <MarkingPage examId={route.examId} attemptId={route.attemptId} /> : <NotAllowed />
     case 'papers':
       return isAdmin ? <PapersPage /> : <NotAllowed />
     case 'users':

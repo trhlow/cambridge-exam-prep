@@ -213,7 +213,9 @@
 }
 
 .st-btn.is-armed,
-.st-link.is-armed {
+.st-btn.is-armed:hover:not(:disabled),
+.st-link.is-armed,
+.st-link.is-armed:hover {
   background: var(--st-red);
   border-color: var(--st-red);
   color: #fff;
@@ -843,4 +845,49 @@ ul.st-error {
     display: block;
     overflow-x: auto;
   }
+}
+
+/* VE-26: marking Writing */
+.st-writing {
+  margin-top: 24px;
+}
+
+.st-essay {
+  margin: 8px 0 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--st-hairline);
+  border-radius: var(--st-radius);
+  background: #fbfbfa;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 16px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.st-mark-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.st-mark-form .st-field input[type='number'] {
+  width: 110px;
+}
+
+.st-grow {
+  flex: 1;
+  min-width: 220px;
+}
+
+.st-mark {
+  font-weight: 600;
+}
+
+.st-mark--right {
+  color: var(--st-green);
+}
+
+.st-mark--wrong {
+  color: var(--st-red);
 }
