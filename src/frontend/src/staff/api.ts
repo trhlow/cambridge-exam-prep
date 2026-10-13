@@ -215,6 +215,27 @@ export interface SectionResult {
   attemptId: number | null
 }
 
+export interface QuestionMark {
+  number: number
+  partNo: number
+  interactionType: string
+  response: string | null
+  acceptedAnswers: string[]
+  isCorrect: boolean | null
+  score: number | null
+  points: number
+  comment: string | null
+}
+
+export interface AttemptMarking {
+  attemptId: number
+  sectionTitle: string
+  gradingStatus: string
+  rawScore: number | null
+  maxScore: number | null
+  questions: QuestionMark[]
+}
+
 export interface CandidateResult {
   candidateId: number
   candidateNumber: string
@@ -263,6 +284,10 @@ export const adminApi = {
   },
   publishPaper: (id: number) => post<PaperListItem>(`/api/admin/papers/${id}/publish`),
   deletePaper: (id: number) => del(`/api/admin/papers/${id}`),
+
+  marking: (attemptId: number) => request<AttemptMarking>(`/api/staff/attempts/${attemptId}/marking`),
+  markWriting: (attemptId: number, questionNumber: number, score: number, comment: string) =>
+    post<AttemptMarking>(`/api/admin/attempts/${attemptId}/writing-marks`, { questionNumber, score, comment }),
 
   users: () => request<StaffProfile[]>('/api/admin/users'),
   createUser: (body: { username: string; fullName: string; password: string; role: Role }) => post<StaffProfile>('/api/admin/users', body),

@@ -9,6 +9,7 @@ export type Route =
   | { page: 'monitor'; examId: number; sectionId: number }
   | { page: 'slips'; examId: number }
   | { page: 'results'; examId: number }
+  | { page: 'marking'; examId: number; attemptId: number }
   | { page: 'papers' }
   | { page: 'users' }
   | { page: 'not-found' }
@@ -32,6 +33,7 @@ export function parseRoute(pathname: string): Route {
   if (third === 'results' && parts.length === 3) return { page: 'results', examId }
   const sectionId = id(fourth)
   if (third === 'sections' && sectionId !== null && parts.length === 4) return { page: 'monitor', examId, sectionId }
+  if (third === 'marking' && sectionId !== null && parts.length === 4) return { page: 'marking', examId, attemptId: sectionId }
   return { page: 'not-found' }
 }
 
