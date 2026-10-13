@@ -45,26 +45,26 @@ public sealed class CandidateAuthController(
     [AllowAnonymous]
     public async Task<ActionResult<CandidateProfile>> Login(CandidateLoginRequest request, CancellationToken cancellationToken)
     {
-        var throttleKey = LoginThrottle.CandidateKey(request.Username);
+        var candidate = await db.Candidates
+            .Include(c => c.Exam)
+            .SingleOrDefaultAsync(c => c.Username == request.Username, cancellationToken);
+        var throttleKey = candidate is null ? LoginThrottle.UnknownKey("candidate", request.Username) : LoginThrottle.CandidateKey(candidate.Id);
         if (throttle.IsLocked(throttleKey))
         {
             logger.LogWarning("Candidate sign-in refused for {Username}: too many failed attempts", request.Username);
             return LoginThrottle.Locked();
         }
 
-        var candidate = await db.Candidates
-            .Include(c => c.Exam)
-            .SingleOrDefaultAsync(c => c.Username == request.Username, cancellationToken);
         if (candidate is null)
         {
             passwordHasher.VerifyHashedPassword(TimingDummy, TimingDummyHash.Value, request.Password);
-            return InvalidLogin(request.Username, "unknown username");
+            return InvalidLogin(throttleKey, request.Username, "unknown username");
         }
 
         var verification = passwordHasher.VerifyHashedPassword(candidate, candidate.PasswordHash, request.Password);
         if (verification == PasswordVerificationResult.Failed)
         {
-            return InvalidLogin(request.Username, "wrong password");
+            return InvalidLogin(throttleKey, request.Username, "wrong password");
         }
 
         var exam = candidate.Exam!;
@@ -166,9 +166,9 @@ public sealed class CandidateAuthController(
     private static bool PinMatches(string entered, string expected) =>
         CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(entered.Trim()), Encoding.UTF8.GetBytes(expected));
 
-    private UnauthorizedObjectResult InvalidLogin(string username, string reason)
+    private UnauthorizedObjectResult InvalidLogin(string throttleKey, string username, string reason)
     {
-        throttle.RecordFailure(LoginThrottle.CandidateKey(username));
+        throttle.RecordFailure(throttleKey);
         logger.LogWarning("Candidate sign-in failed for {Username}: {Reason}", username, reason);
         return Unauthorized(new ProblemDetails
         {
