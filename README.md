@@ -142,7 +142,10 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Đồng hồ server, tự lưu, hết giờ tự nộp; Listening phát một lần, kéo thả
 - [x] Chấm tự động Reading Part 1–5 và Listening theo đáp án; API kết quả cho nhân viên — 182 test backend, 48 test frontend
 - [x] Cổng nhân viên `/staff`: quản trị đề (import, xuất bản), kỳ thi (gắn đề, PIN, mật khẩu giám thị), thí sinh (dán từ Excel, username kiểu Cambridge, in phiếu), tài khoản giám thị và phân công; trang theo dõi của giám thị (tạm dừng, cộng giờ sự cố, Edit End Time, tua audio, thông báo) — 218 test backend, 60 test frontend
-- [ ] Cập nhật thời gian thực bằng SignalR (hiện làm mới 3–5 giây), chấm Writing, xuất kết quả Excel
+- [x] Màn hình thí sinh: menu Options (độ tương phản, cỡ chữ, ẩn giờ), highlight và ghi chú; F5 quay lại đúng bài
+- [x] Chấm Writing cho giáo viên, tổng điểm cuối, xuất kết quả CSV mở bằng Excel
+- [x] Rà soát bảo mật 13/10: khoá tài khoản khi sai mật khẩu/PIN liên tục, lưu khoá mã hoá, security header, xử lý lỗi an toàn — 231 test backend, 71 test frontend
+- [ ] Cập nhật thời gian thực bằng SignalR (hiện làm mới 3–5 giây)
 - [ ] Tích hợp Safe Exam Browser, đóng gói
 - [ ] Kiểm thử tình huống, kiểm thử tải, buổi thi thử
 - [ ] Quyển báo cáo
