@@ -141,7 +141,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  background: rgba(247, 250, 250, 0.97);
+  background: var(--page);
   font-size: 18px;
   text-align: center;
 }
@@ -1028,4 +1028,156 @@ button {
   transform: translateX(-50%);
   background: var(--picker);
   color: #fff;
+}
+
+/* VE-18: Options (☰). Covers the test below the header, so it also hides the candidate's screen. */
+.opt-screen {
+  position: fixed;
+  top: var(--header-height);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 45;
+  overflow-y: auto;
+  background: var(--page);
+  color: var(--text);
+}
+
+.opt-screen-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px var(--gutter) 8px;
+}
+
+.opt-screen-head h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.opt-screen-close {
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.opt-screen-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px var(--gutter) 40px;
+}
+
+.opt-screen-submit {
+  align-self: flex-start;
+  padding: 12px 22px;
+}
+
+.opt-screen-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.opt-screen-group legend {
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.opt-screen-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.opt-screen-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 190px;
+  padding: 14px 16px;
+  border: 2px solid var(--rule);
+  cursor: pointer;
+}
+
+.opt-screen-choice:has(input:checked) {
+  border-color: var(--teal);
+  outline: 1px solid var(--teal);
+}
+
+.contrast-sample--BlackOnWhite {
+  background: #fff;
+  color: #000;
+}
+
+.contrast-sample--WhiteOnBlack {
+  background: #000;
+  color: #fff;
+}
+
+.contrast-sample--YellowOnBlack {
+  background: #000;
+  color: #ff0;
+}
+
+.size-sample--Large {
+  font-size: 19px;
+}
+
+.size-sample--ExtraLarge {
+  font-size: 22px;
+}
+
+/* Text size: the whole test area is scaled, as Inspera enlarges every text and control together. */
+.exam[data-text-size='Large'] .exam-main {
+  zoom: 1.2;
+}
+
+.exam[data-text-size='ExtraLarge'] .exam-main {
+  zoom: 1.4;
+}
+
+/* Contrast: the screen's colours come from these variables; pictures keep their own colours. */
+.exam[data-contrast='WhiteOnBlack'],
+.exam[data-contrast='YellowOnBlack'] {
+  --page: #000;
+  --surface: #000;
+  --rule: #9a9a9a;
+  --rule-strong: #d0d0d0;
+  --tile: #1c1c1c;
+  --selected: #24486a;
+  --nav-disabled: #3a3a3a;
+  --nav-enabled: #d0d0d0;
+  --number-ring: #8cc4f0;
+  --picker: #2a2a2a;
+  --teal: #3fc6cf;
+  --teal-dark: #3fc6cf;
+  background: var(--page);
+  color: var(--text);
+}
+
+.exam[data-contrast='WhiteOnBlack'] {
+  --text: #fff;
+  --text-muted: #e6e6e6;
+  --text-faint: #cfcfcf;
+}
+
+.exam[data-contrast='YellowOnBlack'] {
+  --text: #ff0;
+  --text-muted: #ffff70;
+  --text-faint: #e6e65c;
+}
+
+.exam[data-contrast='WhiteOnBlack'] :is(input, textarea, select),
+.exam[data-contrast='YellowOnBlack'] :is(input, textarea, select) {
+  background: #000;
+  color: var(--text);
+  border-color: var(--rule-strong);
 }

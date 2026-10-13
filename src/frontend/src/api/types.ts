@@ -8,11 +8,17 @@ export type InteractionType =
   | 'DragDropMatch'
   | 'Essay'
 
+export type TextSize = 'Regular' | 'Large' | 'ExtraLarge'
+export type Contrast = 'BlackOnWhite' | 'WhiteOnBlack' | 'YellowOnBlack'
+
 export interface CandidateProfile {
   candidateNumber: string
   fullName: string
   examName: string
   pinVerified: boolean
+  /** Options screen choices, kept on the server for the whole test. */
+  textSize: TextSize
+  contrast: Contrast
 }
 
 export interface CandidateSection {

@@ -13,13 +13,15 @@ type Props = {
   isAudioPlaying?: boolean
   /** The invigilator's messages (bell icon); a plain bell when the section has none to show. */
   bell?: ReactNode
+  /** Opens the Options screen (☰). */
+  onOpenOptions?: () => void
 }
 
 /**
  * Inspera header: logo, candidate name and number, the countdown, then connection, messages, options and
  * notes. The connection icon turns red while answers cannot reach the server (they are kept and retried).
  */
-export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, bell }: Props) {
+export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, bell, onOpenOptions }: Props) {
   const isOffline = saveStatus === 'offline'
 
   return (
@@ -53,7 +55,7 @@ export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, 
             <BellIcon />
           </button>
         )}
-        <button type="button" className="top-icon" aria-label="Options">
+        <button type="button" className="top-icon" aria-label="Options" onClick={onOpenOptions} disabled={!onOpenOptions}>
           <MenuIcon />
         </button>
         <button type="button" className="top-icon" aria-label="Show notes">

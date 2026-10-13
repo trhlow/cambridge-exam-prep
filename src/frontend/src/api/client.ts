@@ -1,4 +1,4 @@
-import type { AttemptState, CandidateProfile, CandidateSection, Paper } from './types'
+import type { AttemptState, CandidateProfile, CandidateSection, Contrast, Paper, TextSize } from './types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -39,6 +39,7 @@ export const candidateApi = {
   login: (username: string, password: string) => post<CandidateProfile>('/api/candidate/auth/login', { username, password }),
   enterPin: (pin: string) => post<CandidateProfile>('/api/candidate/auth/pin', { pin }),
   logout: () => post<void>('/api/candidate/auth/logout'),
+  savePreferences: (textSize: TextSize, contrast: Contrast) => put<CandidateProfile>('/api/candidate/auth/preferences', { textSize, contrast }),
   sections: () => request<CandidateSection[]>('/api/candidate/sections'),
   paper: (sectionId: number) => request<Paper>(`/api/candidate/sections/${sectionId}/paper`),
   /** Starts the section, or returns the running attempt unchanged (after a reload). */
