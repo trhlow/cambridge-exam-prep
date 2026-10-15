@@ -63,7 +63,7 @@ Thời lượng A2 Key và B1 Preliminary lấy theo *Exam Day Booklet for Digit
 Theo hướng dẫn tổ chức repository của Khoa:
 
 ```
-├── docker/             docker-compose cho MySQL (.env.example mẫu)
+├── docker/             docker-compose: MySQL + API + web (.env.example mẫu)
 ├── setup/              Bộ cài đặt, dữ liệu thử, hướng dẫn triển khai
 ├── src/
 │   └── backend/        ASP.NET Core (.NET 10): Domain, Infrastructure (EF Core), Api, Tests
@@ -105,12 +105,33 @@ Sơ đồ nguồn `.drawio` mở bằng [draw.io](https://www.drawio.com/); file
 
 ## Cài đặt & chạy
 
-Yêu cầu: .NET SDK 10, Docker Desktop.
+### Chạy cả hệ thống bằng Docker (một lệnh)
+
+Chỉ cần Docker Desktop. MySQL, API và giao diện chạy trong ba container; API tự tạo bảng, tạo tài khoản admin đầu tiên và kỳ thi demo A2.
+
+```bash
+cp docker/.env.example docker/.env        # rồi đổi mật khẩu MySQL và BOOTSTRAP_ADMIN_* trong docker/.env
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --build
+```
+
+Mở http://localhost:8080 (thí sinh) và http://localhost:8080/staff (quản trị, giám thị). Tài khoản demo (mục `Demo` của `src/backend/src/ExamPrep.Api/appsettings.Development.json`, chỉ dùng khi chạy thử):
+
+| Vai trò | Địa chỉ | Tên đăng nhập | Mật khẩu |
+|---|---|---|---|
+| Quản trị | `/staff` | `hoanglong` | `19072005` |
+| Giám thị | `/staff` | `giamthi` | `victory-invig` |
+| Thí sinh (Trần Hoàng Long) | `/` | `hoanglong` | `19072005`, mã PIN `4821` |
+
+Thí sinh thật vẫn nhận tên đăng nhập kiểu Cambridge và mật khẩu ngẫu nhiên in trên phiếu. Dừng bằng `docker compose -f docker/docker-compose.yml down` (dữ liệu vẫn giữ).
+
+### Chạy từng phần để phát triển
+
+Yêu cầu: .NET SDK 10, Node.js, Docker Desktop.
 
 ```bash
 # 1. Cơ sở dữ liệu MySQL
 cp docker/.env.example docker/.env        # rồi đổi mật khẩu trong docker/.env
-docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d mysql
 
 # 2. Chuỗi kết nối cho API (lưu bằng user-secrets, không nằm trong repo)
 cd src/backend
