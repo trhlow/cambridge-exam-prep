@@ -21,6 +21,7 @@ HEADER_ZONE = 100.0       # "Part n" sits above this y
 FOOTER_ZONE = 770.0       # page number and "Turn over" sit below this y
 NUMBER_COLUMN = 80.0      # question numbers start left of this x
 FOLLOW_ON_GAP = 20.0      # an instruction line continues the one above when closer than this
+SAME_COLUMN = 2.0         # … and starts at the same x (a wrapped line)
 ROW_SLACK = 4.0           # a question's own row may sit a few points above its number
 PICTURE_SLACK = 10.0      # a picture may start a little above its question number
 
@@ -77,9 +78,11 @@ def _strip_headings(part_no: int, lines: list[Line], pictures: tuple[Picture, ..
     first = last = None
     for line in sorted(lines, key=lambda item: (item.page, item.y0, item.x0)):
         heading = QUESTIONS_HEADING.match(line.text)
+        # The next sentence ("Write one word…") or the wrapped end of the instruction above it.
         follows_instruction = (
-            instructions and line.text.startswith("Write") and line.page == instructions[-1].page
+            instructions and line.page == instructions[-1].page
             and 0 < line.y0 - instructions[-1].y0 < FOLLOW_ON_GAP
+            and (line.text.startswith("Write") or abs(line.x0 - instructions[-1].x0) < SAME_COLUMN)
         )
         if line.bold and PART_MARK.match(line.text) and line.y0 < HEADER_ZONE:
             continue

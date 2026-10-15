@@ -104,11 +104,21 @@ curl -k -b cookies.txt -F "package=@a2-key-fs-reading-writing.zip" https://local
 
 ## Chuyển đề PDF thành gói đề (VE-56)
 
-Victory gửi đề dạng PDF theo bố cục của Cambridge. `pdf2package.py` chuyển **đề Reading & Writing A2** và file đáp án thành một thư mục gói đề nháp. Listening sẽ làm sau, khi có audio tách theo part.
+**Trên web (cách dùng thường ngày):** admin vào `/staff` → **Papers** → **Import from PDF**, chọn PDF đề, PDF đáp án và (Listening) 5 file nghe, mỗi part một ô. Server chạy chính `pdf2package.py` bên dưới (`POST /api/admin/papers/convert`) rồi import như một gói `.zip`. Có lỗi thì không tạo gì và hiện từng lỗi; không lỗi thì đề vào trạng thái Draft, kèm danh sách mục cần xem lại. Bấm tên đề để mở trang duyệt (từng câu, hình, đáp án, nghe thử từng part), rồi **Publish**.
+
+Victory gửi đề dạng PDF theo bố cục của Cambridge. `pdf2package.py` chuyển **đề A2 Reading & Writing hoặc Listening** cùng file đáp án thành một thư mục gói đề nháp. Loại đề được nhận ra từ trang bìa.
 
 ```bash
 python -I setup/exam-package/pdf2package.py "<đề>.pdf" "<đáp án>.pdf" --title "A2 Key for Schools – Test 1 – Reading & Writing" [-o <thư mục>]
+python -I setup/exam-package/pdf2package.py "<đề Listening>.pdf" "<đáp án>.pdf" --audio-dir "<thư mục audio>" --title "A2 Key for Schools – Test 1 – Listening"
 ```
+
+Listening cần **mỗi part một file âm thanh** trong `--audio-dir`, tên bắt đầu bằng số part: `P1_….mp3`, `part2.mp3`, `Part 3 - ….m4a`. Bộ chuyển chép chúng vào `audio/part1.mp3` … `audio/part5.mp3`. Bố cục Listening A2:
+
+- Part 1: câu hỏi và ba tranh A/B/C. Tranh có thể là ảnh, hình vẽ nét (đồng hồ) hoặc chữ in to (giá tiền), nên mỗi phương án được **cắt từ vùng trang** giữa câu hỏi và chữ cái, chia cột ở giữa hai chữ cái. Giá tiền in to được giữ làm chữ thay thế cho hình.
+- Part 2: tiêu đề, câu giới thiệu và bảng "Nhãn: giá trị". `(6) Mrs` thành `Mrs {{q:6}}`, `(8)` + `a.m.` thành `{{q:8}} a.m.`. Đáp án là giờ (`7.30`) thì tự nhận thêm `7:30`, và ghi vào mục cần xem lại.
+- Part 3–4: câu chọn A/B/C. Câu giới thiệu ("You will hear …") của Part 3 vào phần hướng dẫn; Part 4 ghép tình huống và câu hỏi.
+- Part 5: tên người bên trái, thẻ A–H bên phải (kéo thả). Dòng ví dụ `0` được ghi vào hướng dẫn.
 
 Bộ chuyển làm các việc sau:
 
@@ -122,7 +132,7 @@ Bộ chuyển làm các việc sau:
    - Part 4: `(19) ......` → `{{q:19}}` kèm hàng ba từ để chọn.
    - Part 5: email From/To, có ví dụ `(0)`, giới hạn "Write one word".
    - Part 6–7: đề viết, gạch đầu dòng, ba tranh, số từ tối thiểu.
-5. Lưu hình gốc nhúng trong PDF vào `images/`. Không chụp vùng trang, nên chữ xung quanh không lẫn vào hình. Mỗi hình có `width` bằng 2 px cho mỗi pt in.
+5. Reading & Writing: lưu hình gốc nhúng trong PDF vào `images/`. Không chụp vùng trang, nên chữ xung quanh không lẫn vào hình. Mỗi hình có `width` bằng 2 px cho mỗi pt in.
 6. Ghép đáp án theo số câu. `your / the` thành hai đáp án được chấp nhận.
 
 Thư mục ra có:

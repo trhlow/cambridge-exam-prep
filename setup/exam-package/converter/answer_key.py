@@ -1,4 +1,5 @@
-"""Cambridge mark schemes: 'PART n', 'KEY', then question number and answer on alternating lines.
+"""Cambridge mark schemes: 'PART n' (Reading & Writing adds a 'KEY' line), then question number and answer on
+alternating lines.
 
 A key ends at the next 'PART n' or at the first line where a question number should be but is not (the page
 header repeated at the top of the next page).
@@ -19,10 +20,10 @@ def parse_answer_key(text: str) -> dict[int, list[str]]:
         line = raw.strip()
         if not line:
             continue
-        if PART_HEADING.match(line) or line.upper() == "KEY":
+        if PART_HEADING.match(line) or (in_key and number is None and line.upper() == "KEY"):
             if number is not None:
                 raise ValueError(f"Answer key: question {number} has no answer.")
-            in_key = line.upper() == "KEY"
+            in_key = True
         elif not in_key:
             continue
         elif number is None:

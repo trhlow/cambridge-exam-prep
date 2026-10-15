@@ -31,6 +31,17 @@ class Picture:
 
 
 @dataclass(frozen=True)
+class Shape:
+    """The bounds of something drawn with vector paths: a frame, a clock face, a table border."""
+
+    page: int
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+
+
+@dataclass(frozen=True)
 class Crop:
     """A PNG saved under `name` (a path inside the package, e.g. images/p1-q1.png).
 
@@ -50,6 +61,7 @@ class Crop:
 class Document:
     lines: tuple[Line, ...]
     pictures: tuple[Picture, ...]
+    shapes: tuple[Shape, ...] = ()
 
 
 def read_document(path: Path) -> Document:
@@ -57,6 +69,7 @@ def read_document(path: Path) -> Document:
 
     lines: list[Line] = []
     pictures: list[Picture] = []
+    shapes: list[Shape] = []
     with pymupdf.open(path) as pdf:
         for page_no, page in enumerate(pdf):
             for block in page.get_text("dict")["blocks"]:
@@ -78,7 +91,10 @@ def read_document(path: Path) -> Document:
                     if box not in seen and rect.width > 20 and rect.height > 20:
                         seen.add(box)
                         pictures.append(Picture(page_no, *box, xref=image[0]))
-    return Document(lines=tuple(lines), pictures=tuple(pictures))
+            for drawing in page.get_drawings():
+                rect = drawing["rect"]
+                shapes.append(Shape(page_no, round(rect.x0, 1), round(rect.y0, 1), round(rect.x1, 1), round(rect.y1, 1)))
+    return Document(lines=tuple(lines), pictures=tuple(pictures), shapes=tuple(shapes))
 
 
 def read_text(path: Path) -> str:

@@ -7,10 +7,10 @@ typed gaps (Part 5), and two writing tasks (Parts 6 and 7).
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from .answer_key import parse_answer_key
+from .builders import Conversion, PartResult, choice_question, key_answers, make_group
 from .model import Crop, Document, Line, Picture, read_document, read_text
 from .parts import (
     OPTION_LETTER, ROW_SLACK, PartSource, Region, is_question_number, parse_choice, question_regions, split_parts,
@@ -37,22 +37,6 @@ BYLINE = re.compile(r"^by\s", re.IGNORECASE)
 NUMBER_WORDS = {"one": 1, "two": 2, "three": 3}
 
 
-@dataclass(frozen=True)
-class PartResult:
-    part: dict
-    crops: list[Crop] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
-    checks: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class Conversion:
-    paper_parts: dict[int, dict]
-    crops: list[Crop]
-    warnings: list[str]
-    checks: list[str]
-
-
 # ---------------------------------------------------------------------------------------------- shared builders
 
 def _part(part_no: int, groups: list[dict], title: str | None = None, stimulus: str | None = None) -> dict:
@@ -63,40 +47,6 @@ def _part(part_no: int, groups: list[dict], title: str | None = None, stimulus: 
         part["stimulusHtml"] = stimulus
     part["groups"] = groups
     return part
-
-
-def _group(interaction: str, source: PartSource, questions: list[dict], **extra) -> dict:
-    group: dict = {"interactionType": interaction}
-    if source.instructions:
-        group["instructions"] = source.instructions
-    group.update(extra)
-    group["questions"] = questions
-    return group
-
-
-def _answers(part_no: int, number: int, key: dict[int, list[str]], options: list[dict] | None) -> tuple[list[str], list[str]]:
-    answers = key.get(number, [])
-    if not answers:
-        return [], [f"Part {part_no}, question {number}: no answer in the answer key."]
-    if options is not None:
-        keys = [option["key"] for option in options]
-        if len(answers) != 1 or answers[0] not in keys:
-            return answers, [f"Part {part_no}, question {number}: answer {' / '.join(answers)} is not one of the options ({', '.join(keys)})."]
-    return answers, []
-
-
-def _choice_question(part_no: int, number: int, prompt: str, options: list[dict], key: dict[int, list[str]],
-                     stimulus: str | None = None) -> tuple[dict, list[str]]:
-    question: dict = {"number": number}
-    if prompt:
-        question["promptHtml"] = escape(prompt)
-    if stimulus:
-        question["stimulusHtml"] = stimulus
-    question["options"] = options
-    question["answers"], warnings = _answers(part_no, number, key, options)
-    if len(options) < 2:
-        warnings.append(f"Part {part_no}, question {number}: found {len(options)} option(s); expected A, B and C.")
-    return question, warnings
 
 
 def _crop(name: str, pictures: list[Picture]) -> Crop:
@@ -143,10 +93,10 @@ def _part1_notices(source: PartSource, key: dict[int, list[str]]) -> PartResult:
             stimulus = _image(crop, f"Question {number}")
         else:
             warnings.append(f"Part 1, question {number}: no notice picture found beside the question.")
-        question, problems = _choice_question(1, number, prompt, options, key, stimulus)
+        question, problems = choice_question(1, number, prompt, options, key, stimulus)
         questions.append(question)
         warnings += problems
-    return PartResult(_part(1, [_group("SingleChoice", source, questions)]), crops, warnings)
+    return PartResult(_part(1, [make_group("SingleChoice", source, questions)]), crops, warnings)
 
 
 def _part2_people(source: PartSource, key: dict[int, list[str]]) -> PartResult:
@@ -170,7 +120,7 @@ def _part2_people(source: PartSource, key: dict[int, list[str]]) -> PartResult:
             [{"key": letter.text, "text": _nearest(names, letter).text} for letter in letters] if letters and names
             else [{"key": "ABCDEFGH"[index], "text": name.text} for index, name in enumerate(names)]
         )
-        question, problems = _choice_question(2, region.question, prompt, options, key)
+        question, problems = choice_question(2, region.question, prompt, options, key)
         questions.append(question)
         warnings += problems
 
@@ -178,7 +128,7 @@ def _part2_people(source: PartSource, key: dict[int, list[str]]) -> PartResult:
         [line for line in source.lines if line.page not in question_pages],
         [picture for picture in source.pictures if picture.page not in question_pages],
     )
-    return PartResult(_part(2, [_group("SingleChoice", source, questions)], title, stimulus), crops, warnings + text_warnings)
+    return PartResult(_part(2, [make_group("SingleChoice", source, questions)], title, stimulus), crops, warnings + text_warnings)
 
 
 def _nearest(names: list[Line], letter: Line) -> Line:
@@ -223,7 +173,7 @@ def _part3_article(source: PartSource, key: dict[int, list[str]]) -> PartResult:
     questions, warnings = [], []
     for region in regions:
         prompt, options = parse_choice(list(region.lines))
-        question, problems = _choice_question(3, region.question, prompt, options, key)
+        question, problems = choice_question(3, region.question, prompt, options, key)
         questions.append(question)
         warnings += problems
 
@@ -236,7 +186,7 @@ def _part3_article(source: PartSource, key: dict[int, list[str]]) -> PartResult:
         remaining = remaining[1:]
     html.append(_html_paragraphs(paragraphs(line for row in remaining for line in row)))
     title = title_line.text if title_line else None
-    return PartResult(_part(3, [_group("SingleChoice", source, questions)], title, "".join(html)), [], warnings)
+    return PartResult(_part(3, [make_group("SingleChoice", source, questions)], title, "".join(html)), [], warnings)
 
 
 def _part4_word_choice(source: PartSource, key: dict[int, list[str]]) -> PartResult:
@@ -255,12 +205,12 @@ def _part4_word_choice(source: PartSource, key: dict[int, list[str]]) -> PartRes
     for region in regions:
         options = _options_in_a_row(region.lines)
         number = region.question
-        answers, problems = _answers(4, number, key, options)
+        answers, problems = key_answers(4, number, key, options)
         questions.append({"number": number, "options": options, "answers": answers})
         warnings += problems
         if f"{{{{q:{number}}}}}" not in body:
             warnings.append(f"Part 4, question {number}: gap ({number}) not found in the text.")
-    group = _group("InlineChoice", source, questions, bodyHtml=body)
+    group = make_group("InlineChoice", source, questions, bodyHtml=body)
     title = title_line.text if title_line else None
     return PartResult(_part(4, [group], title), [], warnings, checks)
 
@@ -305,7 +255,7 @@ def _part5_typed_gaps(source: PartSource, key: dict[int, list[str]]) -> PartResu
 
     questions, warnings = [], []
     for number in numbers:
-        answers, problems = _answers(5, number, key, None)
+        answers, problems = key_answers(5, number, key, None)
         questions.append({"number": number, "answers": answers})
         warnings += problems
     if source.first is not None and numbers != list(range(source.first, source.last + 1)):
@@ -315,7 +265,7 @@ def _part5_typed_gaps(source: PartSource, key: dict[int, list[str]]) -> PartResu
     if words:
         extra["maxWordsPerAnswer"] = NUMBER_WORDS.get(words[1].lower()) or int(words[1])
     extra["bodyHtml"] = "".join(html)
-    return PartResult(_part(5, [_group("InlineText", source, questions, **extra)]), [], warnings, _capital_checks(5, texts))
+    return PartResult(_part(5, [make_group("InlineText", source, questions, **extra)]), [], warnings, _capital_checks(5, texts))
 
 
 def _writing_task(source: PartSource, key: dict[int, list[str]]) -> PartResult:
@@ -347,7 +297,7 @@ def _writing_task(source: PartSource, key: dict[int, list[str]]) -> PartResult:
     if source.first is None:
         warnings.append(f"Part {part_no}: no 'Question n' heading found.")
     question = {"number": source.first or 0, "points": ESSAY_POINTS, "minWords": int(minimum[1]) if minimum else 0}
-    return PartResult(_part(part_no, [_group("Essay", source, [question])], stimulus="".join(html)), crops, warnings)
+    return PartResult(_part(part_no, [make_group("Essay", source, [question])], stimulus="".join(html)), crops, warnings)
 
 
 PART_READERS: dict[int, Callable[[PartSource, dict[int, list[str]]], PartResult]] = {
