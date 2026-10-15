@@ -6,6 +6,7 @@ using ExamPrep.Api.Demo;
 using ExamPrep.Infrastructure;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +35,13 @@ builder.Services.AddHealthChecks().AddDbContextCheck<ExamPrepDbContext>("databas
 
 var app = builder.Build();
 
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStart"))
+{
+    // Docker (docker/docker-compose.yml) brings the schema up to date before anything reads it.
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>().Database.MigrateAsync();
+}
+
 await AdminBootstrapper.EnsureAdminAsync(app.Services, app.Configuration);
 
 if (app.Environment.IsDevelopment())
@@ -47,6 +55,9 @@ if (app.Environment.IsDevelopment())
         ReadingWritingFolder = string.IsNullOrWhiteSpace(demo.ReadingWritingFolder)
             ? null
             : Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, demo.ReadingWritingFolder)),
+        ListeningFolder = string.IsNullOrWhiteSpace(demo.ListeningFolder)
+            ? null
+            : Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, demo.ListeningFolder)),
     };
     await DemoSeeder.SeedAsync(app.Services, demo, CancellationToken.None);
 }

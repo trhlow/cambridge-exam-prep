@@ -1,4 +1,7 @@
-# Local MySQL for development. Copy .env.example to .env and set real passwords first.
+# Whole system in one command (MySQL + API + web), or MySQL alone for development with dotnet run / npm run dev:
+#   docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --build    -> http://localhost:8080
+#   docker compose -f docker/docker-compose.yml --env-file docker/.env up -d mysql
+# Copy .env.example to .env and set real passwords first.
 name: examprep
 
 services:
@@ -23,6 +26,39 @@ services:
       interval: 5s
       timeout: 5s
       retries: 30
+
+  # Same database and App_Data as `dotnet run`, so papers, sessions and sign-ins carry over between the two.
+  # Development environment: it seeds the demo A2 exam (Demo section of appsettings.Development.json).
+  api:
+    build: ../src/backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__ExamPrep: "server=mysql;port=3306;database=${MYSQL_DATABASE:-examprep};user=${MYSQL_USER:-examprep};password=${MYSQL_PASSWORD}"
+      Database__MigrateOnStart: "true"
+      # The expiry worker queries every 5 s; keep its SQL out of `docker compose logs api`.
+      Logging__LogLevel__Microsoft.EntityFrameworkCore: Warning
+      # Only used while the database has no administrator yet.
+      Bootstrap__AdminUsername: ${BOOTSTRAP_ADMIN_USERNAME:-}
+      Bootstrap__AdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      Demo__SamplesRoot: /demo/samples
+      Demo__ReadingWritingFolder: /demo/sources/a2-key-fs-2022-sample/package-reading-writing
+      Demo__ListeningFolder: /demo/sources/a2-key-fs-2022-sample/package-listening
+    volumes:
+      - ../src/backend/src/ExamPrep.Api/App_Data:/app/App_Data
+      - ../setup/exam-package/samples:/demo/samples:ro
+      - ../setup/exam-package/sources:/demo/sources:ro
+
+  web:
+    build: ../src/frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
 
 volumes:
   mysql-data:
