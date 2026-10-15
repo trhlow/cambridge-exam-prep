@@ -41,7 +41,7 @@ def review(paper: dict, report, questions_pdf: Path, key_pdf: Path, out_dir: Pat
     for part in paper["parts"]:
         for group in part["groups"]:
             for q in group["questions"]:
-                options = "; ".join(f"{o['key']} {o['text']}" for o in q.get("options", []))
+                options = "; ".join(f"{o['key']} {o.get('text') or o.get('image', '')}" for o in q.get("options", []))
                 answers = " / ".join(q.get("answers", [])) or ("(giáo viên chấm)" if group["interactionType"] == "Essay" else "**THIẾU**")
                 prompt = q.get("promptHtml") or ("có hình" if q.get("stimulusHtml") else "")
                 rows.append(f"| {q['number']} | {part['partNo']} | {group['interactionType']} | {_cell(prompt)} | {_cell(options)} | {_cell(answers)} |")
@@ -49,11 +49,14 @@ def review(paper: dict, report, questions_pdf: Path, key_pdf: Path, out_dir: Pat
     def bullets(items: list[str], empty: str) -> str:
         return "\n".join(f"- {item}" for item in items) if items else f"- {empty}"
 
+    audio = [f"Part {part['partNo']}: `{part['audio']}`" for part in paper["parts"] if part.get("audio")]
+    audio_lines = "\n" + "\n".join(f"- Âm thanh {item}" for item in audio) if audio else ""
+
     return f"""# Bản nháp cần duyệt: {paper['title']}
 
 - Đề: `{questions_pdf.name}`
 - Đáp án: `{key_pdf.name}`
-- Tạo lúc {datetime.now():%d/%m/%Y %H:%M}: {len(rows)} câu, {len(paper['parts'])} part, {len(report.crops)} hình trong `images/`
+- Tạo lúc {datetime.now():%d/%m/%Y %H:%M}: {len(rows)} câu, {len(paper['parts'])} part, {len(report.crops)} hình trong `images/`{audio_lines}
 
 ## Lỗi phải sửa trước khi import
 
@@ -64,6 +67,7 @@ def review(paper: dict, report, questions_pdf: Path, key_pdf: Path, out_dir: Pat
 {bullets(report.checks, "Không có mục riêng.")}
 - Mở từng hình trong `images/` và so với PDF: cắt đủ, không lẹm chữ.
 - Đọc lướt `paper.json`: chữ trong đoạn văn đúng thứ tự, không dính dòng tiêu đề hay số trang.
+- Listening: nghe đầu và cuối từng file trong `audio/`, đúng part và không bị cắt mất câu.
 
 ## Từng câu
 

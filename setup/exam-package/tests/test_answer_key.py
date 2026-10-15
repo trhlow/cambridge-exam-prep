@@ -53,6 +53,12 @@ def test_rejects_a_key_whose_numbers_do_not_pair_with_answers():
         parse_answer_key("PART 1\nKEY\n1\nA\n2\nB\n3\n")
 
 
+def test_reads_a_key_without_key_lines_as_in_the_listening_mark_scheme():
+    text = "KEY for Schools Listening Sample Paper Answer key\nPart 1\n\n1\nC\n2\nA\n\nPart 2\n\n6\nfairfield\n7\n7.30\n"
+
+    assert parse_answer_key(text) == {1: ["C"], 2: ["A"], 6: ["fairfield"], 7: ["7.30"]}
+
+
 def test_a_page_header_after_a_key_ends_that_key():
     text = "PART 1\nKEY\n1\nB\n2\nC\nEXAM\nPAPER\nREAD/WRITE\nPART 2\nKEY\n3\nA\n"
 
