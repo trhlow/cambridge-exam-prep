@@ -25,58 +25,64 @@ EPICS = {
 }
 
 # (sprint, start, end, goal, stories); story = (key, epic, points, summary, acceptance)
+# Re-planned 15/10/2026 to match Jira (board SCRUM): ahead of schedule, so later stories moved up one sprint.
+# On Jira, Sprint 0 and Sprint 1 run as one sprint, "SCRUM Sprint 1" (10/10 – 18/10).
 SPRINTS = [
     ("Sprint 0", "2026-10-10", "2026-10-11", "Khởi động: CSDL và khảo sát giao diện", [
         ("VE-1", "E1", 5, "Thiết kế CSDL 21 bảng, migration EF Core trên MySQL", "Migration áp được; 16 test tích hợp đạt; ERD sinh từ schema thật"),
         ("VE-2", "E5", 2, "Khảo sát giao diện bài thi mẫu A2 Key for Schools trên Inspera", "thesis/refs/inspera-ui-a2.md mô tả đủ 7 part R&W, 5 part Listening, menu, ghi chú"),
     ]),
-    ("Sprint 1", "2026-10-12", "2026-10-18", "Demo A2 phía thí sinh vào thứ Sáu 16/10", [
+    ("Sprint 1", "2026-10-12", "2026-10-18", "Demo A2 phía thí sinh (16/10); làm sớm cổng nhân viên, chấm Writing, nhập đề từ PDF", [
         ("VE-3", "E2", 5, "Đăng nhập nhân viên (admin, giám thị) bằng cookie, phân quyền theo vai trò", "Sai mật khẩu bị từ chối; API quản trị trả 403 với giám thị"),
         ("VE-4", "E2", 5, "Đăng nhập thí sinh bằng username/password + mã PIN phòng thi", "Sai PIN không vào được; đúng PIN thấy danh sách phần thi"),
         ("VE-5", "E3", 5, "Định dạng gói đề JSON (+audio, hình) và import đề A2", "Import gói mẫu tạo đủ part, nhóm câu, câu hỏi, đáp án; gói sai báo lỗi rõ ràng"),
         ("VE-56", "E3", 3, "Bộ chuyển đề PDF → gói đề JSON (A2) và tách audio Listening thành 5 track", "Đề mẫu A2 2022 chuyển ra gói import được; người duyệt sửa ít; đề thật không vào git"),
+        ("VE-57", "E3", 5, "Nhập đề từ PDF ngay trên cổng nhân viên và trang duyệt đề", "Admin tải PDF đề, đáp án (và 5 file nghe) trên web; đề vào Draft, duyệt từng câu trước khi Publish"),
         ("VE-6", "E5", 3, "Dựng frontend React + TypeScript (Vite), khung màn hình kiểu Inspera", "Thanh trên (logo, Candidate ID, 4 biểu tượng), thanh part 'n of m', nút ← →"),
         ("VE-7", "E5", 8, "Reading & Writing A2: 4 kiểu câu (chọn đáp án, chọn từ trên ô trống, gõ từ, viết bài)", "7 part hiển thị đúng bố cục một cột / chia đôi có thanh kéo; đếm từ ở Part 6–7"),
         ("VE-8", "E5", 5, "Đồng hồ do server nắm, tự lưu câu trả lời, hết giờ tự nộp", "Tải lại trang vẫn đúng giờ còn lại và đáp án; hết giờ chuyển Submitted"),
         ("VE-9", "E5", 2, "Đánh dấu câu hỏi (cờ) và đếm câu đã làm trên thanh part", "Cờ hiện ở thanh dưới; 'Part 2  3 of 7' cập nhật ngay"),
         ("VE-10", "E6", 5, "Listening A2: phát nối 5 track một lần, chọn tranh, kéo thả", "Không tạm dừng/tua được; chuyển part không làm dừng audio"),
         ("VE-11", "E8", 3, "Chấm tự động Reading Part 1–5 và Listening theo đáp án", "Đáp án thay thế được chấp nhận; không phân biệt hoa thường"),
-        ("VE-12", "E12", 1, "Báo cáo tiến độ tuần 1 (progress-report)", "File báo cáo theo mẫu 3 có trong progress-report/"),
-    ]),
-    ("Sprint 2", "2026-10-19", "2026-10-25", "Cổng giám thị thời gian thực (tuần gặp GV 1)", [
-        ("VE-13", "E7", 5, "SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì", "Bảng giám thị đổi trong ≤2 giây khi thí sinh làm bài, mất kết nối hoặc nộp"),
         ("VE-14", "E7", 5, "Tạm dừng / cho làm tiếp một, nhiều hoặc cả phòng", "Chỉ tác động thí sinh online và đang làm; đồng hồ không trừ giờ khi tạm dừng"),
         ("VE-15", "E7", 5, "Cộng giờ bù sự cố và Edit End Time (End now / End at / End in, Disregard extra time)", "End now không hoàn tác ở cấp phần thi; mọi thao tác ghi nhật ký"),
         ("VE-16", "E7", 3, "Tua audio Listening N phút (chỉ khi không tạm dừng, tối đa số phút đã phát)", "Nhắc giám thị cộng giờ bù tương ứng sau khi tua"),
         ("VE-17", "E7", 2, "Thông báo từ giám thị (biểu tượng chuông)", "Gửi cho một thí sinh hoặc cả phòng; thí sinh thấy ngay"),
         ("VE-18", "E5", 3, "Menu Options: độ tương phản, cỡ chữ, ẩn/hiện giờ, trang nộp bài", "3 chế độ màu, 3 cỡ chữ; màn hình Options che bài làm"),
         ("VE-19", "E5", 5, "Ghi chú và highlight khi bôi đen chữ, bảng Notes bên phải", "Notes tắt khi chọn cỡ chữ Large/Extra large"),
-        ("VE-20", "E12", 1, "Báo cáo tiến độ tuần 2", "File báo cáo có trong progress-report/"),
-    ]),
-    ("Sprint 3", "2026-10-26", "2026-11-01", "Quản trị A2 hoàn chỉnh", [
         ("VE-21", "E4", 5, "Tạo / sửa kỳ thi, gắn đề cho từng phần thi, mã PIN, mật khẩu giám thị", "Kỳ thi A2 có 2 phần thi theo mẫu; không xoá được đề đang dùng"),
         ("VE-22", "E4", 5, "Nhập danh sách thí sinh từ Excel, sinh username kiểu Cambridge, in phiếu đăng nhập", "Username = 5 chữ họ + chữ đầu tên + số báo danh; in lại được phiếu"),
         ("VE-23", "E4", 2, "Phân công giám thị cho kỳ thi", "Giám thị chỉ thấy kỳ thi được phân công"),
-        ("VE-24", "E4", 2, "Đổi tên trung tâm và logo (tải PNG)", "Logo mới hiện trên thanh trên của thí sinh"),
-        ("VE-25", "E3", 8, "Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)", "Tạo được một đề A2 đầy đủ không cần file JSON"),
         ("VE-26", "E8", 5, "Chấm Writing cho giáo viên và bảng kết quả theo kỳ thi", "Tổng điểm = tự động + Writing; xuất kết quả ra Excel"),
-        ("VE-27", "E12", 1, "Báo cáo tiến độ tuần 3", "File báo cáo có trong progress-report/"),
+        ("VE-30", "E9", 3, "Giới hạn tần suất đăng nhập, xử lý lỗi an toàn, nhật ký thao tác", "Không lộ stack trace; đăng nhập sai liên tục bị chặn tạm"),
+        ("VE-12", "E12", 1, "Báo cáo tiến độ tuần 1 (progress-report)", "File báo cáo theo mẫu 3 có trong progress-report/"),
     ]),
-    ("Sprint 4", "2026-11-02", "2026-11-08", "Safe Exam Browser, bảo mật, kiểm thử A2 đầu-cuối", [
+    ("Sprint 2", "2026-10-19", "2026-10-25", "Tuần gặp GV 1: đặc tả, sơ đồ, đặc tả API; SignalR; sửa đề trên web; hướng dẫn cài đặt", [
+        ("VE-58", "E12", 2, "Bản đặc tả yêu cầu (quy trình thi máy, vai trò, chức năng, yêu cầu phi chức năng)", "Bản đặc tả trong thesis/doc, đối chiếu được với use case và đề cương"),
+        ("VE-45", "E12", 3, "Sơ đồ trạng thái lượt làm bài, sơ đồ tuần tự, đặc tả API", "Các sơ đồ có trong thesis/diagrams"),
+        ("VE-13", "E7", 5, "SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì", "Bảng giám thị đổi trong ≤2 giây khi thí sinh làm bài, mất kết nối hoặc nộp"),
+        ("VE-25", "E3", 8, "Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)", "Tạo được một đề A2 đầy đủ không cần file JSON; sửa được bản nháp nhập từ PDF"),
+        ("VE-46", "E11", 3, "Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/", "Máy mới cài theo hướng dẫn chạy được"),
+        ("VE-20", "E12", 1, "Báo cáo tiến độ tuần 2", "File báo cáo có trong progress-report/"),
+    ]),
+    ("Sprint 3", "2026-10-26", "2026-11-01", "Safe Exam Browser và cảnh báo vi phạm; đổi tên trung tâm và logo", [
         ("VE-28", "E9", 5, "Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi", "Mở bằng trình duyệt thường bị chặn và sinh cảnh báo"),
         ("VE-29", "E9", 3, "Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm", "Cảnh báo hiện ở cột Warnings, giám thị đánh dấu đã xử lý"),
-        ("VE-30", "E9", 3, "Giới hạn tần suất đăng nhập, xử lý lỗi an toàn, nhật ký thao tác", "Không lộ stack trace; đăng nhập sai liên tục bị chặn tạm"),
-        ("VE-31", "E11", 5, "Test đầu-cuối Playwright cho luồng thi A2 và thao tác giám thị chính", "Chạy được bằng một lệnh; bao phủ đăng nhập → làm bài → nộp → chấm"),
-        ("VE-32", "E12", 1, "Báo cáo tiến độ tuần 4", "File báo cáo có trong progress-report/"),
+        ("VE-24", "E4", 2, "Đổi tên trung tâm và logo (tải PNG)", "Logo mới hiện trên thanh trên của thí sinh"),
+        ("VE-27", "E12", 1, "Báo cáo tiến độ tuần 3", "File báo cáo có trong progress-report/"),
     ]),
-    ("Sprint 5", "2026-11-09", "2026-11-15", "B1 Preliminary for Schools (1) — tuần gặp GV 2", [
+    ("Sprint 4", "2026-11-02", "2026-11-08", "Kiểm thử đầu-cuối A2; bắt đầu B1 Preliminary for Schools", [
+        ("VE-31", "E11", 5, "Test đầu-cuối Playwright cho luồng thi A2 và thao tác giám thị chính", "Chạy được bằng một lệnh; bao phủ đăng nhập → làm bài → nộp → chấm"),
         ("VE-33", "E10", 2, "Khảo sát giao diện bài thi mẫu B1 PfS (Reading, Writing, Listening)", "thesis/refs/inspera-ui-b1.md đầy đủ như bản A2"),
         ("VE-34", "E10", 5, "Bổ sung kiểu câu còn thiếu cho B1 Reading (6 part)", "Import và làm được đề Reading B1 mẫu"),
+        ("VE-32", "E12", 1, "Báo cáo tiến độ tuần 4", "File báo cáo có trong progress-report/"),
+    ]),
+    ("Sprint 5", "2026-11-09", "2026-11-15", "B1 Preliminary for Schools: Writing và Listening — tuần gặp GV 2", [
         ("VE-35", "E10", 3, "B1 Writing: Part 1 email, Part 2 chọn 1 trong 2 đề", "Thí sinh chọn đề Part 2 trước khi viết; đếm từ"),
+        ("VE-37", "E10", 3, "B1 Listening 4 part", "Import và làm được đề Listening B1 mẫu"),
         ("VE-36", "E12", 1, "Báo cáo tiến độ tuần 5", "File báo cáo có trong progress-report/"),
     ]),
-    ("Sprint 6", "2026-11-16", "2026-11-22", "B1 Preliminary for Schools (2)", [
-        ("VE-37", "E10", 3, "B1 Listening 4 part", "Import và làm được đề Listening B1 mẫu"),
+    ("Sprint 6", "2026-11-16", "2026-11-22", "Kỳ thi B1 chạy đầu-cuối, sửa lỗi tồn đọng A2/B1", [
         ("VE-38", "E10", 3, "Kỳ thi B1 3 phần thi chạy đầu-cuối, chấm tự động", "Test Playwright cho luồng B1"),
         ("VE-39", "E11", 3, "Sửa lỗi tồn đọng A2/B1", "Không còn lỗi mức Cao trên backlog"),
         ("VE-40", "E12", 1, "Báo cáo tiến độ tuần 6", "File báo cáo có trong progress-report/"),
@@ -87,9 +93,7 @@ SPRINTS = [
         ("VE-43", "E11", 3, "Sửa lỗi sau thi thử", "Lỗi mức Cao đã đóng"),
         ("VE-44", "E12", 1, "Báo cáo tiến độ tuần 7", "File báo cáo có trong progress-report/"),
     ]),
-    ("Sprint 8", "2026-11-30", "2026-12-06", "Đóng gói và tài liệu thiết kế — tuần gặp GV 3", [
-        ("VE-45", "E12", 3, "Sơ đồ trạng thái lượt làm bài, sơ đồ tuần tự, đặc tả API", "Các sơ đồ có trong thesis/diagrams"),
-        ("VE-46", "E11", 3, "Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/", "Máy mới cài theo hướng dẫn chạy được"),
+    ("Sprint 8", "2026-11-30", "2026-12-06", "Viết quyển báo cáo Mở đầu, Chương 1–3 — tuần gặp GV 3", [
         ("VE-47", "E12", 5, "Viết quyển báo cáo: Mở đầu, Chương 1–3", "Bản nháp theo mẫu của Khoa"),
     ]),
     ("Sprint 9", "2026-12-07", "2026-12-13", "IELTS (nếu kịp) hoặc dự phòng", [
@@ -108,7 +112,7 @@ SPRINTS = [
     ]),
 ]
 
-DONE = {"VE-1", "VE-2"}
+DONE = {"VE-1", "VE-2", "VE-3", "VE-4", "VE-5", "VE-6", "VE-7", "VE-8", "VE-9", "VE-10", "VE-11", "VE-12", "VE-14", "VE-15", "VE-16", "VE-17", "VE-18", "VE-19", "VE-21", "VE-22", "VE-23", "VE-26", "VE-30", "VE-56", "VE-57"}
 
 
 def render_markdown() -> str:
