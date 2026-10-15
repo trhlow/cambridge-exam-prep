@@ -17,6 +17,8 @@ builder.Services.AddAssetAccess();
 builder.Services.AddScoped<CandidateSectionQuery>();
 builder.Services.AddScoped<CandidateCredentials>();
 builder.Services.AddSingleton<LoginThrottle>();
+builder.Services.Configure<ConverterOptions>(builder.Configuration.GetSection("Converter"));
+builder.Services.AddSingleton<IPaperConverter, PythonPaperConverter>();
 
 // Sign-in cookies and the re-printable candidate passwords are encrypted with this key ring; it must outlive a
 // restart or a new container, so it lives in App_Data (git-ignored) unless DataProtection:KeysPath says otherwise.

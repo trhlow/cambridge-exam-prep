@@ -891,3 +891,86 @@ ul.st-error {
 .st-mark--wrong {
   color: var(--st-red);
 }
+
+/* Paper review (PaperPage) and the PDF import dialog */
+.st-fieldset {
+  border: 1px solid #e4e4e0;
+  border-radius: var(--st-radius);
+  padding: 10px 14px 14px;
+}
+
+.st-fieldset legend {
+  padding: 0 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.st-paper-part {
+  margin-bottom: 18px;
+}
+
+.st-paper-audio {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  margin: 6px 0 12px;
+}
+
+.st-paper-group + .st-paper-group {
+  margin-top: 16px;
+}
+
+.st-paper-html {
+  margin: 8px 0;
+  max-width: 820px;
+}
+
+.st-paper-html img {
+  max-width: 100%;
+  height: auto;
+}
+
+.st-paper-html table td {
+  padding: 3px 14px 3px 0;
+}
+
+.st-gap {
+  display: inline-block;
+  min-width: 52px;
+  padding: 0 6px;
+  border-bottom: 2px solid var(--st-ink-strong);
+  font-weight: 700;
+  text-align: center;
+}
+
+.st-paper-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.st-paper-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.st-paper-option {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid #e4e4e0;
+  border-radius: var(--st-radius);
+}
+
+.st-paper-option img {
+  width: 120px;
+  height: auto;
+}
+
+.st-paper-option.is-answer {
+  border-color: #2f7d4f;
+  background: #eef7f1;
+}

@@ -118,6 +118,61 @@ export interface PaperImportSummary {
   questions: number
 }
 
+/** A paper converted from the PDFs and imported as a draft, with what the converter asks a person to check. */
+export interface PaperConversionResult extends PaperImportSummary {
+  checks: string[]
+}
+
+export interface PaperConversionUpload {
+  title: string
+  questions: File
+  answerKey: File
+  /** Listening: one track per part, index 0 = Part 1; empty slots are left out. */
+  audio: (File | null)[]
+}
+
+export interface PaperOption {
+  key: string
+  text: string | null
+  imageUrl: string | null
+}
+
+export interface PaperQuestionDetail {
+  number: number
+  promptHtml: string | null
+  stimulusHtml: string | null
+  options: PaperOption[] | null
+  answers: string[]
+  points: number
+  minWords: number | null
+}
+
+export interface PaperGroupDetail {
+  interactionType: string
+  instructions: string
+  bodyHtml: string | null
+  optionPool: PaperOption[] | null
+  questions: PaperQuestionDetail[]
+}
+
+export interface PaperPartDetail {
+  partNo: number
+  title: string | null
+  layout: string
+  stimulusHtml: string | null
+  audioUrl: string | null
+  groups: PaperGroupDetail[]
+}
+
+export interface PaperDetail {
+  id: number
+  title: string
+  examType: string
+  section: string
+  status: PaperStatus
+  parts: PaperPartDetail[]
+}
+
 export interface NewCandidate {
   candidateNumber: string
   firstName: string
@@ -282,6 +337,19 @@ export const adminApi = {
     form.append('package', file)
     return request<PaperImportSummary>('/api/admin/papers/import', { method: 'POST', body: form })
   },
+  convertPaper: (upload: PaperConversionUpload) => {
+    const form = new FormData()
+    form.append('title', upload.title)
+    form.append('questions', upload.questions)
+    form.append('answerKey', upload.answerKey)
+    upload.audio.forEach((file, index) => {
+      if (file) {
+        form.append(`audio${index + 1}`, file)
+      }
+    })
+    return request<PaperConversionResult>('/api/admin/papers/convert', { method: 'POST', body: form })
+  },
+  paper: (id: number) => request<PaperDetail>(`/api/admin/papers/${id}`),
   publishPaper: (id: number) => post<PaperListItem>(`/api/admin/papers/${id}/publish`),
   deletePaper: (id: number) => del(`/api/admin/papers/${id}`),
 
