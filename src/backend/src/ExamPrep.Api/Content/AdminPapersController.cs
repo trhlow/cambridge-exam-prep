@@ -66,6 +66,18 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
         return papers.OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id).ToList();
     }
 
+    /// <summary>Every part and question with its answer key, pictures and audio, for review before publishing.</summary>
+    [HttpGet("{paperId:int}")]
+    public async Task<ActionResult<PaperDetail>> Detail(int paperId, CancellationToken cancellationToken)
+    {
+        var paper = await db.TestPapers.AsNoTracking()
+            .Include(p => p.SectionTemplate!).ThenInclude(t => t.ExamType)
+            .Include(p => p.Parts).ThenInclude(p => p.Groups).ThenInclude(g => g.Questions).ThenInclude(q => q.AnswerKeys)
+            .AsSplitQuery()
+            .SingleOrDefaultAsync(p => p.Id == paperId, cancellationToken);
+        return paper is null ? NotFound() : PaperDetailMapper.From(paper);
+    }
+
     /// <summary>A reviewed draft becomes available for scheduling. Publishing twice changes nothing.</summary>
     [HttpPost("{paperId:int}/publish")]
     public async Task<ActionResult<PaperListItem>> Publish(int paperId, CancellationToken cancellationToken)

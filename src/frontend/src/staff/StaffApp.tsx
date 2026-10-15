@@ -7,6 +7,7 @@ import { ExamsPage } from './pages/ExamsPage'
 import { LoginSlipsPage } from './pages/LoginSlipsPage'
 import { MarkingPage } from './pages/MarkingPage'
 import { MonitorPage } from './pages/MonitorPage'
+import { PaperPage } from './pages/PaperPage'
 import { PapersPage } from './pages/PapersPage'
 import { ResultsPage } from './pages/ResultsPage'
 import { StaffUsersPage } from './pages/StaffUsersPage'
@@ -68,7 +69,7 @@ export default function StaffApp() {
 function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void }) {
   const route = useRoute()
   const isAdmin = user.role === 'Admin'
-  const section = route.page === 'papers' ? 'papers' : route.page === 'users' ? 'users' : 'exams'
+  const section = route.page === 'papers' || route.page === 'paper' ? 'papers' : route.page === 'users' ? 'users' : 'exams'
   // Login slips print on their own, without the portal around them.
   if (route.page === 'slips') {
     return <LoginSlipsPage examId={route.examId} />
@@ -127,6 +128,8 @@ function Page({ route, isAdmin, currentUserId }: { route: Route; isAdmin: boolea
       return isAdmin ? <MarkingPage examId={route.examId} attemptId={route.attemptId} /> : <NotAllowed />
     case 'papers':
       return isAdmin ? <PapersPage /> : <NotAllowed />
+    case 'paper':
+      return isAdmin ? <PaperPage paperId={route.paperId} /> : <NotAllowed />
     case 'users':
       return isAdmin ? <StaffUsersPage currentUserId={currentUserId} /> : <NotAllowed />
     case 'slips':

@@ -40,6 +40,19 @@ internal static partial class SamplePackages
 
     public static byte[] Zip(string name) => Zip(Load(name));
 
+    /// <summary>Writes the paper as an unpacked package folder, the way pdf2package.py leaves its draft.</summary>
+    public static void WriteFolder(JsonObject paper, string folder)
+    {
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "paper.json"), paper.ToJsonString());
+        foreach (var path in ReferencedFiles(paper))
+        {
+            var target = Path.Combine(folder, path);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.WriteAllBytes(target, Placeholder(path));
+        }
+    }
+
     /// <summary>Deterministic content per path, so importing the same package twice gives identical files.</summary>
     public static byte[] Placeholder(string path) => Encoding.UTF8.GetBytes($"placeholder for {path}");
 

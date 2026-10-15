@@ -54,7 +54,7 @@ internal static class CandidatePaperMapper
 
     public static string AssetUrl(int assetId) => $"{PaperPackageImporter.AssetUrlPrefix}{assetId}";
 
-    private static List<CandidateOption>? Options(string? json) =>
+    public static List<CandidateOption>? Options(string? json) =>
         json is null
             ? null
             : JsonSerializer.Deserialize<List<StoredOption>>(json, Json)!

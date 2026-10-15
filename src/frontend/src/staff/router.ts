@@ -11,6 +11,7 @@ export type Route =
   | { page: 'results'; examId: number }
   | { page: 'marking'; examId: number; attemptId: number }
   | { page: 'papers' }
+  | { page: 'paper'; paperId: number }
   | { page: 'users' }
   | { page: 'not-found' }
 
@@ -21,6 +22,10 @@ export function parseRoute(pathname: string): Route {
 
   if (parts.length === 0) return { page: 'exams' }
   if (first === 'papers' && parts.length === 1) return { page: 'papers' }
+  if (first === 'papers' && parts.length === 2) {
+    const paperId = id(second)
+    return paperId === null ? { page: 'not-found' } : { page: 'paper', paperId }
+  }
   if (first === 'users' && parts.length === 1) return { page: 'users' }
   if (first !== 'exams') return { page: 'not-found' }
   if (second === 'new' && parts.length === 2) return { page: 'new-exam' }
