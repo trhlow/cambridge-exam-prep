@@ -4,64 +4,68 @@ Tổng: 2 story, 7 điểm.
 - [x] VE-2 [E5] (2đ) Khảo sát giao diện bài thi mẫu A2 Key for Schools trên Inspera
 - **Status:** complete
 
-### Phase 1: Sprint 1 (12/10 – 18/10) — Demo A2 phía thí sinh vào thứ Sáu 16/10
-Tổng: 11 story, 45 điểm.
-- [ ] VE-3 [E2] (5đ) Đăng nhập nhân viên (admin, giám thị) bằng cookie, phân quyền theo vai trò
-- [ ] VE-4 [E2] (5đ) Đăng nhập thí sinh bằng username/password + mã PIN phòng thi
-- [ ] VE-5 [E3] (5đ) Định dạng gói đề JSON (+audio, hình) và import đề A2
-- [ ] VE-56 [E3] (3đ) Bộ chuyển đề PDF → gói đề JSON (A2) và tách audio Listening thành 5 track
-- [ ] VE-6 [E5] (3đ) Dựng frontend React + TypeScript (Vite), khung màn hình kiểu Inspera
-- [ ] VE-7 [E5] (8đ) Reading & Writing A2: 4 kiểu câu (chọn đáp án, chọn từ trên ô trống, gõ từ, viết bài)
-- [ ] VE-8 [E5] (5đ) Đồng hồ do server nắm, tự lưu câu trả lời, hết giờ tự nộp
-- [ ] VE-9 [E5] (2đ) Đánh dấu câu hỏi (cờ) và đếm câu đã làm trên thanh part
-- [ ] VE-10 [E6] (5đ) Listening A2: phát nối 5 track một lần, chọn tranh, kéo thả
-- [ ] VE-11 [E8] (3đ) Chấm tự động Reading Part 1–5 và Listening theo đáp án
-- [ ] VE-12 [E12] (1đ) Báo cáo tiến độ tuần 1 (progress-report)
-- **Status:** pending
+### Phase 1: Sprint 1 (12/10 – 18/10) — Demo A2 phía thí sinh (16/10); làm sớm cổng nhân viên, chấm Writing, nhập đề từ PDF
+Tổng: 23 story, 93 điểm.
+- [x] VE-3 [E2] (5đ) Đăng nhập nhân viên (admin, giám thị) bằng cookie, phân quyền theo vai trò
+- [x] VE-4 [E2] (5đ) Đăng nhập thí sinh bằng username/password + mã PIN phòng thi
+- [x] VE-5 [E3] (5đ) Định dạng gói đề JSON (+audio, hình) và import đề A2
+- [x] VE-56 [E3] (3đ) Bộ chuyển đề PDF → gói đề JSON (A2) và tách audio Listening thành 5 track
+- [x] VE-57 [E3] (5đ) Nhập đề từ PDF ngay trên cổng nhân viên và trang duyệt đề
+- [x] VE-6 [E5] (3đ) Dựng frontend React + TypeScript (Vite), khung màn hình kiểu Inspera
+- [x] VE-7 [E5] (8đ) Reading & Writing A2: 4 kiểu câu (chọn đáp án, chọn từ trên ô trống, gõ từ, viết bài)
+- [x] VE-8 [E5] (5đ) Đồng hồ do server nắm, tự lưu câu trả lời, hết giờ tự nộp
+- [x] VE-9 [E5] (2đ) Đánh dấu câu hỏi (cờ) và đếm câu đã làm trên thanh part
+- [x] VE-10 [E6] (5đ) Listening A2: phát nối 5 track một lần, chọn tranh, kéo thả
+- [x] VE-11 [E8] (3đ) Chấm tự động Reading Part 1–5 và Listening theo đáp án
+- [x] VE-14 [E7] (5đ) Tạm dừng / cho làm tiếp một, nhiều hoặc cả phòng
+- [x] VE-15 [E7] (5đ) Cộng giờ bù sự cố và Edit End Time (End now / End at / End in, Disregard extra time)
+- [x] VE-16 [E7] (3đ) Tua audio Listening N phút (chỉ khi không tạm dừng, tối đa số phút đã phát)
+- [x] VE-17 [E7] (2đ) Thông báo từ giám thị (biểu tượng chuông)
+- [x] VE-18 [E5] (3đ) Menu Options: độ tương phản, cỡ chữ, ẩn/hiện giờ, trang nộp bài
+- [x] VE-19 [E5] (5đ) Ghi chú và highlight khi bôi đen chữ, bảng Notes bên phải
+- [x] VE-21 [E4] (5đ) Tạo / sửa kỳ thi, gắn đề cho từng phần thi, mã PIN, mật khẩu giám thị
+- [x] VE-22 [E4] (5đ) Nhập danh sách thí sinh từ Excel, sinh username kiểu Cambridge, in phiếu đăng nhập
+- [x] VE-23 [E4] (2đ) Phân công giám thị cho kỳ thi
+- [x] VE-26 [E8] (5đ) Chấm Writing cho giáo viên và bảng kết quả theo kỳ thi
+- [x] VE-30 [E9] (3đ) Giới hạn tần suất đăng nhập, xử lý lỗi an toàn, nhật ký thao tác
+- [x] VE-12 [E12] (1đ) Báo cáo tiến độ tuần 1 (progress-report)
+- **Status:** complete
 
-### Phase 2: Sprint 2 (19/10 – 25/10) — Cổng giám thị thời gian thực (tuần gặp GV 1)
-Tổng: 8 story, 29 điểm.
+### Phase 2: Sprint 2 (19/10 – 25/10) — Tuần gặp GV 1: đặc tả, sơ đồ, đặc tả API; SignalR; sửa đề trên web; hướng dẫn cài đặt
+Tổng: 6 story, 22 điểm.
+- [ ] VE-58 [E12] (2đ) Bản đặc tả yêu cầu (quy trình thi máy, vai trò, chức năng, yêu cầu phi chức năng)
+- [ ] VE-45 [E12] (3đ) Sơ đồ trạng thái lượt làm bài, sơ đồ tuần tự, đặc tả API
 - [ ] VE-13 [E7] (5đ) SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì
-- [ ] VE-14 [E7] (5đ) Tạm dừng / cho làm tiếp một, nhiều hoặc cả phòng
-- [ ] VE-15 [E7] (5đ) Cộng giờ bù sự cố và Edit End Time (End now / End at / End in, Disregard extra time)
-- [ ] VE-16 [E7] (3đ) Tua audio Listening N phút (chỉ khi không tạm dừng, tối đa số phút đã phát)
-- [ ] VE-17 [E7] (2đ) Thông báo từ giám thị (biểu tượng chuông)
-- [ ] VE-18 [E5] (3đ) Menu Options: độ tương phản, cỡ chữ, ẩn/hiện giờ, trang nộp bài
-- [ ] VE-19 [E5] (5đ) Ghi chú và highlight khi bôi đen chữ, bảng Notes bên phải
+- [ ] VE-25 [E3] (8đ) Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)
+- [ ] VE-46 [E11] (3đ) Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/
 - [ ] VE-20 [E12] (1đ) Báo cáo tiến độ tuần 2
 - **Status:** pending
 
-### Phase 3: Sprint 3 (26/10 – 01/11) — Quản trị A2 hoàn chỉnh
-Tổng: 7 story, 28 điểm.
-- [ ] VE-21 [E4] (5đ) Tạo / sửa kỳ thi, gắn đề cho từng phần thi, mã PIN, mật khẩu giám thị
-- [ ] VE-22 [E4] (5đ) Nhập danh sách thí sinh từ Excel, sinh username kiểu Cambridge, in phiếu đăng nhập
-- [ ] VE-23 [E4] (2đ) Phân công giám thị cho kỳ thi
+### Phase 3: Sprint 3 (26/10 – 01/11) — Safe Exam Browser và cảnh báo vi phạm; đổi tên trung tâm và logo
+Tổng: 4 story, 11 điểm.
+- [ ] VE-28 [E9] (5đ) Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi
+- [ ] VE-29 [E9] (3đ) Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm
 - [ ] VE-24 [E4] (2đ) Đổi tên trung tâm và logo (tải PNG)
-- [ ] VE-25 [E3] (8đ) Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)
-- [ ] VE-26 [E8] (5đ) Chấm Writing cho giáo viên và bảng kết quả theo kỳ thi
 - [ ] VE-27 [E12] (1đ) Báo cáo tiến độ tuần 3
 - **Status:** pending
 
-### Phase 4: Sprint 4 (02/11 – 08/11) — Safe Exam Browser, bảo mật, kiểm thử A2 đầu-cuối
-Tổng: 5 story, 17 điểm.
-- [ ] VE-28 [E9] (5đ) Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi
-- [ ] VE-29 [E9] (3đ) Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm
-- [ ] VE-30 [E9] (3đ) Giới hạn tần suất đăng nhập, xử lý lỗi an toàn, nhật ký thao tác
+### Phase 4: Sprint 4 (02/11 – 08/11) — Kiểm thử đầu-cuối A2; bắt đầu B1 Preliminary for Schools
+Tổng: 4 story, 13 điểm.
 - [ ] VE-31 [E11] (5đ) Test đầu-cuối Playwright cho luồng thi A2 và thao tác giám thị chính
+- [ ] VE-33 [E10] (2đ) Khảo sát giao diện bài thi mẫu B1 PfS (Reading, Writing, Listening)
+- [ ] VE-34 [E10] (5đ) Bổ sung kiểu câu còn thiếu cho B1 Reading (6 part)
 - [ ] VE-32 [E12] (1đ) Báo cáo tiến độ tuần 4
 - **Status:** pending
 
-### Phase 5: Sprint 5 (09/11 – 15/11) — B1 Preliminary for Schools (1) — tuần gặp GV 2
-Tổng: 4 story, 11 điểm.
-- [ ] VE-33 [E10] (2đ) Khảo sát giao diện bài thi mẫu B1 PfS (Reading, Writing, Listening)
-- [ ] VE-34 [E10] (5đ) Bổ sung kiểu câu còn thiếu cho B1 Reading (6 part)
+### Phase 5: Sprint 5 (09/11 – 15/11) — B1 Preliminary for Schools: Writing và Listening — tuần gặp GV 2
+Tổng: 3 story, 7 điểm.
 - [ ] VE-35 [E10] (3đ) B1 Writing: Part 1 email, Part 2 chọn 1 trong 2 đề
+- [ ] VE-37 [E10] (3đ) B1 Listening 4 part
 - [ ] VE-36 [E12] (1đ) Báo cáo tiến độ tuần 5
 - **Status:** pending
 
-### Phase 6: Sprint 6 (16/11 – 22/11) — B1 Preliminary for Schools (2)
-Tổng: 4 story, 10 điểm.
-- [ ] VE-37 [E10] (3đ) B1 Listening 4 part
+### Phase 6: Sprint 6 (16/11 – 22/11) — Kỳ thi B1 chạy đầu-cuối, sửa lỗi tồn đọng A2/B1
+Tổng: 3 story, 7 điểm.
 - [ ] VE-38 [E10] (3đ) Kỳ thi B1 3 phần thi chạy đầu-cuối, chấm tự động
 - [ ] VE-39 [E11] (3đ) Sửa lỗi tồn đọng A2/B1
 - [ ] VE-40 [E12] (1đ) Báo cáo tiến độ tuần 6
@@ -75,10 +79,8 @@ Tổng: 4 story, 12 điểm.
 - [ ] VE-44 [E12] (1đ) Báo cáo tiến độ tuần 7
 - **Status:** pending
 
-### Phase 8: Sprint 8 (30/11 – 06/12) — Đóng gói và tài liệu thiết kế — tuần gặp GV 3
-Tổng: 3 story, 11 điểm.
-- [ ] VE-45 [E12] (3đ) Sơ đồ trạng thái lượt làm bài, sơ đồ tuần tự, đặc tả API
-- [ ] VE-46 [E11] (3đ) Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/
+### Phase 8: Sprint 8 (30/11 – 06/12) — Viết quyển báo cáo Mở đầu, Chương 1–3 — tuần gặp GV 3
+Tổng: 1 story, 5 điểm.
 - [ ] VE-47 [E12] (5đ) Viết quyển báo cáo: Mở đầu, Chương 1–3
 - **Status:** pending
 

@@ -143,3 +143,17 @@
   - Test treo ngẫu nhiên: GET_LOCK('__EFMigrationsLock') toàn server + pool giữ lock → migrate tuần tự, không pool; 3 lần liên tiếp 230/230
 - Kiểm tra trên Chrome (1366×768): Options + Yellow on black + Large, highlight/note, F5, hết phiên, End now hai bước, chấm Writing 13/60 Final
 - Toàn bộ: backend 231/231, frontend 71/71, converter 35/35; commit 7594d40 … 6e9961b
+
+## Session: 2026-10-15
+
+### Docker, Listening, nhập đề từ PDF trên web (VE-12, VE-56, VE-57)
+- **Status:** complete — commit 3ace003 (báo cáo tuần 1), f22e4db (bộ chuyển Listening), 9d119d4 (tài khoản demo), ff56e54 (Docker một lệnh), 8f317dd (Import from PDF + trang duyệt đề)
+- Toàn bộ: backend 244/244, frontend 74/74, converter 55/55
+- Báo cáo tuần 1 điền vào tab "Trần Hoàng Long" của file tiến độ chung (Google Sheets)
+
+### Jira: đủ 12 sprint
+- Board SCRUM chỉ có 1 sprint đang chạy → đổi tên "SCRUM Sprint 1" (10/10–18/10, gồm Sprint 0 + 1 của kế hoạch), sprint trống thành "SCRUM Sprint 2" (19/10–25/10), tạo Sprint 3–11 theo lịch tuần
+- 11 story làm sớm (VE-14…19, VE-21…23, VE-26, VE-30) đưa vào Sprint 1; VE-12, VE-56 → Done; VE-46 → In Progress (Docker xong, còn hướng dẫn cài đặt)
+- Story mới: VE-57 = SCRUM-74 (Done, Sprint 1), VE-58 = SCRUM-75 (đặc tả yêu cầu, Sprint 2)
+- Vượt kế hoạch nên dời lên một sprint: VE-25, VE-45, VE-46 → Sprint 2; VE-28, VE-29 → Sprint 3; VE-33, VE-34 → Sprint 4; VE-37 → Sprint 5 (mô tả và nhãn sprint-N trên Jira đã sửa theo)
+- sprints.py sinh lại sprint-backlog.md và jira-backlog.csv cho khớp Jira
