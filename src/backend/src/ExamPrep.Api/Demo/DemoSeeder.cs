@@ -22,10 +22,23 @@ public sealed record DemoOptions
     /// </summary>
     public string? ReadingWritingFolder { get; init; }
 
+    /// <summary>Optional Listening package folder (paper.json + images/ + audio/), used like <see cref="ReadingWritingFolder"/>.</summary>
+    public string? ListeningFolder { get; init; }
+
     public string ExamName { get; init; } = string.Empty;
     public string CandidateUsername { get; init; } = string.Empty;
     public string CandidatePassword { get; init; } = string.Empty;
+    public string CandidateFirstName { get; init; } = "An";
+    public string CandidateLastName { get; init; } = "Nguyen";
+    public DateOnly? CandidateDateOfBirth { get; init; }
     public string SessionPin { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Optional administrator created (if missing) for the demo, so a fresh machine has a known admin login.
+    /// Unlike Bootstrap:AdminPassword it has no minimum length: it is a development-only, report-friendly account.
+    /// </summary>
+    public string? AdminUsername { get; init; }
+    public string? AdminPassword { get; init; }
 
     /// <summary>Optional invigilator account created (if missing) and assigned to the demo exam.</summary>
     public string? InvigilatorUsername { get; init; }
@@ -57,6 +70,8 @@ public static class DemoSeeder
         var db = provider.GetRequiredService<ExamPrepDbContext>();
         var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(DemoSeeder));
 
+        await EnsureStaffAsync(provider, db, options.AdminUsername, options.AdminPassword, "Demo Administrator", UserRole.Admin, cancellationToken);
+
         if (options.ResetOnStart)
         {
             await DeleteDemoExamAsync(db, options.ExamName, cancellationToken);
@@ -75,16 +90,17 @@ public static class DemoSeeder
         }
 
         var importer = provider.GetRequiredService<PaperPackageImporter>();
-        var readingWritingFolder = ReadingWritingFolder(options, logger);
+        var readingWritingFolder = ChooseFolder(options.ReadingWritingFolder, Path.Combine(options.SamplesRoot, ReadingWritingSample), "Reading & Writing", logger);
+        var listeningFolder = ChooseFolder(options.ListeningFolder, Path.Combine(options.SamplesRoot, ListeningSample), "Listening", logger);
         var readingWriting = await ImportAsync(importer, readingWritingFolder, adminId.Value, cancellationToken);
-        var listening = await ImportAsync(importer, Path.Combine(options.SamplesRoot, ListeningSample), adminId.Value, cancellationToken);
+        var listening = await ImportAsync(importer, listeningFolder, adminId.Value, cancellationToken);
 
         var templates = await db.SectionTemplates.AsNoTracking()
             .Where(t => t.ExamType!.Code == A2ExamTypeCode)
             .ToDictionaryAsync(t => t.Id, cancellationToken);
 
         var candidate = CreateCandidate(provider, options);
-        var invigilatorId = await EnsureInvigilatorAsync(provider, db, options, cancellationToken);
+        var invigilatorId = await EnsureStaffAsync(provider, db, options.InvigilatorUsername, options.InvigilatorPassword, "Demo Invigilator", UserRole.Invigilator, cancellationToken);
         var exam = new Exam
         {
             Name = options.ExamName,
@@ -126,16 +142,16 @@ public static class DemoSeeder
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    private static string ReadingWritingFolder(DemoOptions options, ILogger logger)
+    /// <summary>The configured package folder when it holds a paper.json (e.g. a converted paper), else the sample.</summary>
+    private static string ChooseFolder(string? folder, string sample, string section, ILogger logger)
     {
-        var folder = options.ReadingWritingFolder;
         if (!string.IsNullOrWhiteSpace(folder) && File.Exists(Path.Combine(folder, "paper.json")))
         {
-            logger.LogInformation("Demo Reading & Writing paper comes from {Folder}.", folder);
+            logger.LogInformation("Demo {Section} paper comes from {Folder}.", section, folder);
             return folder;
         }
 
-        return Path.Combine(options.SamplesRoot, ReadingWritingSample);
+        return sample;
     }
 
     private static async Task<TestPaper> ImportAsync(PaperPackageImporter importer, string folder, int adminId, CancellationToken cancellationToken)
@@ -157,15 +173,15 @@ public static class DemoSeeder
         DurationMinutes = template.DurationMinutes,
     };
 
-    /// <summary>The demo invigilator's id, creating the account the first time; null when none is configured.</summary>
-    private static async Task<int?> EnsureInvigilatorAsync(IServiceProvider provider, ExamPrepDbContext db, DemoOptions options, CancellationToken cancellationToken)
+    /// <summary>A demo staff account's id, creating the account the first time; null when none is configured.</summary>
+    private static async Task<int?> EnsureStaffAsync(IServiceProvider provider, ExamPrepDbContext db, string? username, string? password, string fullName, UserRole role, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(options.InvigilatorUsername) || string.IsNullOrWhiteSpace(options.InvigilatorPassword))
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
             return null;
         }
 
-        var existing = await db.Users.Where(u => u.Username == options.InvigilatorUsername).Select(u => (int?)u.Id).SingleOrDefaultAsync(cancellationToken);
+        var existing = await db.Users.Where(u => u.Username == username).Select(u => (int?)u.Id).SingleOrDefaultAsync(cancellationToken);
         if (existing is not null)
         {
             return existing;
@@ -173,13 +189,13 @@ public static class DemoSeeder
 
         var user = new User
         {
-            Username = options.InvigilatorUsername,
-            FullName = "Demo Invigilator",
-            Role = UserRole.Invigilator,
+            Username = username,
+            FullName = fullName,
+            Role = role,
             PasswordHash = string.Empty,
             CreatedAt = DateTime.UtcNow,
         };
-        user.PasswordHash = provider.GetRequiredService<IPasswordHasher<User>>().HashPassword(user, options.InvigilatorPassword);
+        user.PasswordHash = provider.GetRequiredService<IPasswordHasher<User>>().HashPassword(user, password);
         db.Users.Add(user);
         await db.SaveChangesAsync(cancellationToken);
         return user.Id;
@@ -190,8 +206,9 @@ public static class DemoSeeder
         var candidate = new Candidate
         {
             CandidateNumber = "0001",
-            FirstName = "An",
-            LastName = "Nguyen",
+            FirstName = options.CandidateFirstName,
+            LastName = options.CandidateLastName,
+            DateOfBirth = options.CandidateDateOfBirth,
             Username = options.CandidateUsername,
             PasswordHash = string.Empty,
             PasswordProtected = string.Empty,

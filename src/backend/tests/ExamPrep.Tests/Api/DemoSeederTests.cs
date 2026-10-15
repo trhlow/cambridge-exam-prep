@@ -114,12 +114,30 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.StartsWith("A2 Key for Schools – Victory sample test 1", await ReadingWritingTitleAsync(options.ExamName));
     }
 
-    private async Task<string> ReadingWritingTitleAsync(string examName)
+    [Fact]
+    public async Task Seed_UsesTheListeningFolderWhenItExists()
+    {
+        api.SkipIfUnavailable();
+        var folder = Directory.CreateTempSubdirectory("demo-l-").FullName;
+        var sample = Path.Combine(AppContext.BaseDirectory, "Samples", "a2-key-fs-listening", "paper.json");
+        var paper = JsonNode.Parse(await File.ReadAllTextAsync(sample, ct))!;
+        paper["title"] = "Converted listening";
+        await File.WriteAllTextAsync(Path.Combine(folder, "paper.json"), paper.ToJsonString(), ct);
+        var options = Options() with { ListeningFolder = folder };
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+
+        Assert.Equal("Converted listening", await SectionTitleAsync(options.ExamName, 2));
+    }
+
+    private Task<string> ReadingWritingTitleAsync(string examName) => SectionTitleAsync(examName, 1);
+
+    private async Task<string> SectionTitleAsync(string examName, int orderNo)
     {
         using var scope = api.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
         return await db.ExamSections
-            .Where(s => s.Exam!.Name == examName && s.OrderNo == 1)
+            .Where(s => s.Exam!.Name == examName && s.OrderNo == orderNo)
             .Select(s => s.TestPaper!.Title)
             .SingleAsync(ct);
     }
@@ -137,6 +155,35 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
         using var client = await api.StaffClientAsync(username, "demo-invig-1");
         var exams = await client.GetFromJsonAsync<List<JsonObject>>("/api/staff/exams", ct);
         Assert.Equal([options.ExamName], exams!.Select(e => (string)e["name"]!));
+    }
+
+    [Fact]
+    public async Task Seed_CreatesADemoAdministratorWhoCanSignIn()
+    {
+        api.SkipIfUnavailable();
+        var username = $"admdemo{Guid.NewGuid():N}"[..14];
+        var options = Options() with { AdminUsername = username, AdminPassword = "19072005" };
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+        await DemoSeeder.SeedAsync(api.Factory.Services, options with { ResetOnStart = true }, ct);
+
+        using var client = await api.StaffClientAsync(username, "19072005");
+        var me = await client.GetFromJsonAsync<JsonObject>("/api/staff/auth/me", ct);
+        Assert.Equal("Admin", (string)me!["role"]!);
+    }
+
+    [Fact]
+    public async Task Seed_GivesTheDemoCandidateTheConfiguredNameAndDateOfBirth()
+    {
+        api.SkipIfUnavailable();
+        var options = Options() with { CandidateFirstName = "Hoàng Long", CandidateLastName = "Trần", CandidateDateOfBirth = new DateOnly(2005, 7, 19) };
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var candidate = await db.Candidates.SingleAsync(c => c.Username == options.CandidateUsername, ct);
+        Assert.Equal(("Hoàng Long", "Trần", new DateOnly(2005, 7, 19)), (candidate.FirstName, candidate.LastName, candidate.DateOfBirth));
     }
 
     [Fact]
