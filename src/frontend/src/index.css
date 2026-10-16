@@ -356,6 +356,11 @@ button {
   background: var(--selected);
 }
 
+/* Under the mouse, an answer shows a faint version of the selected colour (mixed here, so contrast modes follow). */
+.option:not(.is-selected):hover {
+  background: color-mix(in srgb, var(--selected) 40%, var(--surface));
+}
+
 .option-line {
   display: flex;
   align-items: center;
@@ -930,6 +935,10 @@ button {
 
 .match-card.is-picked {
   outline: 2px solid var(--number-ring);
+}
+
+.match-pool .match-card:not(.is-picked):hover {
+  background: color-mix(in srgb, var(--selected) 40%, var(--surface));
 }
 
 .match-card--placed {
