@@ -1,19 +1,21 @@
 import { useState, type FormEvent } from 'react'
-import { adminApi, type CandidateView, type ExamDetail, type LoginSlip } from '../api'
+import { adminApi, type ApprovalView, type CandidateView, type ExamDetail, type LoginSlip } from '../api'
 import { parseCandidateRows } from '../candidateRows'
-import { ConfirmButton, ErrorBox, Modal } from '../ui'
+import { ConfirmButton, ErrorBox, Modal, RequestSent } from '../ui'
 import { useLoad } from '../useLoad'
 
 /**
  * VE-22: the candidates entered for the session. Rows are pasted from Excel (or typed one per line); the server
- * gives each a Cambridge username and a password, printed on the login slips.
+ * gives each a Cambridge username and a password, printed on the login slips. Managers of exams only read the list;
+ * removing a candidate waits for a second administrator (VE-60).
  */
-export function CandidatesPanel({ exam, onChanged }: { exam: ExamDetail; onChanged: () => void }) {
+export function CandidatesPanel({ exam, canEdit, onChanged }: { exam: ExamDetail; canEdit: boolean; onChanged: () => void }) {
   const { data: candidates, error, reload } = useLoad(() => adminApi.candidates(exam.id), exam.id)
   const [isAdding, setIsAdding] = useState(false)
   const [editing, setEditing] = useState<CandidateView | null>(null)
   const [newSlip, setNewSlip] = useState<LoginSlip | null>(null)
   const [actionError, setActionError] = useState<unknown>(null)
+  const [sent, setSent] = useState<ApprovalView | null>(null)
 
   const changed = () => {
     reload()
@@ -30,8 +32,7 @@ export function CandidatesPanel({ exam, onChanged }: { exam: ExamDetail; onChang
   const remove = async (candidate: CandidateView) => {
     setActionError(null)
     try {
-      await adminApi.deleteCandidate(candidate.id)
-      changed()
+      setSent(await adminApi.deleteCandidate(candidate.id))
     } catch (e) {
       setActionError(e)
     }
@@ -41,11 +42,14 @@ export function CandidatesPanel({ exam, onChanged }: { exam: ExamDetail; onChang
     <section className="st-panel">
       <div className="st-panel-head">
         <h2 className="st-h2">Candidates {candidates && <span className="st-faint">({candidates.length})</span>}</h2>
-        <button type="button" className="st-btn st-btn--primary" onClick={() => setIsAdding(true)}>
-          Add candidates
-        </button>
+        {canEdit && (
+          <button type="button" className="st-btn st-btn--primary" onClick={() => setIsAdding(true)}>
+            Add candidates
+          </button>
+        )}
       </div>
       <ErrorBox error={error ?? actionError} />
+      {sent && <RequestSent request={sent} onDismiss={() => setSent(null)} />}
       {candidates && candidates.length === 0 && <p className="st-empty">No candidates yet. Paste the entry list from Excel.</p>}
       {candidates && candidates.length > 0 && (
         <table className="st-table">
@@ -57,7 +61,7 @@ export function CandidatesPanel({ exam, onChanged }: { exam: ExamDetail; onChang
               <th>Username</th>
               <th className="st-num">Extra time</th>
               <th>Seat</th>
-              <th />
+              {canEdit && <th />}
             </tr>
           </thead>
           <tbody>
@@ -69,15 +73,17 @@ export function CandidatesPanel({ exam, onChanged }: { exam: ExamDetail; onChang
                 <td className="st-mono">{c.username}</td>
                 <td className="st-num">{c.plannedExtraPercent > 0 ? `${c.plannedExtraPercent} %` : '–'}</td>
                 <td>{c.seatNo ?? '–'}</td>
-                <td className="st-row-actions">
-                  <button type="button" className="st-link" onClick={() => setEditing(c)}>
-                    Edit
-                  </button>
-                  <ConfirmButton className="st-link" label="New password" confirmLabel="Confirm new password" onConfirm={() => void resetPassword(c)} />
-                  {!c.hasStarted && (
-                    <ConfirmButton className="st-link st-link--danger" label="Remove" confirmLabel="Confirm remove" onConfirm={() => void remove(c)} />
-                  )}
-                </td>
+                {canEdit && (
+                  <td className="st-row-actions">
+                    <button type="button" className="st-link" onClick={() => setEditing(c)}>
+                      Edit
+                    </button>
+                    <ConfirmButton className="st-link" label="New password" confirmLabel="Confirm new password" onConfirm={() => void resetPassword(c)} />
+                    {!c.hasStarted && (
+                      <ConfirmButton className="st-link st-link--danger" label="Request removal" confirmLabel="Ask an administrator to remove" onConfirm={() => void remove(c)} />
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

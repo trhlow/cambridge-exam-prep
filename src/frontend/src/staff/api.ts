@@ -1,5 +1,5 @@
 // Staff portal calls (src/backend/src/ExamPrep.Api: Auth, Admin, Exams, Monitoring, Content, Results).
-import { ApiError, del as rawDel, post as rawPost, put as rawPut, request as rawRequest } from '../api/client'
+import { ApiError, post as rawPost, put as rawPut, request as rawRequest } from '../api/client'
 
 /** Fired when the staff session has ended (expired, signed out elsewhere, password reset): the portal shows the sign-in. */
 export const SESSION_ENDED_EVENT = 'victory:staff-session-ended'
@@ -17,12 +17,14 @@ function watch<T>(call: Promise<T>): Promise<T> {
 const request = <T>(path: string, init?: RequestInit) => watch(rawRequest<T>(path, init))
 const post = <T>(path: string, body?: unknown) => watch(rawPost<T>(path, body))
 const put = <T>(path: string, body: unknown) => watch(rawPut<T>(path, body))
-const del = (path: string) => watch(rawDel(path))
+/** Deletions wait for a second administrator (VE-60): the server answers with the approval request it filed. */
+const requestDeletion = (path: string) => request<ApprovalView>(path, { method: 'DELETE' })
 
 export type Role = 'Admin' | 'Manager' | 'Examiner' | 'Invigilator'
 
 /** What a manager works in; administrators work in every area. */
 export type ManagerArea = 'Papers' | 'Exams' | 'Candidates' | 'Centre'
+export const MANAGER_AREAS: ManagerArea[] = ['Papers', 'Exams', 'Candidates', 'Centre']
 
 export interface StaffProfile {
   id: number
@@ -47,10 +49,17 @@ export interface ExamSectionView {
   paperTitle: string
 }
 
-export interface InvigilatorView {
+/** An invigilator or examiner assigned to a session. */
+export interface AssignedStaffView {
   id: number
   username: string
   fullName: string
+}
+
+/** An invigilator or examiner account that a session can be given. */
+export interface AssignableStaff extends AssignedStaffView {
+  role: Role
+  isActive: boolean
 }
 
 export interface ExamListItem {
@@ -70,7 +79,8 @@ export interface ExamDetail extends Omit<ExamListItem, 'candidates'> {
   invigilatorPassword: string
   candidates: number
   hasStarted: boolean
-  invigilators: InvigilatorView[]
+  invigilators: AssignedStaffView[]
+  examiners: AssignedStaffView[]
 }
 
 export interface SectionTemplateView {
@@ -302,6 +312,48 @@ export interface CandidateResult {
   sections: SectionResult[]
 }
 
+export type ApprovalKind = 'DeletePaper' | 'DeleteExam' | 'DeleteCandidate' | 'ChangeStaffAccount' | 'CreateAdmin'
+export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled' | 'Failed'
+
+/** An action waiting for (or decided by) an administrator other than the person who asked for it. */
+export interface ApprovalView {
+  id: number
+  kind: ApprovalKind
+  targetId: number | null
+  summary: string
+  status: ApprovalStatus
+  requestedById: number
+  requestedBy: string
+  requestedAt: string
+  decidedById: number | null
+  decidedBy: string | null
+  decidedAt: string | null
+  decisionNote: string | null
+  outcome: string | null
+}
+
+export interface NewStaffAccount {
+  username: string
+  fullName: string
+  password: string
+  role: Role
+  areas: ManagerArea[]
+}
+
+export interface StaffAccountUpdate {
+  fullName: string
+  isActive: boolean
+  newPassword?: string
+  role?: Role
+  areas?: ManagerArea[]
+}
+
+/** Name changes apply at once; anything else in the update waits in `request`. */
+export interface UpdateStaffResult {
+  user: StaffProfile
+  request: ApprovalView | null
+}
+
 const exam = (id: number) => `/api/staff/exams/${id}`
 
 export const staffApi = {
@@ -319,6 +371,11 @@ export const staffApi = {
   act: (examId: number, sectionId: number, body: MonitorActionRequest) => post<ActionOutcome>(`${exam(examId)}/sections/${sectionId}/actions`, body),
   messages: (examId: number) => request<MessageView[]>(`${exam(examId)}/messages`),
   sendMessage: (examId: number, text: string, candidateIds: number[]) => post<MessageView[]>(`${exam(examId)}/messages`, { text, candidateIds }),
+
+  approvals: () => request<ApprovalView[]>('/api/staff/approvals'),
+  approve: (id: number) => post<ApprovalView>(`/api/staff/approvals/${id}/approve`),
+  reject: (id: number, note: string) => post<ApprovalView>(`/api/staff/approvals/${id}/reject`, { note }),
+  cancelRequest: (id: number) => post<ApprovalView>(`/api/staff/approvals/${id}/cancel`),
 }
 
 export const adminApi = {
@@ -326,13 +383,16 @@ export const adminApi = {
   createExam: (body: SaveExamRequest) => post<ExamDetail>('/api/admin/exams', body),
   updateExam: (id: number, body: SaveExamRequest) => put<ExamDetail>(`/api/admin/exams/${id}`, body),
   setStatus: (id: number, status: ExamStatus) => post<ExamDetail>(`/api/admin/exams/${id}/status`, { status }),
-  deleteExam: (id: number) => del(`/api/admin/exams/${id}`),
-  assignInvigilators: (id: number, userIds: number[]) => put<InvigilatorView[]>(`/api/admin/exams/${id}/invigilators`, { userIds }),
+  deleteExam: (id: number) => requestDeletion(`/api/admin/exams/${id}`),
+  examPapers: () => request<PaperListItem[]>('/api/admin/exam-papers'),
+  assignableStaff: () => request<AssignableStaff[]>('/api/admin/assignable-staff'),
+  assignInvigilators: (id: number, userIds: number[]) => put<AssignedStaffView[]>(`/api/admin/exams/${id}/invigilators`, { userIds }),
+  assignExaminers: (id: number, userIds: number[]) => put<AssignedStaffView[]>(`/api/admin/exams/${id}/examiners`, { userIds }),
 
   candidates: (examId: number) => request<CandidateView[]>(`/api/admin/exams/${examId}/candidates`),
   addCandidates: (examId: number, candidates: NewCandidate[]) => post<CandidateView[]>(`/api/admin/exams/${examId}/candidates`, { candidates }),
   updateCandidate: (id: number, body: Required<Omit<NewCandidate, 'candidateNumber'>>) => put<CandidateView>(`/api/admin/candidates/${id}`, body),
-  deleteCandidate: (id: number) => del(`/api/admin/candidates/${id}`),
+  deleteCandidate: (id: number) => requestDeletion(`/api/admin/candidates/${id}`),
   resetCandidatePassword: (id: number) => post<LoginSlip>(`/api/admin/candidates/${id}/reset-password`),
 
   papers: () => request<PaperListItem[]>('/api/admin/papers'),
@@ -355,13 +415,14 @@ export const adminApi = {
   },
   paper: (id: number) => request<PaperDetail>(`/api/admin/papers/${id}`),
   publishPaper: (id: number) => post<PaperListItem>(`/api/admin/papers/${id}/publish`),
-  deletePaper: (id: number) => del(`/api/admin/papers/${id}`),
+  deletePaper: (id: number) => requestDeletion(`/api/admin/papers/${id}`),
 
   marking: (attemptId: number) => request<AttemptMarking>(`/api/staff/attempts/${attemptId}/marking`),
   markWriting: (attemptId: number, questionNumber: number, score: number, comment: string) =>
     post<AttemptMarking>(`/api/staff/attempts/${attemptId}/writing-marks`, { questionNumber, score, comment }),
 
   users: () => request<StaffProfile[]>('/api/admin/users'),
-  createUser: (body: { username: string; fullName: string; password: string; role: Role }) => post<StaffProfile>('/api/admin/users', body),
-  updateUser: (id: number, body: { fullName: string; isActive: boolean; newPassword?: string }) => put<StaffProfile>(`/api/admin/users/${id}`, body),
+  /** A third administrator waits for approval: the answer is then the request, not the account. */
+  createUser: (body: NewStaffAccount) => post<StaffProfile | ApprovalView>('/api/admin/users', body),
+  updateUser: (id: number, body: StaffAccountUpdate) => put<UpdateStaffResult>(`/api/admin/users/${id}`, body),
 }

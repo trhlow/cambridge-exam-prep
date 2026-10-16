@@ -10,3 +10,7 @@ export function formatDate(iso: string): string {
 export function formatTime(iso: string | null): string {
   return iso ? new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '–'
 }
+
+export function formatDateTime(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–'
+}

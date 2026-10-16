@@ -1,20 +1,23 @@
+import type { Access } from '../access'
 import { staffApi } from '../api'
 import { Link } from '../Link'
 import { Badge, ErrorBox, PageHeader } from '../ui'
 import { formatDate } from '../format'
 import { useLoad } from '../useLoad'
 
-/** Every session the staff member may open (invigilators: the ones assigned to them), newest first. */
-export function ExamsPage({ isAdmin }: { isAdmin: boolean }) {
+/** Every session the staff member may open (invigilators and examiners: the ones assigned to them), newest first. */
+export function ExamsPage({ access }: { access: Access }) {
   const { data: exams, error } = useLoad(staffApi.exams, 'exams')
+  const canCreate = access.worksIn('Exams')
+  const meta = access.seesCandidates ? 'Exam sessions at the centre' : access.marks ? 'Sessions you are marking' : 'Sessions you are invigilating'
 
   return (
     <>
       <PageHeader
         title="Exams"
-        meta={isAdmin ? 'Exam sessions at the centre' : 'Sessions you are invigilating'}
+        meta={meta}
         actions={
-          isAdmin && (
+          canCreate && (
             <Link to="/staff/exams/new" className="st-btn st-btn--primary">
               New exam
             </Link>
@@ -23,7 +26,7 @@ export function ExamsPage({ isAdmin }: { isAdmin: boolean }) {
       />
       <ErrorBox error={error} />
       {exams && exams.length === 0 && (
-        <p className="st-empty">{isAdmin ? 'No exams yet. Import and publish the papers, then create an exam.' : 'You are not assigned to any exam yet.'}</p>
+        <p className="st-empty">{access.seesCandidates ? 'No exams yet. Import and publish the papers, then create an exam.' : 'You are not assigned to any exam yet.'}</p>
       )}
       {exams && exams.length > 0 && (
         <table className="st-table">

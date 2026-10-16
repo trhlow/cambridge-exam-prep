@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using ExamPrep.Api.Approvals;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Common;
+using ExamPrep.Api.Content;
 using ExamPrep.Api.Exams;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
@@ -34,6 +35,9 @@ public sealed record SetExamStatusRequest([Required] string Status);
 
 public sealed record AssignInvigilatorsRequest([Required] List<int> UserIds);
 
+/// <summary>An invigilator or examiner account that can be assigned to a session.</summary>
+public sealed record AssignableStaffView(int Id, string Username, string FullName, string Role, bool IsActive);
+
 /// <summary>
 /// VE-21 / VE-23: scheduling exam sessions. Each section of the exam type gets one published paper; the session PIN
 /// and invigilator password are generated unless the administrator types their own. Once any candidate has started,
@@ -60,6 +64,28 @@ public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExam
             .Select(t => new ExamTypeView(t.Id, t.Code, t.Name, templates.Where(s => s.ExamTypeId == t.Id).Select(s => new SectionTemplateView(s.Id, s.OrderNo, s.Title, s.DurationMinutes)).ToList()))
             .ToList();
     }
+
+    /// <summary>
+    /// The papers a session can use: published ones, and any a session already uses. Managers of exams choose from
+    /// them without reaching the paper bank itself.
+    /// </summary>
+    [HttpGet("exam-papers")]
+    public async Task<IReadOnlyList<PaperListItem>> Papers(CancellationToken cancellationToken)
+    {
+        var used = await db.ExamSections.Select(s => s.TestPaperId).Distinct().ToListAsync(cancellationToken);
+        var papers = await AdminPapersController.PaperRows(db, db.TestPapers.Where(p => p.Status == PaperStatus.Published || used.Contains(p.Id)))
+            .ToListAsync(cancellationToken);
+        return papers.OrderBy(p => p.Title).ToList();
+    }
+
+    /// <summary>Invigilator and examiner accounts, for the assignment panels of a session.</summary>
+    [HttpGet("assignable-staff")]
+    public async Task<IReadOnlyList<AssignableStaffView>> AssignableStaff(CancellationToken cancellationToken) =>
+        await db.Users.AsNoTracking()
+            .Where(u => u.Role == UserRole.Invigilator || u.Role == UserRole.Examiner)
+            .OrderBy(u => u.FullName)
+            .Select(u => new AssignableStaffView(u.Id, u.Username, u.FullName, u.Role.ToString(), u.IsActive))
+            .ToListAsync(cancellationToken);
 
     [HttpPost("exams")]
     public async Task<ActionResult<ExamDetail>> Create(SaveExamRequest request, CancellationToken cancellationToken)

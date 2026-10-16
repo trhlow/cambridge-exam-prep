@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ApiError } from '../api/client'
+import type { ApprovalView } from './api'
+import { Link } from './Link'
 import { messageOf } from './format'
 
 /** The server's title and, when it listed them, every problem it found. */
@@ -35,7 +37,14 @@ const BADGE_TONE: Record<string, string> = {
   Paused: 'yellow',
   Submitted: 'blue',
   Invigilator: 'blue',
+  Examiner: 'blue',
+  Manager: 'green',
   Admin: 'yellow',
+  Pending: 'yellow',
+  Approved: 'green',
+  Rejected: 'grey',
+  Cancelled: 'grey',
+  Failed: 'grey',
   Final: 'green',
   NeedsManualMarking: 'yellow',
 }
@@ -54,6 +63,20 @@ export function PageHeader({ title, meta, actions }: { title: string; meta?: Rea
         {meta && <div className="st-meta">{meta}</div>}
       </div>
       {actions && <div className="st-actions">{actions}</div>}
+    </div>
+  )
+}
+
+/** Shown after asking for something that waits for a second administrator (VE-60). */
+export function RequestSent({ request, onDismiss }: { request: ApprovalView; onDismiss: () => void }) {
+  return (
+    <div className="st-note" role="status">
+      <strong>Sent for approval:</strong> {request.summary}. Another administrator must approve it before it happens.{' '}
+      <Link to="/staff/approvals">Approvals</Link>
+      {' · '}
+      <button type="button" className="st-link" onClick={onDismiss}>
+        Dismiss
+      </button>
     </div>
   )
 }
