@@ -17,6 +17,7 @@ builder.Services.AddAssetAccess();
 builder.Services.AddScoped<CandidateSectionQuery>();
 builder.Services.AddScoped<CandidateCredentials>();
 builder.Services.AddSingleton<LoginThrottle>();
+builder.Services.AddScoped<ExamPrep.Api.Approvals.ApprovalService>();
 builder.Services.Configure<ConverterOptions>(builder.Configuration.GetSection("Converter"));
 builder.Services.AddSingleton<IPaperConverter, PythonPaperConverter>();
 

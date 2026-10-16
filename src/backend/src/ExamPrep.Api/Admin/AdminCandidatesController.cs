@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using ExamPrep.Api.Approvals;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Common;
 using ExamPrep.Api.Exams;
 using ExamPrep.Domain.Candidates;
 using ExamPrep.Domain.Entities;
+using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -160,25 +162,28 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
         return new LoginSlip(candidate.Id, candidate.CandidateNumber, $"{candidate.FirstName} {candidate.LastName}", candidate.Username, password, exam.Name, exam.ScheduledDate, exam.Room);
     }
 
+    /// <summary>VE-60: asks for a candidate who has not started to be removed; an administrator other than the requester approves it.</summary>
     [HttpDelete("candidates/{candidateId:int}")]
-    [Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
-    public async Task<IActionResult> Delete(int candidateId, CancellationToken cancellationToken)
+    [Authorize(Policy = StaffAuthDefaults.CandidatesPolicy)]
+    public async Task<ActionResult<ApprovalView>> Delete(int candidateId, [FromServices] ApprovalService approvals, CancellationToken cancellationToken)
     {
-        var candidate = await db.Candidates.SingleOrDefaultAsync(c => c.Id == candidateId, cancellationToken);
+        var candidate = await db.Candidates.AsNoTracking()
+            .Where(c => c.Id == candidateId)
+            .Select(c => new { c.CandidateNumber, c.FirstName, c.LastName, ExamName = c.Exam!.Name })
+            .SingleOrDefaultAsync(cancellationToken);
         if (candidate is null)
         {
             return NotFound();
         }
 
-        if (await db.Attempts.AnyAsync(a => a.CandidateId == candidateId, cancellationToken))
+        if (await ApprovalActions.CandidateProblemAsync(db, candidateId, cancellationToken) is { } problem)
         {
-            return Problems.Conflict("This candidate has already started the exam and cannot be removed.");
+            return Problems.Conflict(problem);
         }
 
-        db.Candidates.Remove(candidate);
-        await db.SaveChangesAsync(cancellationToken);
-        logger.LogInformation("Staff {UserId} removed candidate {CandidateId}", User.GetStaffId(), candidateId);
-        return NoContent();
+        var summary = $"Remove candidate {candidate.CandidateNumber} {candidate.FirstName} {candidate.LastName} from “{candidate.ExamName}”";
+        var (request, conflict) = await approvals.RequestAsync(ApprovalKind.DeleteCandidate, candidateId, summary, null, User.GetStaffId(), cancellationToken);
+        return request is null ? Problems.Conflict(conflict!) : Accepted(request);
     }
 
     private static List<string> Validate(List<NewCandidate> rows, HashSet<string> existingNumbers)
