@@ -26,14 +26,17 @@ public sealed record AttemptMarking(int AttemptId, string SectionTitle, string G
 /// </summary>
 [ApiController]
 [Route("api/staff")]
-[Authorize(Policy = StaffAuthDefaults.StaffPolicy)]
+[Authorize(Policy = StaffAuthDefaults.ResultsPolicy)]
 public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBase
 {
-    /// <summary>One row per candidate with every section's status and score; invigilators see their own sessions only.</summary>
+    /// <summary>
+    /// One row per candidate with every section's status and score: administrators see every session, examiners the
+    /// sessions they are assigned to. Invigilators and managers do not see scores.
+    /// </summary>
     [HttpGet("exams/{examId:int}/results")]
     public async Task<ActionResult<IReadOnlyList<CandidateResult>>> Results(int examId, CancellationToken cancellationToken)
     {
-        if (!await db.Exams.VisibleTo(User).AnyAsync(e => e.Id == examId, cancellationToken))
+        if (!await db.Exams.ResultsVisibleTo(User).AnyAsync(e => e.Id == examId, cancellationToken))
         {
             return NotFound();
         }
@@ -65,16 +68,25 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
     }
 
     /// <summary>
-    /// Every question of an attempt with the candidate's answer, the accepted answers and the mark. Administrators
-    /// only: invigilators are in the exam room while other candidates may still be taking the same paper, so they
-    /// must not see the answer key.
+    /// Every question of a finished attempt with the candidate's answer, the accepted answers and the mark. Examiners
+    /// of the session only (Victory: only examiners see candidates' work), and only once the section has ended.
     /// </summary>
     [HttpGet("attempts/{attemptId:int}/marking")]
-    [Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
+    [Authorize(Policy = StaffAuthDefaults.ExaminerPolicy)]
     public async Task<ActionResult<AttemptMarking>> Marking(int attemptId, CancellationToken cancellationToken)
     {
-        var marking = await WritingMarks.MarkingAsync(db, attemptId, cancellationToken);
-        return marking is null ? NotFound() : marking;
+        var status = await WritingMarks.AttemptStatusForAsync(db, attemptId, User, cancellationToken);
+        if (status is null)
+        {
+            return NotFound();
+        }
+
+        if (status != AttemptStatus.Submitted)
+        {
+            return Problem(title: "The candidate's work can be reviewed once the section has ended.", statusCode: StatusCodes.Status409Conflict);
+        }
+
+        return (await WritingMarks.MarkingAsync(db, attemptId, cancellationToken))!;
     }
 }
 
@@ -84,6 +96,16 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
 /// </summary>
 public static class WritingMarks
 {
+    /// <summary>The attempt's status when it belongs to a session the examiner is assigned to; null otherwise.</summary>
+    public static async Task<AttemptStatus?> AttemptStatusForAsync(ExamPrepDbContext db, int attemptId, System.Security.Claims.ClaimsPrincipal user, CancellationToken cancellationToken)
+    {
+        var markable = db.Exams.MarkableBy(user).Select(e => e.Id);
+        return await db.Attempts.AsNoTracking()
+            .Where(a => a.Id == attemptId && markable.Contains(a.ExamSection!.ExamId))
+            .Select(a => (AttemptStatus?)a.Status)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
     public static async Task<AttemptMarking?> MarkingAsync(ExamPrepDbContext db, int attemptId, CancellationToken cancellationToken)
     {
         var attempt = await db.Attempts.AsNoTracking()
@@ -186,15 +208,20 @@ public static class WritingMarks
 
 public sealed record WritingMarkRequest([Range(1, 1000)] int QuestionNumber, decimal Score, [StringLength(2000)] string? Comment = null);
 
-/// <summary>VE-26: Writing marks, entered by an administrator acting as the teacher.</summary>
+/// <summary>VE-26, VE-61: Writing marks, entered by an examiner assigned to the session.</summary>
 [ApiController]
-[Route("api/admin/attempts")]
-[Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
+[Route("api/staff/attempts")]
+[Authorize(Policy = StaffAuthDefaults.ExaminerPolicy)]
 public sealed class WritingMarksController(ExamPrepDbContext db, TimeProvider clock, ILogger<WritingMarksController> logger) : ControllerBase
 {
     [HttpPost("{attemptId:int}/writing-marks")]
     public async Task<ActionResult<AttemptMarking>> Mark(int attemptId, WritingMarkRequest request, CancellationToken cancellationToken)
     {
+        if (await WritingMarks.AttemptStatusForAsync(db, attemptId, User, cancellationToken) is null)
+        {
+            return NotFound();
+        }
+
         var (status, error) = await WritingMarks.SaveAsync(db, attemptId, request, User.GetStaffId(), clock.GetUtcNow().UtcDateTime, cancellationToken);
         if (status != StatusCodes.Status200OK)
         {

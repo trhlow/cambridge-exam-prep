@@ -34,7 +34,7 @@ public sealed record PaperConversionResult(int Id, string Title, string ExamType
 /// </summary>
 [ApiController]
 [Route("api/admin/papers")]
-[Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
+[Authorize(Policy = StaffAuthDefaults.PapersPolicy)]
 public sealed class AdminPaperConversionController(IPaperConverter converter, PaperPackageImporter importer, ILogger<AdminPaperConversionController> logger) : ControllerBase
 {
     private const int MaxTitleLength = 256;

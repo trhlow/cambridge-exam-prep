@@ -52,6 +52,14 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
         await scope.ServiceProvider.GetRequiredService<AttemptMarker>().MarkPendingAsync(ct);
     }
 
+    /// <summary>An examiner assigned to the session: the only staff who see the marking of an attempt.</summary>
+    private async Task<HttpClient> ExaminerClientAsync(int examId)
+    {
+        var examiner = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        await api.AssignExaminerAsync(examId, examiner.Id);
+        return await api.StaffClientAsync(examiner.Username, Password);
+    }
+
     private async Task<HttpClient> StaffClientAsync()
     {
         var client = api.CreateClient();
@@ -146,7 +154,7 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
         using var _ = client;
         await TakeSectionAsync(client, candidate, candidate.ReadingWritingSectionId, ReadingWritingAnswers);
         var attemptId = (await api.GetAttemptAsync(candidate.CandidateId, candidate.ReadingWritingSectionId)).Id;
-        using var staff = await StaffClientAsync();
+        using var staff = await ExaminerClientAsync(candidate.ExamId);
 
         var marking = (await staff.GetFromJsonAsync<AttemptMarking>($"/api/staff/attempts/{attemptId}/marking", ct))!;
 
@@ -177,7 +185,7 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task Marking_WithTheAnswerKey_IsNotAvailableToInvigilators_AndResultsOnlyForTheirSessions()
+    public async Task Invigilators_SeeNeitherTheMarkingNorTheResults_EvenForTheirOwnSessions()
     {
         api.SkipIfUnavailable();
         var (client, candidate) = await CandidateAsync();
@@ -196,15 +204,16 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
         var results = await staff.GetAsync($"/api/staff/exams/{candidate.ExamId}/results", ct);
 
         Assert.Equal(HttpStatusCode.Forbidden, marking.StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, resultsBeforeAssignment.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, results.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, resultsBeforeAssignment.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, results.StatusCode);
     }
 
     [Fact]
     public async Task Marking_Returns404_ForAnUnknownAttempt()
     {
         api.SkipIfUnavailable();
-        using var staff = await StaffClientAsync();
+        var candidate = await api.CreateCandidateAsync(Password);
+        using var staff = await ExaminerClientAsync(candidate.ExamId);
 
         var response = await staff.GetAsync("/api/staff/attempts/999999/marking", ct);
 

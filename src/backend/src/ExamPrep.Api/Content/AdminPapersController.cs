@@ -18,7 +18,7 @@ public sealed record PaperListItem(int Id, string Title, string ExamType, int Se
 
 [ApiController]
 [Route("api/admin/papers")]
-[Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
+[Authorize(Policy = StaffAuthDefaults.PapersPolicy)]
 public sealed class AdminPapersController(PaperPackageImporter importer, ExamPrepDbContext db, ILogger<AdminPapersController> logger) : ControllerBase
 {
     /// <summary>Five Listening tracks plus pictures fit comfortably; the unpacked size is limited separately by the reader.</summary>
@@ -101,6 +101,7 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
 
     /// <summary>Deletes a paper with its parts, questions and keys; refused while any session uses it.</summary>
     [HttpDelete("{paperId:int}")]
+    [Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
     public async Task<IActionResult> Delete(int paperId, CancellationToken cancellationToken)
     {
         var paper = await db.TestPapers.SingleOrDefaultAsync(p => p.Id == paperId, cancellationToken);

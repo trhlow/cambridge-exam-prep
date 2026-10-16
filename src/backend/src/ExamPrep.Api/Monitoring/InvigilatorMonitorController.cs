@@ -130,7 +130,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
     [HttpGet("messages")]
     public async Task<ActionResult<IReadOnlyList<CandidateMessageView>>> Messages(int examId, CancellationToken cancellationToken)
     {
-        if (!await db.Exams.VisibleTo(User).AnyAsync(e => e.Id == examId, cancellationToken))
+        if (!await db.Exams.MonitorableBy(User).AnyAsync(e => e.Id == examId, cancellationToken))
         {
             return NotFound();
         }
@@ -146,7 +146,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
     [HttpPost("messages")]
     public async Task<ActionResult<IReadOnlyList<CandidateMessageView>>> SendMessage(int examId, SendMessageRequest request, CancellationToken cancellationToken)
     {
-        if (!await db.Exams.VisibleTo(User).AnyAsync(e => e.Id == examId, cancellationToken))
+        if (!await db.Exams.MonitorableBy(User).AnyAsync(e => e.Id == examId, cancellationToken))
         {
             return NotFound();
         }
@@ -291,7 +291,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
     /// <summary>The section, if its session is visible to this staff member (invigilators: assigned sessions only).</summary>
     private async Task<ExamSection?> FindSectionAsync(int examId, int sectionId, CancellationToken cancellationToken)
     {
-        if (!await db.Exams.VisibleTo(User).AnyAsync(e => e.Id == examId, cancellationToken))
+        if (!await db.Exams.MonitorableBy(User).AnyAsync(e => e.Id == examId, cancellationToken))
         {
             return null;
         }

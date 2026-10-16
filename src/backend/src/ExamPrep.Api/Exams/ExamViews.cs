@@ -6,7 +6,8 @@ namespace ExamPrep.Api.Exams;
 
 public sealed record ExamSectionView(int Id, int SectionTemplateId, int OrderNo, string Title, int DurationMinutes, int TestPaperId, string PaperTitle);
 
-public sealed record InvigilatorView(int Id, string Username, string FullName);
+/// <summary>An invigilator or examiner assigned to a session.</summary>
+public sealed record AssignedStaffView(int Id, string Username, string FullName);
 
 /// <summary>A session as the staff portal lists it.</summary>
 public sealed record ExamListItem(int Id, string Name, string ExamType, DateOnly ScheduledDate, string? Room, string Status, int Candidates, IReadOnlyList<ExamSectionView> Sections);
@@ -28,7 +29,8 @@ public sealed record ExamDetail(
     int Candidates,
     bool HasStarted,
     IReadOnlyList<ExamSectionView> Sections,
-    IReadOnlyList<InvigilatorView> Invigilators);
+    IReadOnlyList<AssignedStaffView> Invigilators,
+    IReadOnlyList<AssignedStaffView> Examiners);
 
 /// <param name="Password">Null when it can no longer be read back (data-protection keys replaced); reset it then.</param>
 public sealed record LoginSlip(int CandidateId, string CandidateNumber, string FullName, string Username, string? Password, string ExamName, DateOnly ScheduledDate, string? Room);
@@ -78,12 +80,17 @@ public static class ExamViews
         var invigilators = await db.ExamInvigilators.AsNoTracking()
             .Where(i => i.ExamId == examId)
             .OrderBy(i => i.User!.FullName)
-            .Select(i => new InvigilatorView(i.UserId, i.User!.Username, i.User.FullName))
+            .Select(i => new AssignedStaffView(i.UserId, i.User!.Username, i.User.FullName))
+            .ToListAsync(cancellationToken);
+        var examiners = await db.ExamExaminers.AsNoTracking()
+            .Where(x => x.ExamId == examId)
+            .OrderBy(x => x.User!.FullName)
+            .Select(x => new AssignedStaffView(x.UserId, x.User!.Username, x.User.FullName))
             .ToListAsync(cancellationToken);
         var hasStarted = await HasStartedAsync(db, examId, cancellationToken);
         return new ExamDetail(
             exam.Id, exam.Name, exam.ExamTypeId, exam.ExamType, exam.ScheduledDate, exam.Room, exam.Status.ToString(), exam.SessionPin,
-            exam.InvigilatorPassword, exam.Candidates, hasStarted, sections.GetValueOrDefault(examId, []), invigilators);
+            exam.InvigilatorPassword, exam.Candidates, hasStarted, sections.GetValueOrDefault(examId, []), invigilators, examiners);
     }
 
     /// <summary>True once any candidate has an attempt at any section of the session.</summary>

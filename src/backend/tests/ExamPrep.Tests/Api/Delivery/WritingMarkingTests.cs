@@ -44,20 +44,28 @@ public sealed class WritingMarkingTests(ApiFixture api) : IClassFixture<ApiFixtu
     }
 
     private Task<HttpResponseMessage> MarkAsync(HttpClient client, int attemptId, int question, decimal score, string? comment = null) =>
-        client.PostAsJsonAsync($"/api/admin/attempts/{attemptId}/writing-marks", new { questionNumber = question, score, comment }, ct);
+        client.PostAsJsonAsync($"/api/staff/attempts/{attemptId}/writing-marks", new { questionNumber = question, score, comment }, ct);
+
+    /// <summary>An examiner assigned to the session: the only staff who mark Writing.</summary>
+    private async Task<HttpClient> ExaminerClientAsync(int examId)
+    {
+        var examiner = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        await api.AssignExaminerAsync(examId, examiner.Id);
+        return await api.StaffClientAsync(examiner.Username, Password);
+    }
 
     [Fact]
     public async Task MarkingEveryWritingQuestion_MakesTheResultFinal()
     {
         api.SkipIfUnavailable();
         var (attemptId, candidate) = await FinishedReadingWritingAsync();
-        using var admin = await api.AdminClientAsync();
+        using var examiner = await ExaminerClientAsync(candidate.ExamId);
 
-        var first = await MarkAsync(admin, attemptId, 31, 12, "Clear, all three points.");
+        var first = await MarkAsync(examiner, attemptId, 31, 12, "Clear, all three points.");
         var afterFirst = await first.Content.ReadFromJsonAsync<AttemptMarking>(ct);
-        var second = await MarkAsync(admin, attemptId, 32, 0, "Not attempted.");
+        var second = await MarkAsync(examiner, attemptId, 32, 0, "Not attempted.");
         var final = await second.Content.ReadFromJsonAsync<AttemptMarking>(ct);
-        var remark = await MarkAsync(admin, attemptId, 31, 13);
+        var remark = await MarkAsync(examiner, attemptId, 31, 13);
 
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         Assert.Equal("NeedsManualMarking", afterFirst!.GradingStatus);
@@ -71,23 +79,26 @@ public sealed class WritingMarkingTests(ApiFixture api) : IClassFixture<ApiFixtu
     }
 
     [Fact]
-    public async Task WritingMarks_AreCheckedAndForAdministratorsOnly()
+    public async Task WritingMarks_AreCheckedAndForAssignedExaminersOnly()
     {
         api.SkipIfUnavailable();
-        var (attemptId, _) = await FinishedReadingWritingAsync();
-        using var admin = await api.AdminClientAsync();
+        var (attemptId, candidate) = await FinishedReadingWritingAsync();
+        using var examiner = await ExaminerClientAsync(candidate.ExamId);
+        using var administrator = await api.AdminClientAsync();
         var invigilator = await api.CreateStaffAsync(UserRole.Invigilator, Password);
         using var invigilatorClient = await api.StaffClientAsync(invigilator.Username, Password);
 
-        var tooHigh = await MarkAsync(admin, attemptId, 31, 16);
-        var notWriting = await MarkAsync(admin, attemptId, 1, 1);
-        var negative = await MarkAsync(admin, attemptId, 31, -1);
+        var tooHigh = await MarkAsync(examiner, attemptId, 31, 16);
+        var notWriting = await MarkAsync(examiner, attemptId, 1, 1);
+        var negative = await MarkAsync(examiner, attemptId, 31, -1);
         var byInvigilator = await MarkAsync(invigilatorClient, attemptId, 31, 10);
+        var byAdministrator = await MarkAsync(administrator, attemptId, 31, 10);
 
         Assert.Equal(HttpStatusCode.BadRequest, tooHigh.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, notWriting.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, negative.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, byInvigilator.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, byAdministrator.StatusCode);
     }
 
     [Fact]
@@ -96,9 +107,9 @@ public sealed class WritingMarkingTests(ApiFixture api) : IClassFixture<ApiFixtu
         api.SkipIfUnavailable();
         var candidate = await api.CreateCandidateAsync(Password, withSamplePapers: true);
         var attemptId = await api.StartAttemptAsync(candidate.CandidateId, candidate.ReadingWritingSectionId);
-        using var admin = await api.AdminClientAsync();
+        using var examiner = await ExaminerClientAsync(candidate.ExamId);
 
-        var response = await MarkAsync(admin, attemptId, 31, 10);
+        var response = await MarkAsync(examiner, attemptId, 31, 10);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }

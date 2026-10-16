@@ -26,7 +26,7 @@ public sealed class StaffAuthController(
     [AllowAnonymous]
     public async Task<ActionResult<StaffProfile>> Login(StaffLoginRequest request, CancellationToken cancellationToken)
     {
-        var user = await db.Users.SingleOrDefaultAsync(u => u.Username == request.Username, cancellationToken);
+        var user = await db.Users.Include(u => u.Areas).SingleOrDefaultAsync(u => u.Username == request.Username, cancellationToken);
         var throttleKey = user is null ? LoginThrottle.UnknownKey("staff", request.Username) : LoginThrottle.StaffKey(user.Id);
         if (throttle.IsLocked(throttleKey))
         {
@@ -76,7 +76,7 @@ public sealed class StaffAuthController(
     public async Task<ActionResult<StaffProfile>> Me(CancellationToken cancellationToken)
     {
         var userId = User.GetStaffId();
-        var user = await db.Users.AsNoTracking().SingleAsync(u => u.Id == userId, cancellationToken);
+        var user = await db.Users.AsNoTracking().Include(u => u.Areas).SingleAsync(u => u.Id == userId, cancellationToken);
         return StaffProfile.From(user);
     }
 

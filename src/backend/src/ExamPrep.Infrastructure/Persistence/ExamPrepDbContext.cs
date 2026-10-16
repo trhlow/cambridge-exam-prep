@@ -31,6 +31,10 @@ public class ExamPrepDbContext(DbContextOptions<ExamPrepDbContext> options) : Db
 
     public DbSet<ExamInvigilator> ExamInvigilators => Set<ExamInvigilator>();
 
+    public DbSet<ExamExaminer> ExamExaminers => Set<ExamExaminer>();
+
+    public DbSet<UserArea> UserAreas => Set<UserArea>();
+
     public DbSet<Candidate> Candidates => Set<Candidate>();
 
     public DbSet<Attempt> Attempts => Set<Attempt>();
