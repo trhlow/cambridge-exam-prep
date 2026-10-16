@@ -15,7 +15,8 @@ public sealed record CreateStaffRequest(
     [Required, StringLength(128, MinimumLength = 1)] string FullName,
     [Required, StringLength(128, MinimumLength = AdminUsersController.MinPasswordLength)] string Password,
     [Required] string Role,
-    [EmailAddress, StringLength(256)] string? Email = null);
+    [EmailAddress, StringLength(256)] string? Email = null,
+    IReadOnlyList<string>? Areas = null);
 
 /// <param name="NewPassword">Set to reset the password; signs the account out everywhere.</param>
 public sealed record UpdateStaffRequest(
@@ -25,8 +26,9 @@ public sealed record UpdateStaffRequest(
     [EmailAddress, StringLength(256)] string? Email = null);
 
 /// <summary>
-/// VE-23: staff accounts. Administrators create invigilators (and other administrators), reset passwords and switch
-/// accounts off; a reset or deactivation rotates the security stamp, so open sessions end at once.
+/// VE-23, VE-59: staff accounts. Every staff account is created by an administrator: administrators, managers (with
+/// the areas they work in), examiners and invigilators. A password reset or deactivation rotates the security stamp,
+/// so open sessions end at once.
 /// </summary>
 [ApiController]
 [Route("api/admin/users")]
@@ -38,7 +40,7 @@ public sealed class AdminUsersController(ExamPrepDbContext db, IPasswordHasher<U
     [HttpGet]
     public async Task<IReadOnlyList<StaffProfile>> List(CancellationToken cancellationToken)
     {
-        var users = await db.Users.AsNoTracking().OrderBy(u => u.Username).ToListAsync(cancellationToken);
+        var users = await db.Users.AsNoTracking().Include(u => u.Areas).OrderBy(u => u.Username).ToListAsync(cancellationToken);
         return users.Select(StaffProfile.From).ToList();
     }
 
@@ -48,6 +50,13 @@ public sealed class AdminUsersController(ExamPrepDbContext db, IPasswordHasher<U
         if (!Enum.GetNames<UserRole>().Contains(request.Role))
         {
             return Problems.Invalid($"Role must be one of {string.Join(", ", Enum.GetNames<UserRole>())}.");
+        }
+
+        var role = Enum.Parse<UserRole>(request.Role);
+        var (areas, areaError) = ParseAreas(role, request.Areas);
+        if (areaError is not null)
+        {
+            return Problems.Invalid(areaError);
         }
 
         var username = request.Username.Trim();
@@ -61,9 +70,10 @@ public sealed class AdminUsersController(ExamPrepDbContext db, IPasswordHasher<U
             Username = username,
             FullName = request.FullName.Trim(),
             Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
-            Role = Enum.Parse<UserRole>(request.Role),
+            Role = role,
             PasswordHash = string.Empty,
             CreatedAt = DateTime.UtcNow,
+            Areas = areas.Select(area => new UserArea { Area = area }).ToList(),
         };
         user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
         db.Users.Add(user);
@@ -75,7 +85,7 @@ public sealed class AdminUsersController(ExamPrepDbContext db, IPasswordHasher<U
     [HttpPut("{userId:int}")]
     public async Task<ActionResult<StaffProfile>> Update(int userId, UpdateStaffRequest request, CancellationToken cancellationToken)
     {
-        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        var user = await db.Users.Include(u => u.Areas).SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (user is null)
         {
             return NotFound();
@@ -103,5 +113,24 @@ public sealed class AdminUsersController(ExamPrepDbContext db, IPasswordHasher<U
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Staff {UserId} updated account {TargetId} (active {IsActive}, password reset {Reset})", User.GetStaffId(), userId, user.IsActive, request.NewPassword is not null);
         return StaffProfile.From(user);
+    }
+
+    /// <summary>Managers need at least one area; nobody else has any.</summary>
+    private static (IReadOnlyList<ManagerArea> Areas, string? Error) ParseAreas(UserRole role, IReadOnlyList<string>? names)
+    {
+        names ??= [];
+        var unknown = names.Where(n => !Enum.GetNames<ManagerArea>().Contains(n)).ToList();
+        if (unknown.Count > 0)
+        {
+            return ([], $"Unknown area(s): {string.Join(", ", unknown)}. Areas are {string.Join(", ", Enum.GetNames<ManagerArea>())}.");
+        }
+
+        var areas = names.Distinct().Select(Enum.Parse<ManagerArea>).Order().ToList();
+        return role switch
+        {
+            UserRole.Manager when areas.Count == 0 => ([], "A manager needs at least one area to work in."),
+            not UserRole.Manager when areas.Count > 0 => ([], "Only managers have areas."),
+            _ => (areas, null),
+        };
     }
 }

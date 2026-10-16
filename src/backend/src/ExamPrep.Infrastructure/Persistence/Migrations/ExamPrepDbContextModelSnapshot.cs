@@ -300,7 +300,7 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
 
-                    b.Property<DateOnly?>("DateOfBirth")
+                    b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("date")
                         .HasColumnName("date_of_birth");
 
@@ -451,7 +451,7 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("varchar(64)")
                         .HasColumnName("room");
 
-                    b.Property<DateOnly>("ScheduledDate")
+                    b.Property<DateTime>("ScheduledDate")
                         .HasColumnType("date")
                         .HasColumnName("scheduled_date");
 
@@ -482,6 +482,27 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.HasIndex("ScheduledDate");
 
                     b.ToTable("exams");
+                });
+
+            modelBuilder.Entity("ExamPrep.Domain.Entities.ExamExaminer", b =>
+                {
+                    b.Property<int>("ExamId")
+                        .HasColumnType("int")
+                        .HasColumnName("exam_id");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("assigned_at");
+
+                    b.HasKey("ExamId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("exam_examiners");
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.ExamInvigilator", b =>
@@ -1197,6 +1218,22 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.ToTable("users");
                 });
 
+            modelBuilder.Entity("ExamPrep.Domain.Entities.UserArea", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("Area")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("area");
+
+                    b.HasKey("UserId", "Area");
+
+                    b.ToTable("user_areas");
+                });
+
             modelBuilder.Entity("ExamPrep.Domain.Entities.Annotation", b =>
                 {
                     b.HasOne("ExamPrep.Domain.Entities.Attempt", "Attempt")
@@ -1309,6 +1346,25 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("ExamType");
+                });
+
+            modelBuilder.Entity("ExamPrep.Domain.Entities.ExamExaminer", b =>
+                {
+                    b.HasOne("ExamPrep.Domain.Entities.Exam", "Exam")
+                        .WithMany("Examiners")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ExamPrep.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.ExamInvigilator", b =>
@@ -1520,6 +1576,17 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.Navigation("SectionTemplate");
                 });
 
+            modelBuilder.Entity("ExamPrep.Domain.Entities.UserArea", b =>
+                {
+                    b.HasOne("ExamPrep.Domain.Entities.User", "User")
+                        .WithMany("Areas")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ExamPrep.Domain.Entities.Attempt", b =>
                 {
                     b.Navigation("Annotations");
@@ -1535,6 +1602,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("ExamPrep.Domain.Entities.Exam", b =>
                 {
                     b.Navigation("Candidates");
+
+                    b.Navigation("Examiners");
 
                     b.Navigation("Invigilators");
 
@@ -1574,6 +1643,11 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("ExamPrep.Domain.Entities.TestPaper", b =>
                 {
                     b.Navigation("Parts");
+                });
+
+            modelBuilder.Entity("ExamPrep.Domain.Entities.User", b =>
+                {
+                    b.Navigation("Areas");
                 });
 #pragma warning restore 612, 618
         }

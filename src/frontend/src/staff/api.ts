@@ -19,7 +19,10 @@ const post = <T>(path: string, body?: unknown) => watch(rawPost<T>(path, body))
 const put = <T>(path: string, body: unknown) => watch(rawPut<T>(path, body))
 const del = (path: string) => watch(rawDel(path))
 
-export type Role = 'Admin' | 'Invigilator'
+export type Role = 'Admin' | 'Manager' | 'Examiner' | 'Invigilator'
+
+/** What a manager works in; administrators work in every area. */
+export type ManagerArea = 'Papers' | 'Exams' | 'Candidates' | 'Centre'
 
 export interface StaffProfile {
   id: number
@@ -28,6 +31,7 @@ export interface StaffProfile {
   email: string | null
   role: Role
   isActive: boolean
+  areas: ManagerArea[]
 }
 
 export type ExamStatus = 'Draft' | 'Scheduled' | 'Active' | 'Closed'
@@ -355,7 +359,7 @@ export const adminApi = {
 
   marking: (attemptId: number) => request<AttemptMarking>(`/api/staff/attempts/${attemptId}/marking`),
   markWriting: (attemptId: number, questionNumber: number, score: number, comment: string) =>
-    post<AttemptMarking>(`/api/admin/attempts/${attemptId}/writing-marks`, { questionNumber, score, comment }),
+    post<AttemptMarking>(`/api/staff/attempts/${attemptId}/writing-marks`, { questionNumber, score, comment }),
 
   users: () => request<StaffProfile[]>('/api/admin/users'),
   createUser: (body: { username: string; fullName: string; password: string; role: Role }) => post<StaffProfile>('/api/admin/users', body),

@@ -9,7 +9,8 @@ namespace ExamPrep.Api.Exams;
 
 /// <summary>
 /// Exam sessions as staff see them (Inspera "parent test"): the list, the session with its PIN and invigilator
-/// password, and the candidates' login slips. Invigilators only reach the sessions they are assigned to.
+/// password, and the candidates' login slips. Invigilators and examiners only reach the sessions they are assigned
+/// to (see <see cref="ExamAccess"/>).
 /// </summary>
 [ApiController]
 [Route("api/staff/exams")]
@@ -24,14 +25,21 @@ public sealed class StaffExamsController(ExamPrepDbContext db, CandidateCredenti
     public async Task<ActionResult<ExamDetail>> Get(int examId, CancellationToken cancellationToken)
     {
         var exam = await ExamViews.DetailAsync(db, db.Exams.VisibleTo(User), examId, cancellationToken);
-        return exam is null ? NotFound() : exam;
+        if (exam is null)
+        {
+            return NotFound();
+        }
+
+        // The PIN and the invigilator password are for the people who run the room, not for examiners.
+        var runsTheRoom = await db.Exams.SlipsVisibleTo(User).AnyAsync(e => e.Id == examId, cancellationToken);
+        return runsTheRoom ? exam : exam with { SessionPin = string.Empty, InvigilatorPassword = string.Empty };
     }
 
     /// <summary>Username and password of every candidate, for printing (again) on the day.</summary>
     [HttpGet("{examId:int}/login-slips")]
     public async Task<ActionResult<IReadOnlyList<LoginSlip>>> LoginSlips(int examId, CancellationToken cancellationToken)
     {
-        var exam = await db.Exams.VisibleTo(User).AsNoTracking().SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
+        var exam = await db.Exams.SlipsVisibleTo(User).AsNoTracking().SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         if (exam is null)
         {
             return NotFound();

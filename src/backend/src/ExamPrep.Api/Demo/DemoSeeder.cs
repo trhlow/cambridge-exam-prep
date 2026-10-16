@@ -40,6 +40,18 @@ public sealed record DemoOptions
     public string? AdminUsername { get; init; }
     public string? AdminPassword { get; init; }
 
+    /// <summary>Optional second administrator (Victory: deletions and account changes need two administrators).</summary>
+    public string? SecondAdminUsername { get; init; }
+    public string? SecondAdminPassword { get; init; }
+
+    /// <summary>Optional manager working in every area.</summary>
+    public string? ManagerUsername { get; init; }
+    public string? ManagerPassword { get; init; }
+
+    /// <summary>Optional examiner, assigned to the demo exam.</summary>
+    public string? ExaminerUsername { get; init; }
+    public string? ExaminerPassword { get; init; }
+
     /// <summary>Optional invigilator account created (if missing) and assigned to the demo exam.</summary>
     public string? InvigilatorUsername { get; init; }
     public string? InvigilatorPassword { get; init; }
@@ -71,6 +83,8 @@ public static class DemoSeeder
         var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(DemoSeeder));
 
         await EnsureStaffAsync(provider, db, options.AdminUsername, options.AdminPassword, "Demo Administrator", UserRole.Admin, cancellationToken);
+        await EnsureStaffAsync(provider, db, options.SecondAdminUsername, options.SecondAdminPassword, "Demo Administrator 2", UserRole.Admin, cancellationToken);
+        await EnsureStaffAsync(provider, db, options.ManagerUsername, options.ManagerPassword, "Demo Manager", UserRole.Manager, cancellationToken, Enum.GetValues<ManagerArea>());
 
         if (options.ResetOnStart)
         {
@@ -101,6 +115,7 @@ public static class DemoSeeder
 
         var candidate = CreateCandidate(provider, options);
         var invigilatorId = await EnsureStaffAsync(provider, db, options.InvigilatorUsername, options.InvigilatorPassword, "Demo Invigilator", UserRole.Invigilator, cancellationToken);
+        var examinerId = await EnsureStaffAsync(provider, db, options.ExaminerUsername, options.ExaminerPassword, "Demo Examiner", UserRole.Examiner, cancellationToken);
         var exam = new Exam
         {
             Name = options.ExamName,
@@ -115,6 +130,7 @@ public static class DemoSeeder
             Sections = [Section(templates[readingWriting.SectionTemplateId], readingWriting), Section(templates[listening.SectionTemplateId], listening)],
             Candidates = [candidate],
             Invigilators = invigilatorId is { } id ? [new ExamInvigilator { UserId = id, AssignedAt = DateTime.UtcNow }] : [],
+            Examiners = examinerId is { } examiner ? [new ExamExaminer { UserId = examiner, AssignedAt = DateTime.UtcNow }] : [],
         };
         db.Exams.Add(exam);
         await db.SaveChangesAsync(cancellationToken);
@@ -174,7 +190,8 @@ public static class DemoSeeder
     };
 
     /// <summary>A demo staff account's id, creating the account the first time; null when none is configured.</summary>
-    private static async Task<int?> EnsureStaffAsync(IServiceProvider provider, ExamPrepDbContext db, string? username, string? password, string fullName, UserRole role, CancellationToken cancellationToken)
+    private static async Task<int?> EnsureStaffAsync(
+        IServiceProvider provider, ExamPrepDbContext db, string? username, string? password, string fullName, UserRole role, CancellationToken cancellationToken, IReadOnlyList<ManagerArea>? areas = null)
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
@@ -194,6 +211,7 @@ public static class DemoSeeder
             Role = role,
             PasswordHash = string.Empty,
             CreatedAt = DateTime.UtcNow,
+            Areas = (areas ?? []).Select(area => new UserArea { Area = area }).ToList(),
         };
         user.PasswordHash = provider.GetRequiredService<IPasswordHasher<User>>().HashPassword(user, password);
         db.Users.Add(user);

@@ -37,4 +37,6 @@ public class Exam
     public ICollection<Candidate> Candidates { get; set; } = [];
 
     public ICollection<ExamInvigilator> Invigilators { get; set; } = [];
+
+    public ICollection<ExamExaminer> Examiners { get; set; } = [];
 }

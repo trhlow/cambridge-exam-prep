@@ -2,7 +2,7 @@ using ExamPrep.Domain.Enums;
 
 namespace ExamPrep.Domain.Entities;
 
-/// <summary>Staff account: administrator or invigilator. Candidates are separate per-exam accounts.</summary>
+/// <summary>Staff account (administrator, manager, examiner or invigilator). Candidates are separate per-exam accounts.</summary>
 public class User
 {
     public int Id { get; set; }
@@ -23,4 +23,7 @@ public class User
     public Guid SecurityStamp { get; set; } = Guid.NewGuid();
 
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Managers only: the areas they may work in.</summary>
+    public ICollection<UserArea> Areas { get; set; } = [];
 }

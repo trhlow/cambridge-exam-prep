@@ -36,7 +36,7 @@ public sealed record CandidateView(int Id, string CandidateNumber, string FirstN
 /// </summary>
 [ApiController]
 [Route("api/admin")]
-[Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
+[Authorize(Policy = StaffAuthDefaults.StaffPolicy)]
 public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCredentials credentials, ILogger<AdminCandidatesController> logger) : ControllerBase
 {
     private const int MaxNumberLength = 16;
@@ -44,6 +44,7 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     private const int MaxUsernameLength = 64;
 
     [HttpGet("exams/{examId:int}/candidates")]
+    [Authorize(Policy = StaffAuthDefaults.CandidateListPolicy)]
     public async Task<ActionResult<IReadOnlyList<CandidateView>>> List(int examId, CancellationToken cancellationToken)
     {
         if (!await db.Exams.AnyAsync(e => e.Id == examId, cancellationToken))
@@ -57,6 +58,7 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     }
 
     [HttpPost("exams/{examId:int}/candidates")]
+    [Authorize(Policy = StaffAuthDefaults.CandidatesPolicy)]
     public async Task<ActionResult<IReadOnlyList<CandidateView>>> Add(int examId, AddCandidatesRequest request, CancellationToken cancellationToken)
     {
         if (!await db.Exams.AnyAsync(e => e.Id == examId, cancellationToken))
@@ -112,6 +114,7 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     }
 
     [HttpPut("candidates/{candidateId:int}")]
+    [Authorize(Policy = StaffAuthDefaults.CandidatesPolicy)]
     public async Task<ActionResult<CandidateView>> Update(int candidateId, UpdateCandidateRequest request, CancellationToken cancellationToken)
     {
         var candidate = await db.Candidates.SingleOrDefaultAsync(c => c.Id == candidateId, cancellationToken);
@@ -138,6 +141,7 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     /// on is signed out; the username does not change.
     /// </summary>
     [HttpPost("candidates/{candidateId:int}/reset-password")]
+    [Authorize(Policy = StaffAuthDefaults.CandidatesPolicy)]
     public async Task<ActionResult<LoginSlip>> ResetPassword(int candidateId, CancellationToken cancellationToken)
     {
         var candidate = await db.Candidates.Include(c => c.Exam).SingleOrDefaultAsync(c => c.Id == candidateId, cancellationToken);
@@ -157,6 +161,7 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     }
 
     [HttpDelete("candidates/{candidateId:int}")]
+    [Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
     public async Task<IActionResult> Delete(int candidateId, CancellationToken cancellationToken)
     {
         var candidate = await db.Candidates.SingleOrDefaultAsync(c => c.Id == candidateId, cancellationToken);

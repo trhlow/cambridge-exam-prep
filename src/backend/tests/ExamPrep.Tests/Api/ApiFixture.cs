@@ -119,6 +119,26 @@ public sealed class ApiFixture : IAsyncLifetime
         return user;
     }
 
+    /// <summary>A manager account working in the given areas.</summary>
+    public async Task<User> CreateManagerAsync(string password, params ManagerArea[] areas)
+    {
+        var user = await CreateStaffAsync(UserRole.Manager, password);
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        db.UserAreas.AddRange(areas.Select(area => new UserArea { UserId = user.Id, Area = area }));
+        await db.SaveChangesAsync();
+        return user;
+    }
+
+    /// <summary>Assigns an examiner to a session, as an administrator would.</summary>
+    public async Task AssignExaminerAsync(int examId, int userId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        db.ExamExaminers.Add(new ExamExaminer { ExamId = examId, UserId = userId, AssignedAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+    }
+
     public sealed record SeededCandidate(int CandidateId, int ExamId, string Username, string SessionPin, int ReadingWritingSectionId, int ListeningSectionId);
 
     /// <summary>

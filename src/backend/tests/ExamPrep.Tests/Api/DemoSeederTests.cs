@@ -173,6 +173,30 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task Seed_CreatesASecondAdmin_AManagerOfEveryArea_AndAnExaminerOfTheDemoExam()
+    {
+        api.SkipIfUnavailable();
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var options = Options() with
+        {
+            SecondAdminUsername = $"adm2{suffix}", SecondAdminPassword = "19072005",
+            ManagerUsername = $"mgr{suffix}", ManagerPassword = "19072005",
+            ExaminerUsername = $"exm{suffix}", ExaminerPassword = "19072005",
+        };
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+
+        using var secondAdmin = await api.StaffClientAsync(options.SecondAdminUsername, "19072005");
+        using var manager = await api.StaffClientAsync(options.ManagerUsername, "19072005");
+        using var examiner = await api.StaffClientAsync(options.ExaminerUsername, "19072005");
+        Assert.Equal("Admin", (string)(await secondAdmin.GetFromJsonAsync<JsonObject>("/api/staff/auth/me", ct))!["role"]!);
+        var managerAreas = (await manager.GetFromJsonAsync<JsonObject>("/api/staff/auth/me", ct))!["areas"]!.AsArray().Select(a => (string)a!);
+        Assert.Equal(["Papers", "Exams", "Candidates", "Centre"], managerAreas);
+        var examinerExams = await examiner.GetFromJsonAsync<List<JsonObject>>("/api/staff/exams", ct);
+        Assert.Equal([options.ExamName], examinerExams!.Select(e => (string)e["name"]!));
+    }
+
+    [Fact]
     public async Task Seed_GivesTheDemoCandidateTheConfiguredNameAndDateOfBirth()
     {
         api.SkipIfUnavailable();

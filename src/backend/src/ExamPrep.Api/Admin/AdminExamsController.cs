@@ -40,7 +40,7 @@ public sealed record AssignInvigilatorsRequest([Required] List<int> UserIds);
 /// </summary>
 [ApiController]
 [Route("api/admin")]
-[Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
+[Authorize(Policy = StaffAuthDefaults.ExamsPolicy)]
 public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExamsController> logger) : ControllerBase
 {
     private const string StartedTitle = "Candidates have already started this exam.";
@@ -156,6 +156,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExam
     }
 
     [HttpDelete("exams/{examId:int}")]
+    [Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
     public async Task<IActionResult> Delete(int examId, CancellationToken cancellationToken)
     {
         var exam = await db.Exams.SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
@@ -177,37 +178,52 @@ public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExam
 
     /// <summary>Replaces the session's invigilators; only active invigilator accounts can be assigned.</summary>
     [HttpPut("exams/{examId:int}/invigilators")]
-    public async Task<ActionResult<IReadOnlyList<InvigilatorView>>> AssignInvigilators(int examId, AssignInvigilatorsRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<AssignedStaffView>>> AssignInvigilators(int examId, AssignInvigilatorsRequest request, CancellationToken cancellationToken)
     {
         var exam = await db.Exams.Include(e => e.Invigilators).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
-        if (exam is null)
-        {
-            return NotFound();
-        }
+        return exam is null
+            ? NotFound()
+            : await AssignAsync(exam, exam.Invigilators, UserRole.Invigilator, "invigilator", request.UserIds, id => new ExamInvigilator { UserId = id, AssignedAt = DateTime.UtcNow }, i => i.UserId, cancellationToken);
+    }
 
-        var ids = request.UserIds.Distinct().ToList();
+    /// <summary>
+    /// VE-61: replaces the session's examiners, who review its finished work, mark Writing and see its results; only
+    /// active examiner accounts can be assigned.
+    /// </summary>
+    [HttpPut("exams/{examId:int}/examiners")]
+    public async Task<ActionResult<IReadOnlyList<AssignedStaffView>>> AssignExaminers(int examId, AssignInvigilatorsRequest request, CancellationToken cancellationToken)
+    {
+        var exam = await db.Exams.Include(e => e.Examiners).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
+        return exam is null
+            ? NotFound()
+            : await AssignAsync(exam, exam.Examiners, UserRole.Examiner, "examiner", request.UserIds, id => new ExamExaminer { UserId = id, AssignedAt = DateTime.UtcNow }, x => x.UserId, cancellationToken);
+    }
+
+    private async Task<ActionResult<IReadOnlyList<AssignedStaffView>>> AssignAsync<T>(
+        Exam exam, ICollection<T> assigned, UserRole role, string roleName, IEnumerable<int> userIds, Func<int, T> create, Func<T, int> userIdOf, CancellationToken cancellationToken)
+    {
+        var ids = userIds.Distinct().ToList();
         var users = await db.Users.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, cancellationToken);
         var errors = ids
-            .Where(id => !users.TryGetValue(id, out var user) || user.Role != UserRole.Invigilator || !user.IsActive)
+            .Where(id => !users.TryGetValue(id, out var user) || user.Role != role || !user.IsActive)
             .Select(id => users.TryGetValue(id, out var user)
-                ? $"{user.FullName} is not an active invigilator account."
+                ? $"{user.FullName} is not an active {roleName} account."
                 : $"Staff account {id} does not exist.")
             .ToList();
         if (errors.Count > 0)
         {
-            return Problems.Invalid("The invigilators could not be assigned.", errors);
+            return Problems.Invalid($"The {roleName}s could not be assigned.", errors);
         }
 
-        var now = DateTime.UtcNow;
-        exam.Invigilators.Where(i => !ids.Contains(i.UserId)).ToList().ForEach(i => exam.Invigilators.Remove(i));
-        foreach (var id in ids.Where(id => exam.Invigilators.All(i => i.UserId != id)))
+        assigned.Where(a => !ids.Contains(userIdOf(a))).ToList().ForEach(a => assigned.Remove(a));
+        foreach (var id in ids.Where(id => assigned.All(a => userIdOf(a) != id)))
         {
-            exam.Invigilators.Add(new ExamInvigilator { UserId = id, AssignedAt = now });
+            assigned.Add(create(id));
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        logger.LogInformation("Staff {UserId} assigned {Count} invigilators to exam {ExamId}", User.GetStaffId(), ids.Count, examId);
-        return ids.Select(id => new InvigilatorView(id, users[id].Username, users[id].FullName)).OrderBy(i => i.FullName).ToList();
+        logger.LogInformation("Staff {UserId} assigned {Count} {Role}s to exam {ExamId}", User.GetStaffId(), ids.Count, roleName, exam.Id);
+        return ids.Select(id => new AssignedStaffView(id, users[id].Username, users[id].FullName)).OrderBy(i => i.FullName).ToList();
     }
 
     /// <summary>Checks the request and builds one section per section template of the exam type.</summary>
