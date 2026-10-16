@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { adminApi, type PaperConversionResult, type PaperImportSummary, type PaperListItem } from '../api'
+import { adminApi, type ApprovalView, type PaperConversionResult, type PaperImportSummary, type PaperListItem } from '../api'
 import { Link } from '../Link'
-import { Badge, ConfirmButton, ErrorBox, Modal, PageHeader } from '../ui'
+import { Badge, ConfirmButton, ErrorBox, Modal, PageHeader, RequestSent } from '../ui'
 import { useLoad } from '../useLoad'
 
 const PARTS = [1, 2, 3, 4, 5]
@@ -9,7 +9,7 @@ const PARTS = [1, 2, 3, 4, 5]
 /**
  * The paper library. A paper comes in from Victory's PDFs (converted on the server) or as a ready package (.zip);
  * either way it arrives as a draft, is checked on its own page, then published so it can be scheduled. A paper used
- * by an exam cannot be deleted.
+ * by an exam cannot be deleted; deleting any other waits for a second administrator (VE-60).
  */
 export function PapersPage() {
   const { data: papers, error, reload } = useLoad(adminApi.papers, 'papers')
@@ -18,6 +18,7 @@ export function PapersPage() {
   const [isImporting, setIsImporting] = useState(false)
   const [isConverting, setIsConverting] = useState(false)
   const [converted, setConverted] = useState<PaperConversionResult | null>(null)
+  const [sent, setSent] = useState<ApprovalView | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const upload = async (file: File | undefined) => {
@@ -116,8 +117,9 @@ export function PapersPage() {
         </div>
       )}
       <ErrorBox error={importError ?? error} />
+      {sent && <RequestSent request={sent} onDismiss={() => setSent(null)} />}
       {papers && papers.length === 0 && <p className="st-empty">No papers yet. Import an exam package to begin.</p>}
-      {papers && papers.length > 0 && <PaperTable papers={papers} onPublish={(p) => void act(() => adminApi.publishPaper(p.id))} onDelete={(p) => void act(() => adminApi.deletePaper(p.id))} />}
+      {papers && papers.length > 0 && <PaperTable papers={papers} onPublish={(p) => void act(() => adminApi.publishPaper(p.id))} onDelete={(p) => void act(async () => setSent(await adminApi.deletePaper(p.id)))} />}
     </>
   )
 }
@@ -160,7 +162,7 @@ function PaperTable({ papers, onPublish, onDelete }: { papers: PaperListItem[]; 
                   Publish
                 </button>
               )}
-              {paper.usedByExams === 0 && <ConfirmButton className="st-link st-link--danger" label="Delete" confirmLabel="Confirm delete" onConfirm={() => onDelete(paper)} />}
+              {paper.usedByExams === 0 && <ConfirmButton className="st-link st-link--danger" label="Request deletion" confirmLabel="Ask an administrator to delete" onConfirm={() => onDelete(paper)} />}
             </td>
           </tr>
         ))}

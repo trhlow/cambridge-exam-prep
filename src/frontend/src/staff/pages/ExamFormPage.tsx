@@ -24,7 +24,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 export function ExamFormPage({ examId }: { examId?: number }) {
   const isNew = examId === undefined
   const { data: types } = useLoad(adminApi.examTypes, 'types')
-  const { data: papers } = useLoad(adminApi.papers, 'papers')
+  const { data: papers } = useLoad(adminApi.examPapers, 'exam-papers')
   const [form, setForm] = useState<Form | null>(isNew ? { name: '', examTypeId: 0, scheduledDate: today(), room: '', papers: {}, sessionPin: '', invigilatorPassword: '' } : null)
   const [hasStarted, setHasStarted] = useState(false)
   const [error, setError] = useState<unknown>(null)

@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { VictoryLogo } from '../ui/VictoryLogo'
-import { SESSION_ENDED_EVENT, staffApi, type StaffProfile } from './api'
+import { accessOf, type Access } from './access'
+import { SESSION_ENDED_EVENT, staffApi, type ManagerArea, type StaffProfile } from './api'
+import { ApprovalsPage } from './pages/ApprovalsPage'
 import { ExamFormPage } from './pages/ExamFormPage'
 import { ExamPage } from './pages/ExamPage'
 import { ExamsPage } from './pages/ExamsPage'
@@ -18,9 +20,9 @@ import { Badge } from './ui'
 import './staff.css'
 
 /**
- * Staff portal at /staff (Inspera Admin Portal): administrators prepare papers, sessions, candidates and staff;
- * invigilators open their sessions and monitor each section. The API enforces every permission; the menu only hides
- * what a role cannot use.
+ * Staff portal at /staff (Inspera Admin Portal): administrators and managers prepare papers, sessions and candidates
+ * (deletions and account changes wait for a second administrator); invigilators monitor each section; examiners
+ * review finished work and mark Writing. The API enforces every permission; the menu only hides what a role cannot use.
  */
 export default function StaffApp() {
   const [user, setUser] = useState<StaffProfile | null | undefined>(undefined)
@@ -68,8 +70,8 @@ export default function StaffApp() {
 
 function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void }) {
   const route = useRoute()
-  const isAdmin = user.role === 'Admin'
-  const section = route.page === 'papers' || route.page === 'paper' ? 'papers' : route.page === 'users' ? 'users' : 'exams'
+  const access = accessOf(user)
+  const section = route.page === 'papers' || route.page === 'paper' ? 'papers' : route.page === 'users' || route.page === 'approvals' ? route.page : 'exams'
   // Login slips print on their own, without the portal around them.
   if (route.page === 'slips') {
     return <LoginSlipsPage examId={route.examId} />
@@ -80,17 +82,24 @@ function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void 
       <header className="st-top">
         <VictoryLogo />
         <nav className="st-nav" aria-label="Staff portal">
-          <Link to="/staff" className={section === 'exams' ? 'is-current' : undefined}>
-            Exams
-          </Link>
-          {isAdmin && (
+          {access.seesSessions && (
+            <Link to="/staff" className={section === 'exams' ? 'is-current' : undefined}>
+              Exams
+            </Link>
+          )}
+          {access.worksIn('Papers') && (
             <Link to="/staff/papers" className={section === 'papers' ? 'is-current' : undefined}>
               Papers
             </Link>
           )}
-          {isAdmin && (
+          {access.isAdmin && (
             <Link to="/staff/users" className={section === 'users' ? 'is-current' : undefined}>
               Staff
+            </Link>
+          )}
+          {access.requestsApprovals && (
+            <Link to="/staff/approvals" className={section === 'approvals' ? 'is-current' : undefined}>
+              Approvals
             </Link>
           )}
         </nav>
@@ -104,34 +113,41 @@ function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void 
         </div>
       </header>
       <main className="st-main">
-        <Page route={route} isAdmin={isAdmin} currentUserId={user.id} />
+        <Page route={route} access={access} areas={user.areas} />
       </main>
     </div>
   )
 }
 
-function Page({ route, isAdmin, currentUserId }: { route: Route; isAdmin: boolean; currentUserId: number }) {
+function Page({ route, access, areas }: { route: Route; access: Access; areas: ManagerArea[] }) {
   switch (route.page) {
     case 'exams':
-      return <ExamsPage isAdmin={isAdmin} />
+      if (access.seesSessions) {
+        return <ExamsPage access={access} />
+      }
+
+      // A manager of papers starts on the papers; one of the centre only has a page later (VE-41).
+      return access.worksIn('Papers') ? <PapersPage /> : <NothingYet areas={areas} />
     case 'new-exam':
-      return isAdmin ? <ExamFormPage /> : <NotAllowed />
+      return access.worksIn('Exams') ? <ExamFormPage /> : <NotAllowed />
     case 'edit-exam':
-      return isAdmin ? <ExamFormPage examId={route.examId} /> : <NotAllowed />
+      return access.worksIn('Exams') ? <ExamFormPage examId={route.examId} /> : <NotAllowed />
     case 'exam':
-      return <ExamPage examId={route.examId} isAdmin={isAdmin} />
+      return access.seesSessions ? <ExamPage examId={route.examId} access={access} /> : <NotAllowed />
     case 'monitor':
-      return <MonitorPage examId={route.examId} sectionId={route.sectionId} />
+      return access.monitors ? <MonitorPage examId={route.examId} sectionId={route.sectionId} /> : <NotAllowed />
     case 'results':
-      return <ResultsPage examId={route.examId} isAdmin={isAdmin} />
+      return access.seesResults ? <ResultsPage examId={route.examId} canMark={access.marks} /> : <NotAllowed />
     case 'marking':
-      return isAdmin ? <MarkingPage examId={route.examId} attemptId={route.attemptId} /> : <NotAllowed />
+      return access.marks ? <MarkingPage examId={route.examId} attemptId={route.attemptId} /> : <NotAllowed />
     case 'papers':
-      return isAdmin ? <PapersPage /> : <NotAllowed />
+      return access.worksIn('Papers') ? <PapersPage /> : <NotAllowed />
     case 'paper':
-      return isAdmin ? <PaperPage paperId={route.paperId} /> : <NotAllowed />
+      return access.worksIn('Papers') ? <PaperPage paperId={route.paperId} /> : <NotAllowed />
     case 'users':
-      return isAdmin ? <StaffUsersPage currentUserId={currentUserId} /> : <NotAllowed />
+      return access.isAdmin ? <StaffUsersPage currentUserId={access.userId} /> : <NotAllowed />
+    case 'approvals':
+      return access.requestsApprovals ? <ApprovalsPage access={access} /> : <NotAllowed />
     case 'slips':
     case 'not-found':
       return <NotAllowed />
@@ -141,7 +157,15 @@ function Page({ route, isAdmin, currentUserId }: { route: Route; isAdmin: boolea
 function NotAllowed() {
   return (
     <p className="st-empty">
-      This page does not exist or is for administrators only. <Link to="/staff">Back to exams</Link>
+      This page does not exist or is not part of your role. <Link to="/staff">Back to the start</Link>
+    </p>
+  )
+}
+
+function NothingYet({ areas }: { areas: ManagerArea[] }) {
+  return (
+    <p className="st-empty">
+      You manage: {areas.join(', ') || 'nothing yet'}. The centre settings page is not available yet; ask an administrator if you need something changed.
     </p>
   )
 }
@@ -170,7 +194,7 @@ function StaffLogin({ notice, onSignedIn }: { notice: string | null; onSignedIn:
       <form className="st-card st-login-card" onSubmit={submit}>
         <VictoryLogo />
         <h1>Staff sign in</h1>
-        <p className="st-faint">Administrators and invigilators</p>
+        <p className="st-faint">Staff of the centre</p>
         {notice && (
           <p className="st-note" role="status">
             {notice}

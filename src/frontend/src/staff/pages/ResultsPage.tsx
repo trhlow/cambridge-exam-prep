@@ -11,8 +11,11 @@ const GRADING_TEXT: Record<string, string> = {
   Final: 'Final',
 }
 
-/** Scores per candidate and section (VE-11 auto-marking). Writing is marked by a teacher later (VE-26). */
-export function ResultsPage({ examId, isAdmin }: { examId: number; isAdmin: boolean }) {
+/**
+ * Scores per candidate and section (VE-11 auto-marking). Writing is marked by an examiner assigned to the session
+ * (VE-26, VE-61), who alone opens the candidates' answers; administrators see the score table only.
+ */
+export function ResultsPage({ examId, canMark }: { examId: number; canMark: boolean }) {
   const { data: exam } = useLoad(() => staffApi.exam(examId), `exam-${examId}`)
   const { data: results, error } = useLoad(() => staffApi.results(examId), examId)
   const sections = results?.[0]?.sections ?? []
@@ -40,7 +43,7 @@ export function ResultsPage({ examId, isAdmin }: { examId: number; isAdmin: bool
           </button>
         }
       />
-      <p className="st-faint">Reading and Listening are marked automatically when a section ends. Writing is marked by a teacher (Mark Writing); the score is final once every Writing question has a mark.</p>
+      <p className="st-faint">Reading and Listening are marked automatically when a section ends. Writing is marked by the session's examiner (Mark Writing); the score is final once every Writing question has a mark.</p>
       <ErrorBox error={error} />
       {results && results.length === 0 && <p className="st-empty">No candidates.</p>}
       {results && results.length > 0 && (
@@ -69,7 +72,7 @@ export function ResultsPage({ examId, isAdmin }: { examId: number; isAdmin: bool
                       </div>
                     )}
                     {s.status === 'Submitted' && <div className="st-faint">{GRADING_TEXT[s.gradingStatus] ?? s.gradingStatus}</div>}
-                    {isAdmin && s.status === 'Submitted' && s.attemptId !== null && (
+                    {canMark && s.status === 'Submitted' && s.attemptId !== null && (
                       <Link to={`/staff/exams/${examId}/marking/${s.attemptId}`} className="st-link">
                         {s.gradingStatus === 'NeedsManualMarking' ? 'Mark Writing' : 'View marking'}
                       </Link>

@@ -105,6 +105,29 @@ public sealed class StaffRolesTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task ExamsManager_ChoosesPublishedPapersAndStaff_WithoutThePaperBankOrTheStaffList()
+    {
+        api.SkipIfUnavailable();
+        var (readingWriting, _) = await api.CreatePublishedPapersAsync();
+        var invigilator = await api.CreateStaffAsync(UserRole.Invigilator, Password);
+        var examiner = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        var examsManager = await api.CreateManagerAsync(Password, ManagerArea.Exams);
+        var papersManager = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        using var exams = await api.StaffClientAsync(examsManager.Username, Password);
+        using var papers = await api.StaffClientAsync(papersManager.Username, Password);
+
+        var choices = await exams.GetFromJsonAsync<List<JsonObject>>("/api/admin/exam-papers", ct);
+        var staff = await exams.GetFromJsonAsync<List<JsonObject>>("/api/admin/assignable-staff", ct);
+
+        Assert.Contains(choices!, p => (int)p["id"]! == readingWriting && (string)p["status"]! == "Published");
+        Assert.Contains(staff!, u => (int)u["id"]! == invigilator.Id && (string)u["role"]! == "Invigilator");
+        Assert.Contains(staff!, u => (int)u["id"]! == examiner.Id && (string)u["role"]! == "Examiner");
+        Assert.DoesNotContain(staff!, u => (string)u["role"]! is "Admin" or "Manager");
+        Assert.Equal(HttpStatusCode.Forbidden, (await papers.GetAsync("/api/admin/assignable-staff", ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await papers.GetAsync("/api/admin/exam-papers", ct)).StatusCode);
+    }
+
+    [Fact]
     public async Task CandidateList_StillNeedsASignedInStaffMember()
     {
         api.SkipIfUnavailable();

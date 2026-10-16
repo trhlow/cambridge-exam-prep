@@ -63,7 +63,7 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
     [HttpGet]
     public async Task<IReadOnlyList<PaperListItem>> List(CancellationToken cancellationToken)
     {
-        var papers = await PaperRows(db.TestPapers).ToListAsync(cancellationToken);
+        var papers = await PaperRows(db, db.TestPapers).ToListAsync(cancellationToken);
         return papers.OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id).ToList();
     }
 
@@ -97,7 +97,7 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
             logger.LogInformation("Staff {UserId} published paper {PaperId}", User.GetStaffId(), paperId);
         }
 
-        return await PaperRows(db.TestPapers.Where(p => p.Id == paperId)).SingleAsync(cancellationToken);
+        return await PaperRows(db, db.TestPapers.Where(p => p.Id == paperId)).SingleAsync(cancellationToken);
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
         return request is null ? Problems.Conflict(conflict!) : Accepted(request);
     }
 
-    private IQueryable<PaperListItem> PaperRows(IQueryable<TestPaper> papers) =>
+    internal static IQueryable<PaperListItem> PaperRows(ExamPrepDbContext db, IQueryable<TestPaper> papers) =>
         papers.AsNoTracking().Select(p => new PaperListItem(
             p.Id,
             p.Title,
