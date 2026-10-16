@@ -157,3 +157,12 @@
 - Story mới: VE-57 = SCRUM-74 (Done, Sprint 1), VE-58 = SCRUM-75 (đặc tả yêu cầu, Sprint 2)
 - Vượt kế hoạch nên dời lên một sprint: VE-25, VE-45, VE-46 → Sprint 2; VE-28, VE-29 → Sprint 3; VE-33, VE-34 → Sprint 4; VE-37 → Sprint 5 (mô tả và nhãn sprint-N trên Jira đã sửa theo)
 - sprints.py sinh lại sprint-backlog.md và jira-backlog.csv cho khớp Jira
+
+## Session: 2026-10-16
+
+### Vai trò mới của Victory (E14: VE-59…VE-63)
+- **Status:** complete — commit cb91a56 (kế hoạch), 2ab4d38 (quản trị viên theo mảng, giám khảo), bd8299a (hai admin duyệt chéo), 4a564c5 (cổng nhân viên theo vai trò, trang Approvals), commit tài liệu VE-63
+- Quyết định với người dùng: admin chỉ xem bảng điểm, giám khảo xem bài làm + chấm Writing + xem kết quả kỳ được phân công; cần duyệt = mọi thao tác xoá + thay đổi tài khoản; quản trị viên bốn mảng (đề thi, kỳ thi, thí sinh, trung tâm), tạo + sửa, không xoá
+- CSDL 24 bảng (thêm `user_areas`, `exam_examiners`, `approval_requests`); ERD và use case (5 tác nhân) vẽ lại
+- Toàn bộ: backend 268/268, frontend 82/82
+- Jira: E14 = SCRUM-76, VE-59…63 = SCRUM-77…81 (Sprint 2); VE-13, VE-25 dời sang Sprint 3

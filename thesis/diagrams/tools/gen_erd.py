@@ -25,14 +25,14 @@ QUERIES = {
 
 # Audit foreign keys to users are written in the column text instead of drawn, to keep the diagram readable.
 AUDIT_TO_USERS = {"created_by_user_id", "uploaded_by_user_id", "updated_by_user_id", "sent_by_user_id",
-                  "resolved_by_user_id", "marker_user_id", "user_id"}
-DRAW_USER_EDGES = {("exam_invigilators", "user_id")}
+                  "resolved_by_user_id", "marker_user_id", "user_id", "requested_by_user_id", "decided_by_user_id"}
+DRAW_USER_EDGES = {("exam_invigilators", "user_id"), ("exam_examiners", "user_id"), ("user_areas", "user_id")}
 
 COLUMNS = [  # domain columns, left to right; tables stacked top-down
-    ("staff", ["users", "site_settings"]),
+    ("staff", ["users", "user_areas", "approval_requests", "site_settings"]),
     ("template", ["exam_types", "section_templates", "test_papers", "assets"]),
     ("content", ["paper_parts", "question_groups", "questions", "answer_keys"]),
-    ("exam", ["exams", "exam_sections", "exam_invigilators", "candidates", "candidate_messages"]),
+    ("exam", ["exams", "exam_sections", "exam_invigilators", "exam_examiners", "candidates", "candidate_messages"]),
     ("delivery", ["attempts", "responses", "manual_marks", "annotations"]),
     ("monitor", ["invigilator_actions", "security_events"]),
 ]

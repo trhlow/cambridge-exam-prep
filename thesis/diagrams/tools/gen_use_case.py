@@ -58,6 +58,8 @@ def use_case():
     ACTOR = f"shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;{FONT}fontStyle=1;"
     UC = {
         "admin": f"ellipse;whiteSpace=wrap;html=1;{FONT}fillColor=#e1d5e7;strokeColor=#9673a6;",
+        "mgr": f"ellipse;whiteSpace=wrap;html=1;{FONT}fillColor=#fff2cc;strokeColor=#d6b656;",
+        "exm": f"ellipse;whiteSpace=wrap;html=1;{FONT}fillColor=#f8cecc;strokeColor=#b85450;",
         "inv": f"ellipse;whiteSpace=wrap;html=1;{FONT}fillColor=#dae8fc;strokeColor=#6c8ebf;",
         "cand": f"ellipse;whiteSpace=wrap;html=1;{FONT}fillColor=#d5e8d4;strokeColor=#82b366;",
         "shared": f"ellipse;whiteSpace=wrap;html=1;{FONT}fillColor=#f5f5f5;strokeColor=#666666;",
@@ -66,43 +68,51 @@ def use_case():
     ASSOC = "endArrow=none;html=1;rounded=0;strokeColor=#333333;"
     DEP = ("endArrow=open;endSize=10;dashed=1;html=1;rounded=0;strokeColor=#333333;"
            "fontFamily=Times New Roman;fontSize=12;labelBackgroundColor=#ffffff;")
+    GEN = "endArrow=block;endFill=0;endSize=14;html=1;rounded=0;strokeColor=#333333;"
 
     TOP, W, H, GAP = 70, 250, 50, 62
-    LX = 260  # left column x (admin + invigilator)
+    LX = 260  # left column x (staff)
 
-    admin_ucs = ["Quản lý tài khoản giám thị", "Nhập đề thi (câu hỏi, audio, đáp án)",
-                 "Tạo kỳ thi và các phần thi", "Cấp tài khoản thí sinh, in phiếu đăng nhập",
-                 "Phân công giám thị", "Chấm bài viết (Writing)",
-                 "Đổi tên và logo trung tâm", "Xem kết quả và nhật ký thao tác"]
+    # Victory, 16/10/2026: every staff account is created by an admin; managers ("quản trị viên") create and edit in
+    # their areas but never delete; deletions and account changes wait for the other admin; only examiners open
+    # candidates' work. The admin can do everything a manager can (generalisation).
+    admin_ucs = ["Quản lý tài khoản nhân sự", "Duyệt yêu cầu xoá, đổi tài khoản", "Xem bảng điểm"]
+    mgr_ucs = ["Nhập, kiểm tra và xuất bản đề thi", "Tạo kỳ thi, phân công giám thị và giám khảo",
+               "Cấp tài khoản thí sinh, in phiếu đăng nhập", "Đổi tên và logo trung tâm",
+               "Gửi yêu cầu xoá (chờ Admin duyệt)"]
+    exm_ucs = ["Xem lại bài làm của thí sinh", "Chấm bài viết (Writing)", "Xem kết quả kỳ thi được phân công"]
     inv_ucs = ["Theo dõi phòng thi thời gian thực", "Tạm dừng / cho làm tiếp",
                "Cộng giờ bù do sự cố", "Sửa giờ kết thúc (End now / at / in)",
                "Tua lại phần nghe (Rewind audio)", "Xử lý cảnh báo vi phạm",
                "Gửi thông báo cho thí sinh", "Khôi phục bài kết thúc nhầm"]
 
-    n_rows = len(admin_ucs) + 1 + len(inv_ucs)
+    groups = [admin_ucs, mgr_ucs, ["Đăng nhập"], exm_ucs, inv_ucs]
+    n_rows = sum(len(g) for g in groups)
     boundary_h = TOP + n_rows * GAP + 30
     d.vertex("Hệ thống thi máy Victory (A2 Key, B1 Preliminary)",
              f"rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;verticalAlign=top;{FONT}fontSize=16;fontStyle=1;",
              200, 0, 1000, boundary_h, cid="sys")
 
     y = TOP
-    admin_ids = []
-    for t in admin_ucs:
-        admin_ids.append(d.vertex(t, UC["admin"], LX, y, W, H)); y += GAP
-    login = d.vertex("Đăng nhập", UC["shared"], LX, y, W, H); y += GAP
-    inv_ids = []
-    for t in inv_ucs:
-        inv_ids.append(d.vertex(t, UC["inv"], LX, y, W, H)); y += GAP
+    placed = []
+    for group, kind in zip(groups, ["admin", "mgr", "shared", "exm", "inv"]):
+        top = y
+        ids = []
+        for t in group:
+            ids.append(d.vertex(t, UC[kind], LX, y, W, H)); y += GAP
+        placed.append((ids, top + len(group) * GAP / 2 - 50))
+    (admin_ids, a_mid), (mgr_ids, m_mid), ([login], _), (exm_ids, e_mid), (inv_ids, i_mid) = placed
 
-    a_mid = TOP + (len(admin_ucs)) * GAP / 2 - 50
-    i_mid = TOP + (len(admin_ucs) + 1) * GAP + len(inv_ucs) * GAP / 2 - 50
-    admin = d.vertex("Quản trị viên", ACTOR, 60, a_mid, 40, 80)
+    admin = d.vertex("Admin", ACTOR, 60, a_mid, 40, 80)
+    mgr = d.vertex("Quản trị viên", ACTOR, 60, m_mid, 40, 80)
+    exm = d.vertex("Giám khảo", ACTOR, 60, e_mid, 40, 80)
     inv = d.vertex("Giám thị", ACTOR, 60, i_mid, 40, 80)
     LEFT = ASSOC + "entryX=0;entryY=0.5;entryDx=0;entryDy=0;"
-    for u in admin_ids + [login]:
-        d.edge(admin, u, LEFT)
-    for u in inv_ids + [login]:
-        d.edge(inv, u, LEFT)
+    for actor, ucs in ((admin, admin_ids), (mgr, mgr_ids), (exm, exm_ids), (inv, inv_ids)):
+        for u in ucs + [login]:
+            d.edge(actor, u, LEFT)
+    # Admin is a manager of every area, and more.
+    d.edge(admin, mgr, GEN + "exitX=0.5;exitY=1;exitDx=0;exitDy=20;entryX=0.5;entryY=0;entryDx=0;entryDy=0;")
 
     # Right half: candidate (column A near right edge) + extensions (column B)
     AX, BX = 900, 600
@@ -136,14 +146,15 @@ def use_case():
     legend_y = boundary_h + 30
     leg = d.vertex("Chú thích", f"rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=8;{FONT}fontStyle=1;",
                    200, legend_y, 1000, 60, cid="legend")
-    items = [("#e1d5e7", "#9673a6", "Quản trị viên"), ("#dae8fc", "#6c8ebf", "Giám thị"),
-             ("#d5e8d4", "#82b366", "Thí sinh"), ("#ffe6cc", "#d79b00", "Safe Exam Browser"),
+    items = [("#e1d5e7", "#9673a6", "Admin"), ("#fff2cc", "#d6b656", "Quản trị viên"),
+             ("#f8cecc", "#b85450", "Giám khảo"), ("#dae8fc", "#6c8ebf", "Giám thị"),
+             ("#d5e8d4", "#82b366", "Thí sinh"), ("#ffe6cc", "#d79b00", "SEB"),
              ("#f5f5f5", "#666666", "Dùng chung")]
-    x = 110
+    x = 100
     for fill, stroke, label in items:
         d.vertex("", f"ellipse;html=1;fillColor={fill};strokeColor={stroke};", x, 28, 34, 18, parent="legend")
-        d.vertex(label, f"text;html=1;align=left;verticalAlign=middle;{FONT}", x + 40, 25, 140, 24, parent="legend")
-        x += 180
+        d.vertex(label, f"text;html=1;align=left;verticalAlign=middle;{FONT}", x + 40, 25, 90, 24, parent="legend")
+        x += 128
     return d.page("Use Case tổng quát")
 
 

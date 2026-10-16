@@ -32,7 +32,8 @@ Thi máy khó ở khâu vận hành: giám thị phải tạm dừng đúng thí
 - **Cổng giám thị thời gian thực (SignalR):** bảng theo dõi cả phòng, chọn nhiều thí sinh thao tác cùng lúc; tạm dừng / làm tiếp, cộng giờ bù, sửa giờ kết thúc (*End now / End at / End in*), tua lại phần nghe.
 - **Màn hình thí sinh:** vào thi bằng mã PIN, làm bài, ghi chú, đánh dấu câu, đổi cỡ chữ và độ tương phản.
 - **Safe Exam Browser:** server kiểm tra cấu hình SEB (Browser Exam Key) mới cho vào thi; vi phạm hiển thị cảnh báo cho giám thị.
-- **Ba vai trò:** quản trị, giám thị, thí sinh.
+- **Năm vai trò** (theo yêu cầu Victory 16/10/2026): **admin** tạo mọi tài khoản nhân sự; **quản trị viên** phụ trách từng mảng (đề thi, kỳ thi, thí sinh, trung tâm) — được tạo và sửa, không được xoá; **giám khảo** xem lại bài làm, chấm Writing và xem kết quả của kỳ thi được phân công (chỉ giám khảo mở được bài làm); **giám thị**; **thí sinh**.
+- **Hai admin duyệt chéo:** mọi thao tác xoá (đề, kỳ thi, thí sinh) và thay đổi tài khoản (khoá/mở, đổi vai trò, đặt lại mật khẩu, thêm admin) thành yêu cầu chờ một admin *khác* duyệt; ai yêu cầu không tự duyệt được, mọi yêu cầu được lưu làm nhật ký.
 
 **Ngoài phạm vi:** các cấp B2 First, C1 Advanced, C2 Proficiency; phần Speaking (thi trực tiếp); máy Mac/Chromebook; chạy nhiều server.
 
@@ -114,11 +115,14 @@ cp docker/.env.example docker/.env        # rồi đổi mật khẩu MySQL và 
 docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --build
 ```
 
-Mở http://localhost:8080 (thí sinh) và http://localhost:8080/staff (quản trị, giám thị). Tài khoản demo (mục `Demo` của `src/backend/src/ExamPrep.Api/appsettings.Development.json`, chỉ dùng khi chạy thử):
+Mở http://localhost:8080 (thí sinh) và http://localhost:8080/staff (nhân sự trung tâm). Tài khoản demo (mục `Demo` của `src/backend/src/ExamPrep.Api/appsettings.Development.json`, chỉ dùng khi chạy thử):
 
 | Vai trò | Địa chỉ | Tên đăng nhập | Mật khẩu |
 |---|---|---|---|
-| Quản trị | `/staff` | `hoanglong` | `19072005` |
+| Admin | `/staff` | `hoanglong` | `19072005` |
+| Admin thứ hai (duyệt yêu cầu) | `/staff` | `admin2` | `19072005` |
+| Quản trị viên (cả bốn mảng) | `/staff` | `quantri` | `19072005` |
+| Giám khảo | `/staff` | `giamkhao` | `19072005` |
 | Giám thị | `/staff` | `giamthi` | `victory-invig` |
 | Thí sinh (Trần Hoàng Long) | `/` | `hoanglong` | `19072005`, mã PIN `4821` |
 
@@ -153,12 +157,12 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Tài liệu tham khảo quy trình thi máy
 - [x] Sơ đồ use case tổng quát, ERD
 - [x] Khảo sát giao diện bài thi mẫu A2 Key for Schools
-- [x] Cơ sở dữ liệu: 21 bảng (EF Core + MySQL), migration, dữ liệu mẫu A2/B1, 16 test tích hợp
+- [x] Cơ sở dữ liệu: 24 bảng (EF Core + MySQL), migration, dữ liệu mẫu A2/B1, 16 test tích hợp
 - [ ] Đặc tả yêu cầu, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API
 - [x] Backend: đăng nhập nhân viên (admin, giám thị) và thí sinh (username/password + PIN phòng thi), phân quyền, đồng hồ server — 78 test
 - [x] Nhập đề: định dạng gói đề (`setup/exam-package/FORMAT.md`), import có kiểm tra lỗi, đề mẫu A2 tự soạn — 116 test
 - [x] Bộ chuyển đề PDF → gói đề cho Reading & Writing A2 (đề mẫu A2 2022: 32 câu, 12 hình, import được) — 35 test Python
-- [ ] Bộ chuyển đề Listening (tách audio theo part)
+- [x] Bộ chuyển đề Listening (mỗi part một file audio) và "Import from PDF" trong cổng nhân viên
 - [x] Màn hình thí sinh A2 Reading & Writing kiểu Inspera (React + TS), kỳ thi demo — 21 test frontend
 - [x] Đồng hồ server, tự lưu, hết giờ tự nộp; Listening phát một lần, kéo thả
 - [x] Chấm tự động Reading Part 1–5 và Listening theo đáp án; API kết quả cho nhân viên — 182 test backend, 48 test frontend
@@ -166,6 +170,7 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Màn hình thí sinh: menu Options (độ tương phản, cỡ chữ, ẩn giờ), highlight và ghi chú; F5 quay lại đúng bài
 - [x] Chấm Writing cho giáo viên, tổng điểm cuối, xuất kết quả CSV mở bằng Excel
 - [x] Rà soát bảo mật 13/10: khoá tài khoản khi sai mật khẩu/PIN liên tục, lưu khoá mã hoá, security header, xử lý lỗi an toàn — 231 test backend, 71 test frontend
+- [x] Vai trò mới của Victory (16/10): quản trị viên theo mảng, giám khảo (chỉ giám khảo xem bài làm), hai admin duyệt chéo mọi thao tác xoá và thay đổi tài khoản, trang Approvals — 268 test backend, 82 test frontend
 - [ ] Cập nhật thời gian thực bằng SignalR (hiện làm mới 3–5 giây)
 - [ ] Tích hợp Safe Exam Browser, đóng gói
 - [ ] Kiểm thử tình huống, kiểm thử tải, buổi thi thử
