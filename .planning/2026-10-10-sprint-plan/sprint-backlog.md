@@ -31,18 +31,23 @@ Tổng: 23 story, 93 điểm.
 - [x] VE-12 [E12] (1đ) Báo cáo tiến độ tuần 1 (progress-report)
 - **Status:** complete
 
-### Phase 2: Sprint 2 (19/10 – 25/10) — Tuần gặp GV 1: đặc tả, sơ đồ, đặc tả API; SignalR; sửa đề trên web; hướng dẫn cài đặt
-Tổng: 6 story, 22 điểm.
+### Phase 2: Sprint 2 (19/10 – 25/10) — Tuần gặp GV 1: phân quyền nhiều tác nhân, duyệt chéo hai admin (Victory 16/10); đặc tả, sơ đồ, đặc tả API; hướng dẫn cài đặt
+Tổng: 9 story, 34 điểm.
 - [ ] VE-58 [E12] (2đ) Bản đặc tả yêu cầu (quy trình thi máy, vai trò, chức năng, yêu cầu phi chức năng)
 - [ ] VE-45 [E12] (3đ) Sơ đồ trạng thái lượt làm bài, sơ đồ tuần tự, đặc tả API
-- [ ] VE-13 [E7] (5đ) SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì
-- [ ] VE-25 [E3] (8đ) Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)
+- [ ] VE-59 [E14] (5đ) Mô hình quyền: Admin, Quản trị viên theo mảng, Giám khảo, Giám thị
+- [ ] VE-60 [E14] (8đ) Duyệt chéo hai admin: yêu cầu xoá và thao tác tài khoản chờ duyệt
+- [ ] VE-61 [E14] (5đ) Giám khảo: xem bài làm, chấm Writing và xem kết quả theo kỳ thi được phân công
+- [ ] VE-62 [E14] (5đ) Cổng nhân viên theo quyền: tài khoản theo vai trò/mảng, trang yêu cầu chờ duyệt, nhật ký
+- [ ] VE-63 [E14] (2đ) Cập nhật sơ đồ use case, ERD và tài liệu cho các tác nhân mới
 - [ ] VE-46 [E11] (3đ) Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/
 - [ ] VE-20 [E12] (1đ) Báo cáo tiến độ tuần 2
 - **Status:** pending
 
-### Phase 3: Sprint 3 (26/10 – 01/11) — Safe Exam Browser và cảnh báo vi phạm; đổi tên trung tâm và logo
-Tổng: 4 story, 11 điểm.
+### Phase 3: Sprint 3 (26/10 – 01/11) — SignalR; sửa đề trên web; Safe Exam Browser và cảnh báo vi phạm; tên trung tâm và logo
+Tổng: 6 story, 24 điểm.
+- [ ] VE-13 [E7] (5đ) SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì
+- [ ] VE-25 [E3] (8đ) Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)
 - [ ] VE-28 [E9] (5đ) Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi
 - [ ] VE-29 [E9] (3đ) Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm
 - [ ] VE-24 [E4] (2đ) Đổi tên trung tâm và logo (tải PNG)

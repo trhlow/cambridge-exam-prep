@@ -22,10 +22,12 @@ EPICS = {
     "E11": "Kiểm thử & buổi thi thử",
     "E12": "Báo cáo đồ án & tài liệu",
     "E13": "IELTS (nếu kịp)",
+    "E14": "Phân quyền nhiều tác nhân và duyệt chéo hai admin",
 }
 
 # (sprint, start, end, goal, stories); story = (key, epic, points, summary, acceptance)
 # Re-planned 15/10/2026 to match Jira (board SCRUM): ahead of schedule, so later stories moved up one sprint.
+# 16/10: Victory asked for more roles and two-admin approval (E14, VE-59…63, Sprint 2); VE-13 and VE-25 moved to Sprint 3.
 # On Jira, Sprint 0 and Sprint 1 run as one sprint, "SCRUM Sprint 1" (10/10 – 18/10).
 SPRINTS = [
     ("Sprint 0", "2026-10-10", "2026-10-11", "Khởi động: CSDL và khảo sát giao diện", [
@@ -57,15 +59,20 @@ SPRINTS = [
         ("VE-30", "E9", 3, "Giới hạn tần suất đăng nhập, xử lý lỗi an toàn, nhật ký thao tác", "Không lộ stack trace; đăng nhập sai liên tục bị chặn tạm"),
         ("VE-12", "E12", 1, "Báo cáo tiến độ tuần 1 (progress-report)", "File báo cáo theo mẫu 3 có trong progress-report/"),
     ]),
-    ("Sprint 2", "2026-10-19", "2026-10-25", "Tuần gặp GV 1: đặc tả, sơ đồ, đặc tả API; SignalR; sửa đề trên web; hướng dẫn cài đặt", [
+    ("Sprint 2", "2026-10-19", "2026-10-25", "Tuần gặp GV 1: phân quyền nhiều tác nhân, duyệt chéo hai admin (Victory 16/10); đặc tả, sơ đồ, đặc tả API; hướng dẫn cài đặt", [
         ("VE-58", "E12", 2, "Bản đặc tả yêu cầu (quy trình thi máy, vai trò, chức năng, yêu cầu phi chức năng)", "Bản đặc tả trong thesis/doc, đối chiếu được với use case và đề cương"),
         ("VE-45", "E12", 3, "Sơ đồ trạng thái lượt làm bài, sơ đồ tuần tự, đặc tả API", "Các sơ đồ có trong thesis/diagrams"),
-        ("VE-13", "E7", 5, "SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì", "Bảng giám thị đổi trong ≤2 giây khi thí sinh làm bài, mất kết nối hoặc nộp"),
-        ("VE-25", "E3", 8, "Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)", "Tạo được một đề A2 đầy đủ không cần file JSON; sửa được bản nháp nhập từ PDF"),
+        ("VE-59", "E14", 5, "Mô hình quyền: Admin, Quản trị viên theo mảng, Giám khảo, Giám thị", "Mỗi API kiểm tra đúng vai trò và mảng; quản trị viên tạo và sửa, không xoá"),
+        ("VE-60", "E14", 8, "Duyệt chéo hai admin: yêu cầu xoá và thao tác tài khoản chờ duyệt", "Xoá và thao tác tài khoản chờ một admin khác duyệt; không tự duyệt; có nhật ký"),
+        ("VE-61", "E14", 5, "Giám khảo: xem bài làm, chấm Writing và xem kết quả theo kỳ thi được phân công", "Chỉ giám khảo xem bài làm; admin chỉ xem điểm tổng; giám thị không xem kết quả"),
+        ("VE-62", "E14", 5, "Cổng nhân viên theo quyền: tài khoản theo vai trò/mảng, trang yêu cầu chờ duyệt, nhật ký", "Menu theo quyền; trang Chờ duyệt và nhật ký cho admin"),
+        ("VE-63", "E14", 2, "Cập nhật sơ đồ use case, ERD và tài liệu cho các tác nhân mới", "Use case có 5 tác nhân và luồng duyệt chéo; ERD sinh lại"),
         ("VE-46", "E11", 3, "Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/", "Máy mới cài theo hướng dẫn chạy được"),
         ("VE-20", "E12", 1, "Báo cáo tiến độ tuần 2", "File báo cáo có trong progress-report/"),
     ]),
-    ("Sprint 3", "2026-10-26", "2026-11-01", "Safe Exam Browser và cảnh báo vi phạm; đổi tên trung tâm và logo", [
+    ("Sprint 3", "2026-10-26", "2026-11-01", "SignalR; sửa đề trên web; Safe Exam Browser và cảnh báo vi phạm; tên trung tâm và logo", [
+        ("VE-13", "E7", 5, "SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì", "Bảng giám thị đổi trong ≤2 giây khi thí sinh làm bài, mất kết nối hoặc nộp"),
+        ("VE-25", "E3", 8, "Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)", "Tạo được một đề A2 đầy đủ không cần file JSON; sửa được bản nháp nhập từ PDF"),
         ("VE-28", "E9", 5, "Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi", "Mở bằng trình duyệt thường bị chặn và sinh cảnh báo"),
         ("VE-29", "E9", 3, "Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm", "Cảnh báo hiện ở cột Warnings, giám thị đánh dấu đã xử lý"),
         ("VE-24", "E4", 2, "Đổi tên trung tâm và logo (tải PNG)", "Logo mới hiện trên thanh trên của thí sinh"),
