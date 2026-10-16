@@ -117,13 +117,17 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
         var update = await admin.PutAsJsonAsync($"/api/admin/candidates/{fresh.Id}", new { firstName = "Cuong", lastName = "Do", plannedExtraPercent = 50, seatNo = "B4" }, ct);
         var deleteStarted = await admin.DeleteAsync($"/api/admin/candidates/{seeded.CandidateId}", ct);
         var deleteFresh = await admin.DeleteAsync($"/api/admin/candidates/{fresh.Id}", ct);
+        using var otherAdmin = await api.SecondAdminClientAsync();
+        await ApiFixture.ApproveAsync(otherAdmin, await ApiFixture.RequestIdOfAsync(deleteFresh));
+        var remaining = await admin.GetFromJsonAsync<List<CandidateView>>($"/api/admin/exams/{examId}/candidates", ct);
 
         var updated = await update.Content.ReadFromJsonAsync<CandidateView>(ct);
         Assert.Equal(50, updated!.PlannedExtraPercent);
         Assert.Equal("B4", updated.SeatNo);
         Assert.Equal(fresh.Username, updated.Username);
         Assert.Equal(HttpStatusCode.Conflict, deleteStarted.StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, deleteFresh.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, deleteFresh.StatusCode);
+        Assert.DoesNotContain(remaining!, c => c.Id == fresh.Id);
     }
 
     [Fact]

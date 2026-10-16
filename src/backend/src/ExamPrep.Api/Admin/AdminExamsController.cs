@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
+using ExamPrep.Api.Approvals;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Common;
 using ExamPrep.Api.Exams;
@@ -155,25 +156,23 @@ public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExam
         return (await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken))!;
     }
 
+    /// <summary>VE-60: asks for an unused session to be deleted; an administrator other than the requester approves it.</summary>
     [HttpDelete("exams/{examId:int}")]
-    [Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
-    public async Task<IActionResult> Delete(int examId, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApprovalView>> Delete(int examId, [FromServices] ApprovalService approvals, CancellationToken cancellationToken)
     {
-        var exam = await db.Exams.SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
+        var exam = await db.Exams.AsNoTracking().SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         if (exam is null)
         {
             return NotFound();
         }
 
-        if (await ExamViews.HasStartedAsync(db, examId, cancellationToken))
+        if (await ApprovalActions.ExamProblemAsync(db, examId, cancellationToken) is { } problem)
         {
-            return Problems.Conflict($"{StartedTitle} It cannot be deleted.");
+            return Problems.Conflict(problem);
         }
 
-        db.Exams.Remove(exam);
-        await db.SaveChangesAsync(cancellationToken);
-        logger.LogInformation("Staff {UserId} deleted exam {ExamId}", User.GetStaffId(), examId);
-        return NoContent();
+        var (request, conflict) = await approvals.RequestAsync(ApprovalKind.DeleteExam, examId, $"Delete exam “{exam.Name}” ({exam.ScheduledDate:dd/MM/yyyy})", null, User.GetStaffId(), cancellationToken);
+        return request is null ? Problems.Conflict(conflict!) : Accepted(request);
     }
 
     /// <summary>Replaces the session's invigilators; only active invigilator accounts can be assigned.</summary>

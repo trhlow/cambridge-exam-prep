@@ -117,17 +117,19 @@ public sealed class StaffRolesTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task Manager_CannotDeleteAnything()
+    public async Task Manager_OnlyRequestsDeletions_AndOnlyInTheirAreas()
     {
         api.SkipIfUnavailable();
         var candidate = await api.CreateCandidateAsync(Password);
         var (paperId, _) = await api.CreatePublishedPapersAsync();
-        var account = await api.CreateManagerAsync(Password, ManagerArea.Papers, ManagerArea.Exams, ManagerArea.Candidates);
+        var account = await api.CreateManagerAsync(Password, ManagerArea.Papers);
         using var manager = await api.StaffClientAsync(account.Username, Password);
 
-        Assert.Equal(HttpStatusCode.Forbidden, (await manager.DeleteAsync($"/api/admin/papers/{paperId}", ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, (await manager.DeleteAsync($"/api/admin/papers/{paperId}", ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await manager.GetAsync($"/api/admin/papers/{paperId}", ct)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await manager.DeleteAsync($"/api/admin/candidates/{candidate.CandidateId}", ct)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await manager.DeleteAsync($"/api/admin/exams/{candidate.ExamId}", ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await manager.PutAsJsonAsync($"/api/admin/users/{account.Id}", new { fullName = "Me", isActive = true, areas = new[] { "Papers", "Exams" } }, ct)).StatusCode);
     }
 
     [Fact]

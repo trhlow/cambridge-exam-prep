@@ -97,6 +97,80 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.ToTable("answer_keys");
                 });
 
+            modelBuilder.Entity("ExamPrep.Domain.Entities.ApprovalRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("DecidedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("decided_at");
+
+                    b.Property<int?>("DecidedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("decision_note");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Outcome")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("text")
+                        .HasColumnName("payload_json");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("requested_at");
+
+                    b.Property<int>("RequestedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)")
+                        .HasColumnName("summary");
+
+                    b.Property<int?>("TargetId")
+                        .HasColumnType("int")
+                        .HasColumnName("target_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DecidedByUserId");
+
+                    b.HasIndex("RequestedByUserId");
+
+                    b.HasIndex("Status", "Kind", "TargetId");
+
+                    b.ToTable("approval_requests", t =>
+                        {
+                            t.HasCheckConstraint("CK_approval_requests_decider", "decided_by_user_id IS NULL OR decided_by_user_id <> requested_by_user_id OR status = 'Cancelled'");
+                        });
+                });
+
             modelBuilder.Entity("ExamPrep.Domain.Entities.Asset", b =>
                 {
                     b.Property<int>("Id")
@@ -1267,6 +1341,24 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("ExamPrep.Domain.Entities.ApprovalRequest", b =>
+                {
+                    b.HasOne("ExamPrep.Domain.Entities.User", "DecidedBy")
+                        .WithMany()
+                        .HasForeignKey("DecidedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ExamPrep.Domain.Entities.User", "RequestedBy")
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DecidedBy");
+
+                    b.Navigation("RequestedBy");
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.Asset", b =>

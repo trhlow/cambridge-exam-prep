@@ -35,6 +35,8 @@ public class ExamPrepDbContext(DbContextOptions<ExamPrepDbContext> options) : Db
 
     public DbSet<UserArea> UserAreas => Set<UserArea>();
 
+    public DbSet<ApprovalRequest> ApprovalRequests => Set<ApprovalRequest>();
+
     public DbSet<Candidate> Candidates => Set<Candidate>();
 
     public DbSet<Attempt> Attempts => Set<Attempt>();

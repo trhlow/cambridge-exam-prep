@@ -130,6 +130,34 @@ public sealed class ApiFixture : IAsyncLifetime
         return user;
     }
 
+    /// <summary>A client signed in as a new administrator: the second pair of eyes for approvals.</summary>
+    public async Task<HttpClient> SecondAdminClientAsync()
+    {
+        const string password = "Second#Admin2026";
+        var admin = await CreateStaffAsync(UserRole.Admin, password);
+        return await StaffClientAsync(admin.Username, password);
+    }
+
+    /// <summary>Reads the approval request a 202 response carries (a deletion or an account change waiting for approval).</summary>
+    public static async Task<int> RequestIdOfAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonObject>();
+        var request = body!["request"] ?? body;
+        return (int)request["id"]!;
+    }
+
+    /// <summary>Approves a request as the given administrator and fails the test unless it went through.</summary>
+    public static async Task ApproveAsync(HttpClient approver, int requestId)
+    {
+        var response = await approver.PostAsync($"/api/staff/approvals/{requestId}/approve", null);
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonObject>();
+        if ((string)body!["status"]! != "Approved")
+        {
+            throw new InvalidOperationException($"Request {requestId} ended as {(string)body["status"]!}: {(string?)body["outcome"]}");
+        }
+    }
+
     /// <summary>Assigns an examiner to a session, as an administrator would.</summary>
     public async Task AssignExaminerAsync(int examId, int userId)
     {

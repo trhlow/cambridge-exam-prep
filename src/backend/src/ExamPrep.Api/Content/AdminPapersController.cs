@@ -1,3 +1,4 @@
+using ExamPrep.Api.Approvals;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Common;
 using ExamPrep.Domain.Entities;
@@ -99,26 +100,26 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
         return await PaperRows(db.TestPapers.Where(p => p.Id == paperId)).SingleAsync(cancellationToken);
     }
 
-    /// <summary>Deletes a paper with its parts, questions and keys; refused while any session uses it.</summary>
+    /// <summary>
+    /// VE-60: asks for the paper (with its parts, questions and keys) to be deleted; an administrator other than the
+    /// requester approves it. Refused at once while a session uses the paper.
+    /// </summary>
     [HttpDelete("{paperId:int}")]
-    [Authorize(Policy = StaffAuthDefaults.AdminPolicy)]
-    public async Task<IActionResult> Delete(int paperId, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApprovalView>> Delete(int paperId, [FromServices] ApprovalService approvals, CancellationToken cancellationToken)
     {
-        var paper = await db.TestPapers.SingleOrDefaultAsync(p => p.Id == paperId, cancellationToken);
+        var paper = await db.TestPapers.AsNoTracking().SingleOrDefaultAsync(p => p.Id == paperId, cancellationToken);
         if (paper is null)
         {
             return NotFound();
         }
 
-        if (await db.ExamSections.AnyAsync(s => s.TestPaperId == paperId, cancellationToken))
+        if (await ApprovalActions.PaperProblemAsync(db, paperId, cancellationToken) is { } problem)
         {
-            return Problems.Conflict("This paper is used by an exam and cannot be deleted.");
+            return Problems.Conflict(problem);
         }
 
-        db.TestPapers.Remove(paper);
-        await db.SaveChangesAsync(cancellationToken);
-        logger.LogInformation("Staff {UserId} deleted paper {PaperId}", User.GetStaffId(), paperId);
-        return NoContent();
+        var (request, conflict) = await approvals.RequestAsync(ApprovalKind.DeletePaper, paperId, $"Delete paper “{paper.Title}”", null, User.GetStaffId(), cancellationToken);
+        return request is null ? Problems.Conflict(conflict!) : Accepted(request);
     }
 
     private IQueryable<PaperListItem> PaperRows(IQueryable<TestPaper> papers) =>

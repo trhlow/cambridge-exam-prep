@@ -39,23 +39,26 @@ public sealed class AdminStaffTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task Update_ResetsThePasswordAndDeactivatesTheAccount()
+    public async Task Update_ResetsThePasswordAndDeactivatesTheAccount_OnceAnotherAdminApproves()
     {
         api.SkipIfUnavailable();
         using var admin = await api.AdminClientAsync();
+        using var otherAdmin = await api.SecondAdminClientAsync();
         var invigilator = await api.CreateStaffAsync(UserRole.Invigilator, Password);
         using var signedIn = await api.StaffClientAsync(invigilator.Username, Password);
 
         var reset = await admin.PutAsJsonAsync($"/api/admin/users/{invigilator.Id}", new { fullName = "Renamed", isActive = true, newPassword = "new-pass-2026" }, ct);
+        var resetBody = (await reset.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonObject>(ct))!;
+        await ApiFixture.ApproveAsync(otherAdmin, (int)resetBody["request"]!["id"]!);
         var oldSessionAfterReset = await signedIn.GetAsync("/api/staff/auth/me", ct);
         var newLogin = await LoginAsync(invigilator.Username, "new-pass-2026");
         var deactivate = await admin.PutAsJsonAsync($"/api/admin/users/{invigilator.Id}", new { fullName = "Renamed", isActive = false }, ct);
+        await ApiFixture.ApproveAsync(otherAdmin, await ApiFixture.RequestIdOfAsync(deactivate));
         var loginWhenInactive = await LoginAsync(invigilator.Username, "new-pass-2026");
 
-        Assert.Equal("Renamed", (await reset.Content.ReadFromJsonAsync<StaffProfile>(ct))!.FullName);
+        Assert.Equal("Renamed", (string)resetBody["user"]!["fullName"]!);
         Assert.Equal(HttpStatusCode.Unauthorized, oldSessionAfterReset.StatusCode);
         Assert.Equal(HttpStatusCode.OK, newLogin.StatusCode);
-        Assert.False((await deactivate.Content.ReadFromJsonAsync<StaffProfile>(ct))!.IsActive);
         Assert.Equal(HttpStatusCode.Unauthorized, loginWhenInactive.StatusCode);
     }
 
