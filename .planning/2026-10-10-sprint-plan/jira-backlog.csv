@@ -12,235 +12,256 @@
 11,,Epic,E11 · Kiểm thử & buổi thi thử,,,,epic
 12,,Epic,E12 · Báo cáo đồ án & tài liệu,,,,epic
 13,,Epic,E13 · IELTS (nếu kịp),,,,epic
-14,1,Story,"Thiết kế CSDL 21 bảng, migration EF Core trên MySQL","Mã kế hoạch: VE-1
+14,,Epic,E14 · Phân quyền nhiều tác nhân và duyệt chéo hai admin,,,,epic
+15,1,Story,"Thiết kế CSDL 21 bảng, migration EF Core trên MySQL","Mã kế hoạch: VE-1
 
 Tiêu chí chấp nhận:
 - Migration áp được; 16 test tích hợp đạt; ERD sinh từ schema thật",Sprint 0,5,VE-1
-15,5,Story,Khảo sát giao diện bài thi mẫu A2 Key for Schools trên Inspera,"Mã kế hoạch: VE-2
+16,5,Story,Khảo sát giao diện bài thi mẫu A2 Key for Schools trên Inspera,"Mã kế hoạch: VE-2
 
 Tiêu chí chấp nhận:
 - thesis/refs/inspera-ui-a2.md mô tả đủ 7 part R&W, 5 part Listening, menu, ghi chú",Sprint 0,2,VE-2
-16,2,Story,"Đăng nhập nhân viên (admin, giám thị) bằng cookie, phân quyền theo vai trò","Mã kế hoạch: VE-3
+17,2,Story,"Đăng nhập nhân viên (admin, giám thị) bằng cookie, phân quyền theo vai trò","Mã kế hoạch: VE-3
 
 Tiêu chí chấp nhận:
 - Sai mật khẩu bị từ chối; API quản trị trả 403 với giám thị",Sprint 1,5,VE-3
-17,2,Story,Đăng nhập thí sinh bằng username/password + mã PIN phòng thi,"Mã kế hoạch: VE-4
+18,2,Story,Đăng nhập thí sinh bằng username/password + mã PIN phòng thi,"Mã kế hoạch: VE-4
 
 Tiêu chí chấp nhận:
 - Sai PIN không vào được; đúng PIN thấy danh sách phần thi",Sprint 1,5,VE-4
-18,3,Story,"Định dạng gói đề JSON (+audio, hình) và import đề A2","Mã kế hoạch: VE-5
+19,3,Story,"Định dạng gói đề JSON (+audio, hình) và import đề A2","Mã kế hoạch: VE-5
 
 Tiêu chí chấp nhận:
 - Import gói mẫu tạo đủ part, nhóm câu, câu hỏi, đáp án; gói sai báo lỗi rõ ràng",Sprint 1,5,VE-5
-19,3,Story,Bộ chuyển đề PDF → gói đề JSON (A2) và tách audio Listening thành 5 track,"Mã kế hoạch: VE-56
+20,3,Story,Bộ chuyển đề PDF → gói đề JSON (A2) và tách audio Listening thành 5 track,"Mã kế hoạch: VE-56
 
 Tiêu chí chấp nhận:
 - Đề mẫu A2 2022 chuyển ra gói import được; người duyệt sửa ít; đề thật không vào git",Sprint 1,3,VE-56
-20,3,Story,Nhập đề từ PDF ngay trên cổng nhân viên và trang duyệt đề,"Mã kế hoạch: VE-57
+21,3,Story,Nhập đề từ PDF ngay trên cổng nhân viên và trang duyệt đề,"Mã kế hoạch: VE-57
 
 Tiêu chí chấp nhận:
 - Admin tải PDF đề, đáp án (và 5 file nghe) trên web; đề vào Draft, duyệt từng câu trước khi Publish",Sprint 1,5,VE-57
-21,5,Story,"Dựng frontend React + TypeScript (Vite), khung màn hình kiểu Inspera","Mã kế hoạch: VE-6
+22,5,Story,"Dựng frontend React + TypeScript (Vite), khung màn hình kiểu Inspera","Mã kế hoạch: VE-6
 
 Tiêu chí chấp nhận:
 - Thanh trên (logo, Candidate ID, 4 biểu tượng), thanh part 'n of m', nút ← →",Sprint 1,3,VE-6
-22,5,Story,"Reading & Writing A2: 4 kiểu câu (chọn đáp án, chọn từ trên ô trống, gõ từ, viết bài)","Mã kế hoạch: VE-7
+23,5,Story,"Reading & Writing A2: 4 kiểu câu (chọn đáp án, chọn từ trên ô trống, gõ từ, viết bài)","Mã kế hoạch: VE-7
 
 Tiêu chí chấp nhận:
 - 7 part hiển thị đúng bố cục một cột / chia đôi có thanh kéo; đếm từ ở Part 6–7",Sprint 1,8,VE-7
-23,5,Story,"Đồng hồ do server nắm, tự lưu câu trả lời, hết giờ tự nộp","Mã kế hoạch: VE-8
+24,5,Story,"Đồng hồ do server nắm, tự lưu câu trả lời, hết giờ tự nộp","Mã kế hoạch: VE-8
 
 Tiêu chí chấp nhận:
 - Tải lại trang vẫn đúng giờ còn lại và đáp án; hết giờ chuyển Submitted",Sprint 1,5,VE-8
-24,5,Story,Đánh dấu câu hỏi (cờ) và đếm câu đã làm trên thanh part,"Mã kế hoạch: VE-9
+25,5,Story,Đánh dấu câu hỏi (cờ) và đếm câu đã làm trên thanh part,"Mã kế hoạch: VE-9
 
 Tiêu chí chấp nhận:
 - Cờ hiện ở thanh dưới; 'Part 2  3 of 7' cập nhật ngay",Sprint 1,2,VE-9
-25,6,Story,"Listening A2: phát nối 5 track một lần, chọn tranh, kéo thả","Mã kế hoạch: VE-10
+26,6,Story,"Listening A2: phát nối 5 track một lần, chọn tranh, kéo thả","Mã kế hoạch: VE-10
 
 Tiêu chí chấp nhận:
 - Không tạm dừng/tua được; chuyển part không làm dừng audio",Sprint 1,5,VE-10
-26,8,Story,Chấm tự động Reading Part 1–5 và Listening theo đáp án,"Mã kế hoạch: VE-11
+27,8,Story,Chấm tự động Reading Part 1–5 và Listening theo đáp án,"Mã kế hoạch: VE-11
 
 Tiêu chí chấp nhận:
 - Đáp án thay thế được chấp nhận; không phân biệt hoa thường",Sprint 1,3,VE-11
-27,7,Story,"Tạm dừng / cho làm tiếp một, nhiều hoặc cả phòng","Mã kế hoạch: VE-14
+28,7,Story,"Tạm dừng / cho làm tiếp một, nhiều hoặc cả phòng","Mã kế hoạch: VE-14
 
 Tiêu chí chấp nhận:
 - Chỉ tác động thí sinh online và đang làm; đồng hồ không trừ giờ khi tạm dừng",Sprint 1,5,VE-14
-28,7,Story,"Cộng giờ bù sự cố và Edit End Time (End now / End at / End in, Disregard extra time)","Mã kế hoạch: VE-15
+29,7,Story,"Cộng giờ bù sự cố và Edit End Time (End now / End at / End in, Disregard extra time)","Mã kế hoạch: VE-15
 
 Tiêu chí chấp nhận:
 - End now không hoàn tác ở cấp phần thi; mọi thao tác ghi nhật ký",Sprint 1,5,VE-15
-29,7,Story,"Tua audio Listening N phút (chỉ khi không tạm dừng, tối đa số phút đã phát)","Mã kế hoạch: VE-16
+30,7,Story,"Tua audio Listening N phút (chỉ khi không tạm dừng, tối đa số phút đã phát)","Mã kế hoạch: VE-16
 
 Tiêu chí chấp nhận:
 - Nhắc giám thị cộng giờ bù tương ứng sau khi tua",Sprint 1,3,VE-16
-30,7,Story,Thông báo từ giám thị (biểu tượng chuông),"Mã kế hoạch: VE-17
+31,7,Story,Thông báo từ giám thị (biểu tượng chuông),"Mã kế hoạch: VE-17
 
 Tiêu chí chấp nhận:
 - Gửi cho một thí sinh hoặc cả phòng; thí sinh thấy ngay",Sprint 1,2,VE-17
-31,5,Story,"Menu Options: độ tương phản, cỡ chữ, ẩn/hiện giờ, trang nộp bài","Mã kế hoạch: VE-18
+32,5,Story,"Menu Options: độ tương phản, cỡ chữ, ẩn/hiện giờ, trang nộp bài","Mã kế hoạch: VE-18
 
 Tiêu chí chấp nhận:
 - 3 chế độ màu, 3 cỡ chữ; màn hình Options che bài làm",Sprint 1,3,VE-18
-32,5,Story,"Ghi chú và highlight khi bôi đen chữ, bảng Notes bên phải","Mã kế hoạch: VE-19
+33,5,Story,"Ghi chú và highlight khi bôi đen chữ, bảng Notes bên phải","Mã kế hoạch: VE-19
 
 Tiêu chí chấp nhận:
 - Notes tắt khi chọn cỡ chữ Large/Extra large",Sprint 1,5,VE-19
-33,4,Story,"Tạo / sửa kỳ thi, gắn đề cho từng phần thi, mã PIN, mật khẩu giám thị","Mã kế hoạch: VE-21
+34,4,Story,"Tạo / sửa kỳ thi, gắn đề cho từng phần thi, mã PIN, mật khẩu giám thị","Mã kế hoạch: VE-21
 
 Tiêu chí chấp nhận:
 - Kỳ thi A2 có 2 phần thi theo mẫu; không xoá được đề đang dùng",Sprint 1,5,VE-21
-34,4,Story,"Nhập danh sách thí sinh từ Excel, sinh username kiểu Cambridge, in phiếu đăng nhập","Mã kế hoạch: VE-22
+35,4,Story,"Nhập danh sách thí sinh từ Excel, sinh username kiểu Cambridge, in phiếu đăng nhập","Mã kế hoạch: VE-22
 
 Tiêu chí chấp nhận:
 - Username = 5 chữ họ + chữ đầu tên + số báo danh; in lại được phiếu",Sprint 1,5,VE-22
-35,4,Story,Phân công giám thị cho kỳ thi,"Mã kế hoạch: VE-23
+36,4,Story,Phân công giám thị cho kỳ thi,"Mã kế hoạch: VE-23
 
 Tiêu chí chấp nhận:
 - Giám thị chỉ thấy kỳ thi được phân công",Sprint 1,2,VE-23
-36,8,Story,Chấm Writing cho giáo viên và bảng kết quả theo kỳ thi,"Mã kế hoạch: VE-26
+37,8,Story,Chấm Writing cho giáo viên và bảng kết quả theo kỳ thi,"Mã kế hoạch: VE-26
 
 Tiêu chí chấp nhận:
 - Tổng điểm = tự động + Writing; xuất kết quả ra Excel",Sprint 1,5,VE-26
-37,9,Story,"Giới hạn tần suất đăng nhập, xử lý lỗi an toàn, nhật ký thao tác","Mã kế hoạch: VE-30
+38,9,Story,"Giới hạn tần suất đăng nhập, xử lý lỗi an toàn, nhật ký thao tác","Mã kế hoạch: VE-30
 
 Tiêu chí chấp nhận:
 - Không lộ stack trace; đăng nhập sai liên tục bị chặn tạm",Sprint 1,3,VE-30
-38,12,Story,Báo cáo tiến độ tuần 1 (progress-report),"Mã kế hoạch: VE-12
+39,12,Story,Báo cáo tiến độ tuần 1 (progress-report),"Mã kế hoạch: VE-12
 
 Tiêu chí chấp nhận:
 - File báo cáo theo mẫu 3 có trong progress-report/",Sprint 1,1,VE-12
-39,12,Story,"Bản đặc tả yêu cầu (quy trình thi máy, vai trò, chức năng, yêu cầu phi chức năng)","Mã kế hoạch: VE-58
+40,12,Story,"Bản đặc tả yêu cầu (quy trình thi máy, vai trò, chức năng, yêu cầu phi chức năng)","Mã kế hoạch: VE-58
 
 Tiêu chí chấp nhận:
 - Bản đặc tả trong thesis/doc, đối chiếu được với use case và đề cương",Sprint 2,2,VE-58
-40,12,Story,"Sơ đồ trạng thái lượt làm bài, sơ đồ tuần tự, đặc tả API","Mã kế hoạch: VE-45
+41,12,Story,"Sơ đồ trạng thái lượt làm bài, sơ đồ tuần tự, đặc tả API","Mã kế hoạch: VE-45
 
 Tiêu chí chấp nhận:
 - Các sơ đồ có trong thesis/diagrams",Sprint 2,3,VE-45
-41,7,Story,"SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì","Mã kế hoạch: VE-13
+42,14,Story,"Mô hình quyền: Admin, Quản trị viên theo mảng, Giám khảo, Giám thị","Mã kế hoạch: VE-59
 
 Tiêu chí chấp nhận:
-- Bảng giám thị đổi trong ≤2 giây khi thí sinh làm bài, mất kết nối hoặc nộp",Sprint 2,5,VE-13
-42,3,Story,"Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)","Mã kế hoạch: VE-25
+- Mỗi API kiểm tra đúng vai trò và mảng; quản trị viên tạo và sửa, không xoá",Sprint 2,5,VE-59
+43,14,Story,Duyệt chéo hai admin: yêu cầu xoá và thao tác tài khoản chờ duyệt,"Mã kế hoạch: VE-60
 
 Tiêu chí chấp nhận:
-- Tạo được một đề A2 đầy đủ không cần file JSON; sửa được bản nháp nhập từ PDF",Sprint 2,8,VE-25
-43,11,Story,Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/,"Mã kế hoạch: VE-46
+- Xoá và thao tác tài khoản chờ một admin khác duyệt; không tự duyệt; có nhật ký",Sprint 2,8,VE-60
+44,14,Story,"Giám khảo: xem bài làm, chấm Writing và xem kết quả theo kỳ thi được phân công","Mã kế hoạch: VE-61
+
+Tiêu chí chấp nhận:
+- Chỉ giám khảo xem bài làm; admin chỉ xem điểm tổng; giám thị không xem kết quả",Sprint 2,5,VE-61
+45,14,Story,"Cổng nhân viên theo quyền: tài khoản theo vai trò/mảng, trang yêu cầu chờ duyệt, nhật ký","Mã kế hoạch: VE-62
+
+Tiêu chí chấp nhận:
+- Menu theo quyền; trang Chờ duyệt và nhật ký cho admin",Sprint 2,5,VE-62
+46,14,Story,"Cập nhật sơ đồ use case, ERD và tài liệu cho các tác nhân mới","Mã kế hoạch: VE-63
+
+Tiêu chí chấp nhận:
+- Use case có 5 tác nhân và luồng duyệt chéo; ERD sinh lại",Sprint 2,2,VE-63
+47,11,Story,Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/,"Mã kế hoạch: VE-46
 
 Tiêu chí chấp nhận:
 - Máy mới cài theo hướng dẫn chạy được",Sprint 2,3,VE-46
-44,12,Story,Báo cáo tiến độ tuần 2,"Mã kế hoạch: VE-20
+48,12,Story,Báo cáo tiến độ tuần 2,"Mã kế hoạch: VE-20
 
 Tiêu chí chấp nhận:
 - File báo cáo có trong progress-report/",Sprint 2,1,VE-20
-45,9,Story,Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi,"Mã kế hoạch: VE-28
+49,7,Story,"SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì","Mã kế hoạch: VE-13
+
+Tiêu chí chấp nhận:
+- Bảng giám thị đổi trong ≤2 giây khi thí sinh làm bài, mất kết nối hoặc nộp",Sprint 3,5,VE-13
+50,3,Story,"Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)","Mã kế hoạch: VE-25
+
+Tiêu chí chấp nhận:
+- Tạo được một đề A2 đầy đủ không cần file JSON; sửa được bản nháp nhập từ PDF",Sprint 3,8,VE-25
+51,9,Story,Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi,"Mã kế hoạch: VE-28
 
 Tiêu chí chấp nhận:
 - Mở bằng trình duyệt thường bị chặn và sinh cảnh báo",Sprint 3,5,VE-28
-46,9,Story,"Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm","Mã kế hoạch: VE-29
+52,9,Story,"Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm","Mã kế hoạch: VE-29
 
 Tiêu chí chấp nhận:
 - Cảnh báo hiện ở cột Warnings, giám thị đánh dấu đã xử lý",Sprint 3,3,VE-29
-47,4,Story,Đổi tên trung tâm và logo (tải PNG),"Mã kế hoạch: VE-24
+53,4,Story,Đổi tên trung tâm và logo (tải PNG),"Mã kế hoạch: VE-24
 
 Tiêu chí chấp nhận:
 - Logo mới hiện trên thanh trên của thí sinh",Sprint 3,2,VE-24
-48,12,Story,Báo cáo tiến độ tuần 3,"Mã kế hoạch: VE-27
+54,12,Story,Báo cáo tiến độ tuần 3,"Mã kế hoạch: VE-27
 
 Tiêu chí chấp nhận:
 - File báo cáo có trong progress-report/",Sprint 3,1,VE-27
-49,11,Story,Test đầu-cuối Playwright cho luồng thi A2 và thao tác giám thị chính,"Mã kế hoạch: VE-31
+55,11,Story,Test đầu-cuối Playwright cho luồng thi A2 và thao tác giám thị chính,"Mã kế hoạch: VE-31
 
 Tiêu chí chấp nhận:
 - Chạy được bằng một lệnh; bao phủ đăng nhập → làm bài → nộp → chấm",Sprint 4,5,VE-31
-50,10,Story,"Khảo sát giao diện bài thi mẫu B1 PfS (Reading, Writing, Listening)","Mã kế hoạch: VE-33
+56,10,Story,"Khảo sát giao diện bài thi mẫu B1 PfS (Reading, Writing, Listening)","Mã kế hoạch: VE-33
 
 Tiêu chí chấp nhận:
 - thesis/refs/inspera-ui-b1.md đầy đủ như bản A2",Sprint 4,2,VE-33
-51,10,Story,Bổ sung kiểu câu còn thiếu cho B1 Reading (6 part),"Mã kế hoạch: VE-34
+57,10,Story,Bổ sung kiểu câu còn thiếu cho B1 Reading (6 part),"Mã kế hoạch: VE-34
 
 Tiêu chí chấp nhận:
 - Import và làm được đề Reading B1 mẫu",Sprint 4,5,VE-34
-52,12,Story,Báo cáo tiến độ tuần 4,"Mã kế hoạch: VE-32
+58,12,Story,Báo cáo tiến độ tuần 4,"Mã kế hoạch: VE-32
 
 Tiêu chí chấp nhận:
 - File báo cáo có trong progress-report/",Sprint 4,1,VE-32
-53,10,Story,"B1 Writing: Part 1 email, Part 2 chọn 1 trong 2 đề","Mã kế hoạch: VE-35
+59,10,Story,"B1 Writing: Part 1 email, Part 2 chọn 1 trong 2 đề","Mã kế hoạch: VE-35
 
 Tiêu chí chấp nhận:
 - Thí sinh chọn đề Part 2 trước khi viết; đếm từ",Sprint 5,3,VE-35
-54,10,Story,B1 Listening 4 part,"Mã kế hoạch: VE-37
+60,10,Story,B1 Listening 4 part,"Mã kế hoạch: VE-37
 
 Tiêu chí chấp nhận:
 - Import và làm được đề Listening B1 mẫu",Sprint 5,3,VE-37
-55,12,Story,Báo cáo tiến độ tuần 5,"Mã kế hoạch: VE-36
+61,12,Story,Báo cáo tiến độ tuần 5,"Mã kế hoạch: VE-36
 
 Tiêu chí chấp nhận:
 - File báo cáo có trong progress-report/",Sprint 5,1,VE-36
-56,10,Story,"Kỳ thi B1 3 phần thi chạy đầu-cuối, chấm tự động","Mã kế hoạch: VE-38
+62,10,Story,"Kỳ thi B1 3 phần thi chạy đầu-cuối, chấm tự động","Mã kế hoạch: VE-38
 
 Tiêu chí chấp nhận:
 - Test Playwright cho luồng B1",Sprint 6,3,VE-38
-57,11,Story,Sửa lỗi tồn đọng A2/B1,"Mã kế hoạch: VE-39
+63,11,Story,Sửa lỗi tồn đọng A2/B1,"Mã kế hoạch: VE-39
 
 Tiêu chí chấp nhận:
 - Không còn lỗi mức Cao trên backlog",Sprint 6,3,VE-39
-58,12,Story,Báo cáo tiến độ tuần 6,"Mã kế hoạch: VE-40
+64,12,Story,Báo cáo tiến độ tuần 6,"Mã kế hoạch: VE-40
 
 Tiêu chí chấp nhận:
 - File báo cáo có trong progress-report/",Sprint 6,1,VE-40
-59,11,Story,Kiểm thử tải ~100 thí sinh đồng thời (SignalR + lưu bài),"Mã kế hoạch: VE-41
+65,11,Story,Kiểm thử tải ~100 thí sinh đồng thời (SignalR + lưu bài),"Mã kế hoạch: VE-41
 
 Tiêu chí chấp nhận:
 - Số liệu độ trễ và lỗi ghi vào báo cáo",Sprint 7,5,VE-41
-60,11,Story,Buổi thi thử với các bạn đóng vai thí sinh và giám thị,"Mã kế hoạch: VE-42
+66,11,Story,Buổi thi thử với các bạn đóng vai thí sinh và giám thị,"Mã kế hoạch: VE-42
 
 Tiêu chí chấp nhận:
 - Biên bản buổi thi thử và danh sách lỗi phát hiện",Sprint 7,3,VE-42
-61,11,Story,Sửa lỗi sau thi thử,"Mã kế hoạch: VE-43
+67,11,Story,Sửa lỗi sau thi thử,"Mã kế hoạch: VE-43
 
 Tiêu chí chấp nhận:
 - Lỗi mức Cao đã đóng",Sprint 7,3,VE-43
-62,12,Story,Báo cáo tiến độ tuần 7,"Mã kế hoạch: VE-44
+68,12,Story,Báo cáo tiến độ tuần 7,"Mã kế hoạch: VE-44
 
 Tiêu chí chấp nhận:
 - File báo cáo có trong progress-report/",Sprint 7,1,VE-44
-63,12,Story,"Viết quyển báo cáo: Mở đầu, Chương 1–3","Mã kế hoạch: VE-47
+69,12,Story,"Viết quyển báo cáo: Mở đầu, Chương 1–3","Mã kế hoạch: VE-47
 
 Tiêu chí chấp nhận:
 - Bản nháp theo mẫu của Khoa",Sprint 8,5,VE-47
-64,13,Story,"IELTS Listening / Reading: kiểu câu nhiều đáp án, ghi nhãn bản đồ","Mã kế hoạch: VE-48
+70,13,Story,"IELTS Listening / Reading: kiểu câu nhiều đáp án, ghi nhãn bản đồ","Mã kế hoạch: VE-48
 
 Tiêu chí chấp nhận:
 - Làm được một đề IELTS mẫu tự soạn",Sprint 9,5,VE-48
-65,13,Story,"IELTS Writing Task 1/2 (Academic, General Training)","Mã kế hoạch: VE-49
+71,13,Story,"IELTS Writing Task 1/2 (Academic, General Training)","Mã kế hoạch: VE-49
 
 Tiêu chí chấp nhận:
 - Đếm từ, ảnh đề bài cho Task 1",Sprint 9,3,VE-49
-66,12,Story,Báo cáo tiến độ tuần 9,"Mã kế hoạch: VE-50
+72,12,Story,Báo cáo tiến độ tuần 9,"Mã kế hoạch: VE-50
 
 Tiêu chí chấp nhận:
 - File báo cáo có trong progress-report/",Sprint 9,1,VE-50
-67,12,Story,"Viết Chương 4 (kết quả, ảnh giao diện, số liệu kiểm thử) và Chương 5","Mã kế hoạch: VE-51
+73,12,Story,"Viết Chương 4 (kết quả, ảnh giao diện, số liệu kiểm thử) và Chương 5","Mã kế hoạch: VE-51
 
 Tiêu chí chấp nhận:
 - Bản nháp hoàn chỉnh gửi GV",Sprint 10,5,VE-51
-68,12,Story,Báo cáo tiến độ tuần 10,"Mã kế hoạch: VE-52
+74,12,Story,Báo cáo tiến độ tuần 10,"Mã kế hoạch: VE-52
 
 Tiêu chí chấp nhận:
 - File báo cáo có trong progress-report/",Sprint 10,1,VE-52
-69,12,Story,"Chỉnh sửa quyển báo cáo theo góp ý GV, xuất PDF","Mã kế hoạch: VE-53
+75,12,Story,"Chỉnh sửa quyển báo cáo theo góp ý GV, xuất PDF","Mã kế hoạch: VE-53
 
 Tiêu chí chấp nhận:
 - Bản cuối trong thesis/pdf",Sprint 11,3,VE-53
-70,12,Story,Slide trình bày và video demo (thesis/abs),"Mã kế hoạch: VE-54
+76,12,Story,Slide trình bày và video demo (thesis/abs),"Mã kế hoạch: VE-54
 
 Tiêu chí chấp nhận:
 - Slide và video sẵn sàng",Sprint 11,2,VE-54
-71,12,Story,"Cập nhật README cuối cùng, nộp link GitHub, nộp quyển 31/12","Mã kế hoạch: VE-55
+77,12,Story,"Cập nhật README cuối cùng, nộp link GitHub, nộp quyển 31/12","Mã kế hoạch: VE-55
 
 Tiêu chí chấp nhận:
 - README đủ thông tin; đã nộp",Sprint 11,1,VE-55
