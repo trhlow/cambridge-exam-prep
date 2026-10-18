@@ -154,6 +154,10 @@ function RoomCard({ exam }: { exam: ExamDetail }) {
         </div>
       </dl>
       <p className="st-faint">Read the PIN out once every candidate has logged in. The invigilator password lets a candidate leave the locked browser or move to another computer.</p>
+      <p>
+        Safe Exam Browser:{' '}
+        {exam.sebConfigKey ? <strong>required</strong> : <span className="st-faint">not required — any browser can sign in</span>}
+      </p>
     </section>
   )
 }

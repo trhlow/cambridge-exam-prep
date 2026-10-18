@@ -82,6 +82,8 @@ export interface ExamDetail extends Omit<ExamListItem, 'candidates'> {
   hasStarted: boolean
   invigilators: AssignedStaffView[]
   examiners: AssignedStaffView[]
+  /** VE-28: set when the exam only accepts Safe Exam Browser with these settings; never sent to examiners. */
+  sebConfigKey: string | null
 }
 
 export interface SectionTemplateView {
@@ -106,6 +108,8 @@ export interface SaveExamRequest {
   papers: { sectionTemplateId: number; testPaperId: number }[]
   sessionPin?: string | null
   invigilatorPassword?: string | null
+  /** Empty switches Safe Exam Browser off. */
+  sebConfigKey?: string
 }
 
 export type PaperStatus = 'Draft' | 'Published' | 'Archived'
@@ -239,6 +243,21 @@ export interface MonitorRow {
   submitReason: string | null
   audioPositionSeconds: number | null
   answered: number
+  /** Unresolved warnings (VE-29). */
+  warnings: number
+}
+
+export type WarningType = 'InvalidSebKey' | 'LockdownBrowserExited' | 'ConnectionLost' | 'ClockSkew' | 'StartedEarly'
+
+export interface WarningView {
+  id: number
+  candidateId: number
+  fullName: string
+  type: WarningType
+  detail: string | null
+  detectedAt: string
+  resolvedAt: string | null
+  resolvedBy: string | null
 }
 
 export interface MonitorView {
@@ -372,6 +391,8 @@ export const staffApi = {
   act: (examId: number, sectionId: number, body: MonitorActionRequest) => post<ActionOutcome>(`${exam(examId)}/sections/${sectionId}/actions`, body),
   messages: (examId: number) => request<MessageView[]>(`${exam(examId)}/messages`),
   sendMessage: (examId: number, text: string, candidateIds: number[]) => post<MessageView[]>(`${exam(examId)}/messages`, { text, candidateIds }),
+  warnings: (examId: number, sectionId: number) => request<WarningView[]>(`${exam(examId)}/sections/${sectionId}/warnings`),
+  resolveWarning: (examId: number, sectionId: number, id: number) => post<WarningView>(`${exam(examId)}/sections/${sectionId}/warnings/${id}/resolve`),
 
   approvals: () => request<ApprovalView[]>('/api/staff/approvals'),
   approve: (id: number) => post<ApprovalView>(`/api/staff/approvals/${id}/approve`),

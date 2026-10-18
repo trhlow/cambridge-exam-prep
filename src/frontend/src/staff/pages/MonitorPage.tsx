@@ -6,6 +6,7 @@ import { Link } from '../Link'
 import { Badge, ErrorBox, PageHeader } from '../ui'
 import { formatTime } from '../format'
 import { ActionDialog, type DialogKind } from './MonitorDialogs'
+import { WarningsDialog } from './WarningsDialog'
 
 /** Without the live connection the page polls a little faster than the candidates' 5 s heartbeat. */
 const REFRESH_MS = 3_000
@@ -32,6 +33,7 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
   const [dialog, setDialog] = useState<DialogKind | null>(null)
   const [outcome, setOutcome] = useState<{ text: string; skipped: ActionOutcome['skipped'] } | null>(null)
   const [version, setVersion] = useState(0)
+  const [warningsFor, setWarningsFor] = useState<{ candidateId: number | null; title: string } | null>(null)
   const [receivedAt, setReceivedAt] = useState(() => Date.now())
   const [now, setNow] = useState(() => Date.now())
   const isLive = useLive(
@@ -89,6 +91,7 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.candidateId))
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.candidateId)))
   const counts = countByStatus(rows)
+  const totalWarnings = rows.reduce((sum, r) => sum + r.warnings, 0)
   const done = (result: { text: string; skipped: ActionOutcome['skipped'] }, next?: DialogKind) => {
     setOutcome(result)
     setDialog(next ?? null)
@@ -106,9 +109,14 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
           </>
         }
         actions={
-          <button type="button" className="st-btn" onClick={() => setDialog({ kind: 'message', toRoom: true })}>
-            Message the room
-          </button>
+          <>
+            <button type="button" className="st-btn" onClick={() => setWarningsFor({ candidateId: null, title: 'Warnings in this section' })}>
+              Warnings{totalWarnings > 0 ? ` (${totalWarnings})` : ''}
+            </button>
+            <button type="button" className="st-btn" onClick={() => setDialog({ kind: 'message', toRoom: true })}>
+              Message the room
+            </button>
+          </>
         }
       />
       <div className="st-counts" aria-label="Candidates by status">
@@ -137,11 +145,19 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
             <th>Incident time</th>
             {view.hasAudio && <th className="st-num">Audio</th>}
             <th className="st-num">Answered</th>
+            <th>Warnings</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
-            <Row key={row.candidateId} row={row} hasAudio={view.hasAudio} isSelected={selected.has(row.candidateId)} onToggle={() => toggle(row.candidateId)} />
+            <Row
+              key={row.candidateId}
+              row={row}
+              hasAudio={view.hasAudio}
+              isSelected={selected.has(row.candidateId)}
+              onToggle={() => toggle(row.candidateId)}
+              onWarnings={() => setWarningsFor({ candidateId: row.candidateId, title: `Warnings — ${row.fullName}` })}
+            />
           ))}
         </tbody>
       </table>
@@ -172,12 +188,23 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
         </div>
       )}
 
+      {warningsFor && (
+        <WarningsDialog
+          examId={examId}
+          sectionId={sectionId}
+          candidateId={warningsFor.candidateId}
+          title={warningsFor.title}
+          onClose={() => setWarningsFor(null)}
+          onChanged={() => setVersion((v) => v + 1)}
+        />
+      )}
       {dialog && <ActionDialog key={JSON.stringify(dialog)} dialog={dialog} examId={examId} sectionId={sectionId} selected={selectedRows} onClose={() => setDialog(null)} onDone={done} />}
     </>
   )
 }
 
-function Row({ row, hasAudio, isSelected, onToggle }: { row: MonitorRow; hasAudio: boolean; isSelected: boolean; onToggle: () => void }) {
+function Row(props: { row: MonitorRow; hasAudio: boolean; isSelected: boolean; onToggle: () => void; onWarnings: () => void }) {
+  const { row, hasAudio, isSelected, onToggle, onWarnings } = props
   const isRunning = row.status === 'InProgress' || row.status === 'Paused'
   return (
     <tr className={isSelected ? 'is-selected' : undefined}>
@@ -204,6 +231,13 @@ function Row({ row, hasAudio, isSelected, onToggle }: { row: MonitorRow; hasAudi
       <td>{extraTimeText(row.incidentExtraSeconds)}</td>
       {hasAudio && <td className="st-num st-mono">{row.audioPositionSeconds === null ? '–' : clockText(row.audioPositionSeconds)}</td>}
       <td className="st-num">{row.answered}</td>
+      <td>
+        {row.warnings > 0 && (
+          <button type="button" className="st-warning" onClick={onWarnings} aria-label={`${row.warnings} warning${row.warnings === 1 ? '' : 's'} for ${row.fullName}`}>
+            ⚠ {row.warnings}
+          </button>
+        )}
+      </td>
     </tr>
   )
 }

@@ -43,6 +43,7 @@ public sealed class CandidateAuthController(
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [Security.SkipSebCheck]
     public async Task<ActionResult<CandidateProfile>> Login(CandidateLoginRequest request, CancellationToken cancellationToken)
     {
         var candidate = await db.Candidates
@@ -72,6 +73,13 @@ public sealed class CandidateAuthController(
         {
             logger.LogWarning("Candidate {CandidateId} tried to sign in to exam {ExamId} with status {Status}", candidate.Id, exam.Id, exam.Status);
             return Problem(title: ExamNotOpen, statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        // VE-28: an exam that requires Safe Exam Browser cannot even be signed in to from another browser.
+        if (exam.SebConfigKeyHash is { } sebKey && !Security.SebGuard.Passes(Request, sebKey))
+        {
+            logger.LogWarning("Candidate {CandidateId} tried to sign in to exam {ExamId} outside Safe Exam Browser", candidate.Id, exam.Id);
+            return Problem(title: Security.SebGuard.RequiredTitle, statusCode: StatusCodes.Status403Forbidden);
         }
 
         if (verification == PasswordVerificationResult.SuccessRehashNeeded)
@@ -126,6 +134,7 @@ public sealed class CandidateAuthController(
     }
 
     [HttpPost("logout")]
+    [Security.SkipSebCheck]
     [AllowAnonymous]
     public async Task<IActionResult> Logout()
     {

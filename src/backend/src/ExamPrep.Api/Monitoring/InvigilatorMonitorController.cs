@@ -33,7 +33,11 @@ public sealed record MonitorRow(
     bool EndTimeEdited,
     string? SubmitReason,
     int? AudioPositionSeconds,
-    int Answered);
+    int Answered,
+    int Warnings);
+
+/// <summary>VE-29: a warning in the Warnings column, with who resolved it.</summary>
+public sealed record WarningView(long Id, int CandidateId, string FullName, string Type, string? Detail, DateTime DetectedAt, DateTime? ResolvedAt, string? ResolvedBy);
 
 public sealed record MonitorView(int ExamId, string ExamName, int SectionId, string SectionTitle, bool HasAudio, int DurationMinutes, DateTime ServerNow, IReadOnlyList<MonitorRow> Candidates);
 
@@ -87,8 +91,15 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
             .Select(g => new { AttemptId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.AttemptId, g => g.Count, cancellationToken);
         var hasAudio = await db.PaperParts.AnyAsync(p => p.TestPaperId == section.TestPaperId && p.AudioAssetId != null, cancellationToken);
+        var warnings = await db.SecurityEvents.AsNoTracking()
+            .Where(e => e.Attempt!.ExamSectionId == sectionId && e.ResolvedAt == null)
+            .GroupBy(e => e.AttemptId)
+            .Select(g => new { AttemptId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.AttemptId, g => g.Count, cancellationToken);
 
-        var rows = candidates.Select(c => Row(c, attempts.GetValueOrDefault(c.Id), section, answered, now)).ToList();
+        var rows = candidates.Select(c => Row(c, attempts.GetValueOrDefault(c.Id), section, answered, now) is var row && row.AttemptId is { } id
+            ? row with { Warnings = warnings.GetValueOrDefault(id) }
+            : row).ToList();
         return new MonitorView(examId, section.Exam!.Name, sectionId, section.SectionTemplate!.Title, hasAudio, section.DurationMinutes, now, rows);
     }
 
@@ -127,6 +138,57 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
             }
         }
     }
+
+    /// <summary>VE-29: the section's warnings, unresolved first, newest first.</summary>
+    [HttpGet("sections/{sectionId:int}/warnings")]
+    public async Task<ActionResult<IReadOnlyList<WarningView>>> Warnings(int examId, int sectionId, CancellationToken cancellationToken)
+    {
+        if (await FindSectionAsync(examId, sectionId, cancellationToken) is null)
+        {
+            return NotFound();
+        }
+
+        var warnings = await WarningRows(db.SecurityEvents.Where(e => e.Attempt!.ExamSectionId == sectionId)).ToListAsync(cancellationToken);
+        return warnings.OrderBy(w => w.ResolvedAt is not null).ThenByDescending(w => w.DetectedAt).ToList();
+    }
+
+    /// <summary>The invigilator has looked into the warning; it leaves the candidate's count but stays in the log.</summary>
+    [HttpPost("sections/{sectionId:int}/warnings/{warningId:long}/resolve")]
+    public async Task<ActionResult<WarningView>> ResolveWarning(int examId, int sectionId, long warningId, CancellationToken cancellationToken)
+    {
+        if (await FindSectionAsync(examId, sectionId, cancellationToken) is null)
+        {
+            return NotFound();
+        }
+
+        var warning = await db.SecurityEvents.SingleOrDefaultAsync(e => e.Id == warningId && e.Attempt!.ExamSectionId == sectionId, cancellationToken);
+        if (warning is null)
+        {
+            return NotFound();
+        }
+
+        if (warning.ResolvedAt is null)
+        {
+            warning.ResolvedAt = Now();
+            warning.ResolvedByUserId = User.GetStaffId();
+            await db.SaveChangesAsync(cancellationToken);
+            notifier.SectionChanged(sectionId);
+            logger.LogInformation("Staff {UserId} resolved warning {WarningId} in section {SectionId}", warning.ResolvedByUserId, warningId, sectionId);
+        }
+
+        return await WarningRows(db.SecurityEvents.Where(e => e.Id == warningId)).SingleAsync(cancellationToken);
+    }
+
+    private IQueryable<WarningView> WarningRows(IQueryable<SecurityEvent> events) =>
+        events.AsNoTracking().Select(e => new WarningView(
+            e.Id,
+            e.Attempt!.CandidateId,
+            e.Attempt.Candidate!.FirstName + " " + e.Attempt.Candidate.LastName,
+            e.Type.ToString(),
+            e.Detail,
+            e.DetectedAt,
+            e.ResolvedAt,
+            db.Users.Where(u => u.Id == e.ResolvedByUserId).Select(u => u.FullName).FirstOrDefault()));
 
     [HttpGet("messages")]
     public async Task<ActionResult<IReadOnlyList<CandidateMessageView>>> Messages(int examId, CancellationToken cancellationToken)
@@ -267,7 +329,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
     {
         if (attempt is null)
         {
-            return new MonitorRow(candidate.Id, candidate.CandidateNumber, FullName(candidate), candidate.Username, null, nameof(AttemptStatus.NotStarted), false, null, null, null, 0, 0, false, null, null, 0);
+            return new MonitorRow(candidate.Id, candidate.CandidateNumber, FullName(candidate), candidate.Username, null, nameof(AttemptStatus.NotStarted), false, null, null, null, 0, 0, false, null, null, 0, 0);
         }
 
         var attemptClock = AttemptExpiry.ClockFor(attempt, section, candidate);
@@ -289,7 +351,8 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
             attempt.EndAdjustSeconds != 0 || attempt.DisregardExtraTime,
             attempt.SubmitReason?.ToString(),
             audio,
-            answered.GetValueOrDefault(attempt.Id));
+            answered.GetValueOrDefault(attempt.Id),
+            0);
     }
 
     /// <summary>A recent heartbeat, and no closed live connection since (VE-13: closing the tab shows at once).</summary>

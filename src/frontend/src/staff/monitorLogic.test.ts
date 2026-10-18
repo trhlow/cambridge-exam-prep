@@ -18,6 +18,7 @@ const row = (overrides: Partial<MonitorRow>): MonitorRow => ({
   submitReason: null,
   audioPositionSeconds: null,
   answered: 3,
+  warnings: 0,
   ...overrides,
 })
 

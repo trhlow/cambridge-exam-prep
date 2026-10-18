@@ -4,6 +4,7 @@ using ExamPrep.Api.Content;
 using ExamPrep.Api.Delivery;
 using ExamPrep.Api.Demo;
 using ExamPrep.Api.Realtime;
+using ExamPrep.Api.Security;
 using ExamPrep.Infrastructure;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.DataProtection;
@@ -41,7 +42,8 @@ builder.Services.AddHostedService<RoomBroadcaster>();
 builder.Services.AddScoped<AttemptExpiry>();
 builder.Services.AddHostedService<AttemptExpiryWorker>();
 builder.Services.AddProblemDetails();
-builder.Services.AddControllers();
+builder.Services.AddScoped<SecurityEventRecorder>();
+builder.Services.AddControllers(options => options.Filters.Add<SebActionFilter>());
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks().AddDbContextCheck<ExamPrepDbContext>("database");
 
