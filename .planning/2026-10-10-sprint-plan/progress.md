@@ -175,6 +175,6 @@
 - Jira: VE-13 kéo vào Sprint 2; 10/10 story Sprint 2 Done. Đóng Sprint 1 / mở Sprint 2 trên Jira bị chặn quyền (cần người dùng tự làm hoặc cho phép)
 
 ### Sprint 3 làm sớm (VE-24, VE-25, VE-28, VE-29)
-- **Status:** complete trừ VE-27 (báo cáo tuần 3, làm cuối tuần 3) — commit a97fccd (tên + logo trung tâm), e6563fb (SEB + cảnh báo), 82a151a (sửa đề nháp trên web)
+- **Status:** VE-24, VE-28 Done; VE-25 In Progress (sửa đề nháp xong, còn tạo đề mới từ đầu trên web); VE-29 In Progress (3/5 cảnh báo, còn "làm sớm" cần nút Announce start); VE-27 làm cuối tuần 3 — commit a97fccd (tên + logo trung tâm), e6563fb (SEB + cảnh báo), 82a151a (sửa đề nháp trên web)
 - Toàn bộ: backend 287/287, frontend 87/87; Docker build lại, kiểm tra /api/site, đăng nhập thí sinh
 - Tài liệu đặc tả cập nhật trạng thái và 64 API
