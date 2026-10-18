@@ -87,6 +87,13 @@ button {
   margin-top: 4px;
 }
 
+/* An uploaded logo (VE-24) keeps the header height. */
+.logo-image {
+  display: block;
+  max-height: 40px;
+  max-width: 220px;
+}
+
 /* ── Exam layout ─────────────────────────────────── */
 .exam {
   display: grid;

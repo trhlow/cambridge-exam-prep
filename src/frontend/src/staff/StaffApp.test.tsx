@@ -31,16 +31,26 @@ function signIn(user: StaffProfile, path = '/staff') {
 const menu = async () => within(await screen.findByRole('navigation', { name: 'Staff portal' })).getAllByRole('link').map((l) => l.textContent)
 
 describe('StaffApp menu (VE-59, VE-61)', () => {
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
 
   it('gives administrators every page', async () => {
     signIn(profile(1, 'Admin'))
-    expect(await menu()).toEqual(['Exams', 'Papers', 'Staff', 'Approvals'])
+    expect(await menu()).toEqual(['Exams', 'Papers', 'Centre', 'Staff', 'Approvals'])
   })
 
   it('gives a manager only their areas and their requests', async () => {
     signIn(profile(2, 'Manager', ['Exams']))
     expect(await menu()).toEqual(['Exams', 'Approvals'])
+  })
+
+  it('starts a manager of the centre on the centre page', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ centreName: 'Victory', logoUrl: null, updatedAt: '2026-10-18T00:00:00Z' }), { status: 200 })))
+    signIn(profile(4, 'Manager', ['Centre']))
+    expect(await menu()).toEqual(['Centre', 'Approvals'])
+    expect(await screen.findByRole('heading', { name: 'Centre' })).toBeInTheDocument()
   })
 
   it('gives examiners and invigilators their sessions only', async () => {

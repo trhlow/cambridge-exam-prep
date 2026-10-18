@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { VictoryLogo } from '../ui/VictoryLogo'
 import { accessOf, type Access } from './access'
-import { SESSION_ENDED_EVENT, staffApi, type ManagerArea, type StaffProfile } from './api'
+import { SESSION_ENDED_EVENT, staffApi, type StaffProfile } from './api'
 import { ApprovalsPage } from './pages/ApprovalsPage'
+import { CentrePage } from './pages/CentrePage'
 import { ExamFormPage } from './pages/ExamFormPage'
 import { ExamPage } from './pages/ExamPage'
 import { ExamsPage } from './pages/ExamsPage'
@@ -71,7 +72,7 @@ export default function StaffApp() {
 function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void }) {
   const route = useRoute()
   const access = accessOf(user)
-  const section = route.page === 'papers' || route.page === 'paper' ? 'papers' : route.page === 'users' || route.page === 'approvals' ? route.page : 'exams'
+  const section = route.page === 'papers' || route.page === 'paper' ? 'papers' : route.page === 'users' || route.page === 'approvals' || route.page === 'centre' ? route.page : 'exams'
   // Login slips print on their own, without the portal around them.
   if (route.page === 'slips') {
     return <LoginSlipsPage examId={route.examId} />
@@ -90,6 +91,11 @@ function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void 
           {access.worksIn('Papers') && (
             <Link to="/staff/papers" className={section === 'papers' ? 'is-current' : undefined}>
               Papers
+            </Link>
+          )}
+          {access.worksIn('Centre') && (
+            <Link to="/staff/centre" className={section === 'centre' ? 'is-current' : undefined}>
+              Centre
             </Link>
           )}
           {access.isAdmin && (
@@ -113,21 +119,21 @@ function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void 
         </div>
       </header>
       <main className="st-main">
-        <Page route={route} access={access} areas={user.areas} />
+        <Page route={route} access={access} />
       </main>
     </div>
   )
 }
 
-function Page({ route, access, areas }: { route: Route; access: Access; areas: ManagerArea[] }) {
+function Page({ route, access }: { route: Route; access: Access }) {
   switch (route.page) {
     case 'exams':
       if (access.seesSessions) {
         return <ExamsPage access={access} />
       }
 
-      // A manager of papers starts on the papers; one of the centre only has a page later (VE-41).
-      return access.worksIn('Papers') ? <PapersPage /> : <NothingYet areas={areas} />
+      // A manager without sessions starts on their own area.
+      return access.worksIn('Papers') ? <PapersPage /> : access.worksIn('Centre') ? <CentrePage /> : <NotAllowed />
     case 'new-exam':
       return access.worksIn('Exams') ? <ExamFormPage /> : <NotAllowed />
     case 'edit-exam':
@@ -148,6 +154,8 @@ function Page({ route, access, areas }: { route: Route; access: Access; areas: M
       return access.isAdmin ? <StaffUsersPage currentUserId={access.userId} /> : <NotAllowed />
     case 'approvals':
       return access.requestsApprovals ? <ApprovalsPage access={access} /> : <NotAllowed />
+    case 'centre':
+      return access.worksIn('Centre') ? <CentrePage /> : <NotAllowed />
     case 'slips':
     case 'not-found':
       return <NotAllowed />
@@ -158,14 +166,6 @@ function NotAllowed() {
   return (
     <p className="st-empty">
       This page does not exist or is not part of your role. <Link to="/staff">Back to the start</Link>
-    </p>
-  )
-}
-
-function NothingYet({ areas }: { areas: ManagerArea[] }) {
-  return (
-    <p className="st-empty">
-      You manage: {areas.join(', ') || 'nothing yet'}. The centre settings page is not available yet; ask an administrator if you need something changed.
     </p>
   )
 }
