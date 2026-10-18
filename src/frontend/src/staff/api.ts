@@ -167,6 +167,7 @@ export interface PaperQuestionDetail {
 }
 
 export interface PaperGroupDetail {
+  orderNo: number
   interactionType: string
   instructions: string
   bodyHtml: string | null
@@ -190,6 +191,26 @@ export interface PaperDetail {
   section: string
   status: PaperStatus
   parts: PaperPartDetail[]
+}
+
+export interface OptionEdit {
+  key: string
+  text: string | null
+}
+
+export interface GroupEdit {
+  instructions: string
+  bodyHtml: string | null
+  optionPool?: OptionEdit[]
+}
+
+export interface QuestionEdit {
+  promptHtml: string | null
+  stimulusHtml: string | null
+  options?: OptionEdit[]
+  answers: string[]
+  points: number
+  minWords: number | null
 }
 
 export interface NewCandidate {
@@ -437,6 +458,16 @@ export const adminApi = {
   },
   paper: (id: number) => request<PaperDetail>(`/api/admin/papers/${id}`),
   publishPaper: (id: number) => post<PaperListItem>(`/api/admin/papers/${id}/publish`),
+  // VE-25: fixing a draft on the web; each call answers with the whole paper as it now is.
+  editPaperTitle: (id: number, title: string) => put<PaperDetail>(`/api/admin/papers/${id}`, { title }),
+  editPart: (id: number, partNo: number, body: { title: string | null; stimulusHtml: string | null }) => put<PaperDetail>(`/api/admin/papers/${id}/parts/${partNo}`, body),
+  editGroup: (id: number, partNo: number, orderNo: number, body: GroupEdit) => put<PaperDetail>(`/api/admin/papers/${id}/parts/${partNo}/groups/${orderNo}`, body),
+  editQuestion: (id: number, number: number, body: QuestionEdit) => put<PaperDetail>(`/api/admin/papers/${id}/questions/${number}`, body),
+  replaceAudio: (id: number, partNo: number, file: File) => {
+    const form = new FormData()
+    form.append('audio', file)
+    return request<PaperDetail>(`/api/admin/papers/${id}/parts/${partNo}/audio`, { method: 'POST', body: form })
+  },
   deletePaper: (id: number) => requestDeletion(`/api/admin/papers/${id}`),
 
   marking: (attemptId: number) => request<AttemptMarking>(`/api/staff/attempts/${attemptId}/marking`),

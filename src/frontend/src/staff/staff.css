@@ -997,3 +997,25 @@ ul.st-error {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* VE-25: the draft editor. */
+.st-paper-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.st-editor textarea.st-mono {
+  font-size: 13px;
+}
+
+.st-option-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.st-option-field input {
+  flex: 1;
+}
