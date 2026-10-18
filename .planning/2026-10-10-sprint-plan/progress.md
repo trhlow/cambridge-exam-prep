@@ -166,3 +166,15 @@
 - CSDL 24 bảng (thêm `user_areas`, `exam_examiners`, `approval_requests`); ERD và use case (5 tác nhân) vẽ lại
 - Toàn bộ: backend 268/268, frontend 82/82
 - Jira: E14 = SCRUM-76, VE-59…63 = SCRUM-77…81 (Sprint 2); VE-13, VE-25 dời sang Sprint 3
+
+## Session: 2026-10-18
+
+### Sprint 2 hoàn tất (VE-13, VE-45, VE-46, VE-58, VE-20)
+- **Status:** complete — commit be5c2e5 (SignalR), a2361a3 (hướng dẫn cài đặt), e8ef191 (đặc tả yêu cầu, sơ đồ trạng thái, 3 sơ đồ tuần tự, đặc tả API), ef03820 (CLAUDE.md), 6c4798b (báo cáo tuần 2)
+- Báo cáo tuần 2: file docx trong progress-report/ và dòng tuần 2 trong Google Sheet (mục 6 để trống theo ý người dùng)
+- Jira: VE-13 kéo vào Sprint 2; 10/10 story Sprint 2 Done. Đóng Sprint 1 / mở Sprint 2 trên Jira bị chặn quyền (cần người dùng tự làm hoặc cho phép)
+
+### Sprint 3 làm sớm (VE-24, VE-25, VE-28, VE-29)
+- **Status:** complete trừ VE-27 (báo cáo tuần 3, làm cuối tuần 3) — commit a97fccd (tên + logo trung tâm), e6563fb (SEB + cảnh báo), 82a151a (sửa đề nháp trên web)
+- Toàn bộ: backend 287/287, frontend 87/87; Docker build lại, kiểm tra /api/site, đăng nhập thí sinh
+- Tài liệu đặc tả cập nhật trạng thái và 64 API
