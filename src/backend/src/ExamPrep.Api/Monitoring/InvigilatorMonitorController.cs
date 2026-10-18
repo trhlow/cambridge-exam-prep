@@ -4,6 +4,7 @@ using ExamPrep.Api.Auth;
 using ExamPrep.Api.Common;
 using ExamPrep.Api.Delivery;
 using ExamPrep.Api.Exams;
+using ExamPrep.Api.Realtime;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Persistence;
@@ -58,13 +59,13 @@ public sealed record SendMessageRequest([Required, StringLength(InvigilatorMonit
 [ApiController]
 [Route("api/staff/exams/{examId:int}")]
 [Authorize(Policy = StaffAuthDefaults.StaffPolicy)]
-public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvider clock, ILogger<InvigilatorMonitorController> logger) : ControllerBase
+public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvider clock, RoomNotifier notifier, ILogger<InvigilatorMonitorController> logger) : ControllerBase
 {
     public const int MaxMinutes = 180;
     public const int MaxMessageLength = 500;
 
     /// <summary>The candidate's browser sends a heartbeat every 5 s; three missed beats count as offline.</summary>
-    private static readonly TimeSpan OnlineWindow = TimeSpan.FromSeconds(15);
+    public static readonly TimeSpan OnlineWindow = TimeSpan.FromSeconds(15);
 
     private const int MaxSaveAttempts = 3;
 
@@ -180,6 +181,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
             CreatedAt = now,
         });
         await db.SaveChangesAsync(cancellationToken);
+        await (ids.Count == 0 ? notifier.RefreshExamAsync(examId) : notifier.RefreshCandidatesAsync(ids));
         logger.LogInformation("Staff {UserId} sent a message in exam {ExamId} to {Recipients}", userId, examId, ids.Count == 0 ? "the room" : $"{ids.Count} candidate(s)");
         return Created($"/api/staff/exams/{examId}/messages", messages.Select(m => new CandidateMessageView(m.Id, m.Text, m.SentAt, m.CandidateId)).ToList());
     }
@@ -227,6 +229,13 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        notifier.SectionChanged(section.Id);
+        if (applied > 0)
+        {
+            // The candidates' screens pause, resume or move their clock now rather than at the next heartbeat.
+            await notifier.RefreshCandidatesAsync(candidateIds.Except(skipped.Select(s => s.CandidateId)));
+        }
+
         logger.LogInformation("Staff {UserId} applied {Action} to {Applied} candidate(s) in section {SectionId}; {Skipped} skipped", userId, command.Action, applied, section.Id, skipped.Count);
         return new ActionOutcome(applied, skipped);
     }
@@ -283,8 +292,9 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
             answered.GetValueOrDefault(attempt.Id));
     }
 
-    private static bool IsOnline(Attempt? attempt, DateTime now) =>
-        attempt?.LastHeartbeatAt is { } beat && now - beat <= OnlineWindow;
+    /// <summary>A recent heartbeat, and no closed live connection since (VE-13: closing the tab shows at once).</summary>
+    public static bool IsOnline(Attempt? attempt, DateTime now) =>
+        attempt?.LastHeartbeatAt is { } beat && now - beat <= OnlineWindow && attempt.ConnectionStatus == ConnectionStatus.Online;
 
     private static string FullName(Candidate candidate) => $"{candidate.FirstName} {candidate.LastName}";
 

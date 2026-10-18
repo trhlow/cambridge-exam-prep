@@ -1,3 +1,4 @@
+using ExamPrep.Api.Realtime;
 using ExamPrep.Domain.Delivery;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
@@ -12,7 +13,7 @@ namespace ExamPrep.Api.Delivery;
 /// (<see cref="AttemptExpiryWorker"/>) catches candidates whose computer is off or disconnected, so the next
 /// section still opens on time.
 /// </summary>
-public sealed class AttemptExpiry(ExamPrepDbContext db, TimeProvider clock, ILogger<AttemptExpiry> logger)
+public sealed class AttemptExpiry(ExamPrepDbContext db, TimeProvider clock, RoomNotifier notifier, ILogger<AttemptExpiry> logger)
 {
     /// <summary>Clock for an attempt, honouring its section duration and any parent-level end.</summary>
     public static AttemptClock ClockFor(Attempt attempt, ExamSection section, Candidate candidate) =>
@@ -50,6 +51,9 @@ public sealed class AttemptExpiry(ExamPrepDbContext db, TimeProvider clock, ILog
         try
         {
             await db.SaveChangesAsync(cancellationToken);
+            var ended = due.Where(a => a.Status == AttemptStatus.Submitted).ToList();
+            ended.Select(a => a.ExamSectionId).Distinct().ToList().ForEach(notifier.SectionChanged);
+            await notifier.RefreshCandidatesAsync(ended.Select(a => a.CandidateId));
             logger.LogInformation("Submitted {Count} attempt(s) whose time ran out", submitted);
             return submitted;
         }

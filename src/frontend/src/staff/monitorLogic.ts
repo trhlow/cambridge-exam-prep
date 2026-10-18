@@ -37,3 +37,19 @@ export function clockText(seconds: number | null): string {
 export function extraTimeText(seconds: number): string {
   return seconds > 0 ? `+${Math.round(seconds / 60)} min` : ''
 }
+
+/**
+ * Time left and recording position `elapsedSeconds` after the page last heard from the server: a working candidate's
+ * clock runs on between refreshes (VE-13 refreshes on changes, not every few seconds); a paused one stands still.
+ */
+export function rowAt(row: MonitorRow, elapsedSeconds: number): MonitorRow {
+  if (row.status !== 'InProgress' || elapsedSeconds <= 0) {
+    return row
+  }
+
+  return {
+    ...row,
+    remainingSeconds: row.remainingSeconds === null ? null : Math.max(0, row.remainingSeconds - elapsedSeconds),
+    audioPositionSeconds: row.audioPositionSeconds === null ? null : row.audioPositionSeconds + elapsedSeconds,
+  }
+}

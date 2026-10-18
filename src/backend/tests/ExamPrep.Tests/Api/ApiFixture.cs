@@ -91,6 +91,7 @@ public sealed class ApiFixture : IAsyncLifetime
             StartedAt = now,
             EndsAt = now.AddMinutes(durationMinutes),
             LastHeartbeatAt = isOnline ? now : now.AddMinutes(-5),
+            ConnectionStatus = isOnline ? ConnectionStatus.Online : ConnectionStatus.Offline,
             AudioStartedAt = audioPlayedMinutes is { } played ? now.AddMinutes(-played) : null,
         };
         db.Attempts.Add(attempt);

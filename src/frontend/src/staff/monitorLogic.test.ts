@@ -1,5 +1,5 @@
 import type { MonitorRow } from './api'
-import { actionAvailability, clockText, extraTimeText } from './monitorLogic'
+import { actionAvailability, clockText, extraTimeText, rowAt } from './monitorLogic'
 
 const row = (overrides: Partial<MonitorRow>): MonitorRow => ({
   candidateId: 1,
@@ -61,5 +61,19 @@ describe('extraTimeText', () => {
     expect(extraTimeText(0)).toBe('')
     expect(extraTimeText(300)).toBe('+5 min')
     expect(extraTimeText(450)).toBe('+8 min')
+  })
+})
+
+describe('rowAt', () => {
+  const running = { status: 'InProgress', remainingSeconds: 100, audioPositionSeconds: 30 } as MonitorRow
+
+  it('runs a working candidate’s clock and recording on between refreshes', () => {
+    expect(rowAt(running, 7)).toMatchObject({ remainingSeconds: 93, audioPositionSeconds: 37 })
+    expect(rowAt(running, 500).remainingSeconds).toBe(0)
+  })
+
+  it('keeps a paused candidate still', () => {
+    const paused = { ...running, status: 'Paused' } as MonitorRow
+    expect(rowAt(paused, 7)).toBe(paused)
   })
 })
