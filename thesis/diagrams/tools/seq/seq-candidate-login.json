@@ -1,0 +1,30 @@
+{
+  "title": "Thí sinh đăng nhập và bắt đầu phần thi",
+  "participants": [
+    {"id": "ts", "label": "Thí sinh", "actor": true},
+    {"id": "fe", "label": "Trình duyệt (React)"},
+    {"id": "api", "label": "API (ASP.NET Core)"},
+    {"id": "db", "label": "MySQL"}
+  ],
+  "messages": [
+    {"from": "ts", "to": "fe", "label": "Nhập tên đăng nhập, mật khẩu trên phiếu"},
+    {"from": "fe", "to": "api", "label": "POST /api/candidate/auth/login"},
+    {"from": "api", "to": "db", "label": "Tìm thí sinh, kỳ thi đang Active"},
+    {"from": "db", "to": "api", "label": "candidates, exams", "return": true},
+    {"from": "api", "to": "api", "label": "Kiểm tra mật khẩu, LoginThrottle; đổi security_stamp"},
+    {"from": "api", "to": "fe", "label": "200 + cookie (pin_verified = False)", "return": true},
+    {"note": "Giám thị đọc mã PIN phòng thi khi cả phòng đã đăng nhập", "over": "ts"},
+    {"from": "ts", "to": "fe", "label": "Nhập mã PIN"},
+    {"from": "fe", "to": "api", "label": "POST /api/candidate/auth/pin"},
+    {"from": "api", "to": "fe", "label": "200 + cookie (pin_verified = True)", "return": true},
+    {"from": "fe", "to": "api", "label": "GET /api/candidate/sections"},
+    {"from": "api", "to": "fe", "label": "Các phần thi (Listening: Locked)", "return": true},
+    {"from": "ts", "to": "fe", "label": "Mở Reading & Writing"},
+    {"from": "fe", "to": "api", "label": "POST /sections/{id}/attempt"},
+    {"from": "api", "to": "db", "label": "Tạo attempts, AttemptClock.Start tính ends_at"},
+    {"from": "db", "to": "api", "label": "attempt", "return": true},
+    {"from": "api", "to": "fe", "label": "AttemptState (giờ còn lại, câu trả lời)", "return": true},
+    {"from": "fe", "to": "api", "label": "PUT .../responses (tự lưu)", "async": true},
+    {"from": "fe", "to": "api", "label": "POST .../heartbeat mỗi 5 giây", "async": true}
+  ]
+}
