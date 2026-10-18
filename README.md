@@ -108,6 +108,8 @@ Sơ đồ nguồn `.drawio` mở bằng [draw.io](https://www.drawio.com/); file
 
 ### Chạy cả hệ thống bằng Docker (một lệnh)
 
+Hướng dẫn đầy đủ cho phòng thi (máy thí sinh qua mạng LAN, sao lưu, xử lý sự cố): [setup/INSTALL.md](setup/INSTALL.md).
+
 Chỉ cần Docker Desktop. MySQL, API và giao diện chạy trong ba container; API tự tạo bảng, tạo tài khoản admin đầu tiên và kỳ thi demo A2.
 
 ```bash
