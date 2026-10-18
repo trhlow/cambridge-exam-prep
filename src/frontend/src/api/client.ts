@@ -46,7 +46,12 @@ export const candidateApi = {
   startAttempt: (sectionId: number) => post<AttemptState>(`/api/candidate/sections/${sectionId}/attempt`),
   attempt: (sectionId: number) => request<AttemptState>(`/api/candidate/sections/${sectionId}/attempt`),
   /** Every few seconds: keeps the candidate online for the invigilator and returns the clock and messages. */
-  heartbeat: (sectionId: number) => post<AttemptState>(`/api/candidate/sections/${sectionId}/heartbeat`),
+  // The computer's clock goes along so the invigilator is warned about one set far off (VE-29).
+  heartbeat: (sectionId: number) =>
+    request<AttemptState>(`/api/candidate/sections/${sectionId}/heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Client-Time': String(Date.now()) },
+    }),
   /** Listening: starts the recording once; later calls return where it is now. */
   playAudio: (sectionId: number) => post<AttemptState>(`/api/candidate/sections/${sectionId}/audio`),
   saveResponses: (sectionId: number, responses: { questionNumber: number; value: string }[]) =>

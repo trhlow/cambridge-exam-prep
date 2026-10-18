@@ -29,7 +29,8 @@ public sealed record SaveExamRequest(
     [StringLength(64)] string? Room,
     [Required] List<SectionPaper> Papers,
     string? SessionPin = null,
-    string? InvigilatorPassword = null);
+    string? InvigilatorPassword = null,
+    string? SebConfigKey = null);
 
 public sealed record SetExamStatusRequest([Required] string Status);
 
@@ -46,7 +47,7 @@ public sealed record AssignableStaffView(int Id, string Username, string FullNam
 [ApiController]
 [Route("api/admin")]
 [Authorize(Policy = StaffAuthDefaults.ExamsPolicy)]
-public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExamsController> logger) : ControllerBase
+public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensions.Caching.Memory.IMemoryCache cache, ILogger<AdminExamsController> logger) : ControllerBase
 {
     private const string StartedTitle = "Candidates have already started this exam.";
     private const int MinPinLength = 4;
@@ -104,6 +105,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExam
             Room = Blank(request.Room),
             SessionPin = Blank(request.SessionPin) ?? RandomNumberGenerator.GetInt32(0, 10_000).ToString("D4"),
             InvigilatorPassword = Blank(request.InvigilatorPassword) ?? RandomNumberGenerator.GetString(InvigilatorPasswordAlphabet, 10),
+            SebConfigKeyHash = Blank(request.SebConfigKey)?.ToLowerInvariant(),
             CreatedByUserId = User.GetStaffId(),
             CreatedAt = DateTime.UtcNow,
             Sections = sections,
@@ -144,6 +146,12 @@ public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExam
         exam.Room = Blank(request.Room);
         exam.SessionPin = Blank(request.SessionPin) ?? exam.SessionPin;
         exam.InvigilatorPassword = Blank(request.InvigilatorPassword) ?? exam.InvigilatorPassword;
+        if (request.SebConfigKey is not null)
+        {
+            // Empty switches Safe Exam Browser off; omitted (older clients) keeps it as it is.
+            exam.SebConfigKeyHash = Blank(request.SebConfigKey)?.ToLowerInvariant();
+            Security.SebActionFilter.Forget(cache, examId);
+        }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         if (papersChanged)
@@ -263,6 +271,11 @@ public sealed class AdminExamsController(ExamPrepDbContext db, ILogger<AdminExam
         if (Blank(request.InvigilatorPassword) is { } password && password.Length is < MinInvigilatorPasswordLength or > MaxInvigilatorPasswordLength)
         {
             errors.Add($"The invigilator password must be {MinInvigilatorPasswordLength}–{MaxInvigilatorPasswordLength} characters.");
+        }
+
+        if (Blank(request.SebConfigKey) is { } sebKey && !Security.SebGuard.IsConfigKey(sebKey))
+        {
+            errors.Add("The Safe Exam Browser config key must be 64 hexadecimal characters (SEB Config Tool → Config Key).");
         }
 
         var templates = await db.SectionTemplates.AsNoTracking()

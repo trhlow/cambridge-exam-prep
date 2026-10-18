@@ -30,7 +30,8 @@ public sealed record ExamDetail(
     bool HasStarted,
     IReadOnlyList<ExamSectionView> Sections,
     IReadOnlyList<AssignedStaffView> Invigilators,
-    IReadOnlyList<AssignedStaffView> Examiners);
+    IReadOnlyList<AssignedStaffView> Examiners,
+    string? SebConfigKey);
 
 /// <param name="Password">Null when it can no longer be read back (data-protection keys replaced); reset it then.</param>
 public sealed record LoginSlip(int CandidateId, string CandidateNumber, string FullName, string Username, string? Password, string ExamName, DateOnly ScheduledDate, string? Room);
@@ -68,6 +69,7 @@ public static class ExamViews
                 e.Status,
                 e.SessionPin,
                 e.InvigilatorPassword,
+                e.SebConfigKeyHash,
                 Candidates = e.Candidates.Count,
             })
             .SingleOrDefaultAsync(cancellationToken);
@@ -90,7 +92,7 @@ public static class ExamViews
         var hasStarted = await HasStartedAsync(db, examId, cancellationToken);
         return new ExamDetail(
             exam.Id, exam.Name, exam.ExamTypeId, exam.ExamType, exam.ScheduledDate, exam.Room, exam.Status.ToString(), exam.SessionPin,
-            exam.InvigilatorPassword, exam.Candidates, hasStarted, sections.GetValueOrDefault(examId, []), invigilators, examiners);
+            exam.InvigilatorPassword, exam.Candidates, hasStarted, sections.GetValueOrDefault(examId, []), invigilators, examiners, exam.SebConfigKeyHash);
     }
 
     /// <summary>True once any candidate has an attempt at any section of the session.</summary>

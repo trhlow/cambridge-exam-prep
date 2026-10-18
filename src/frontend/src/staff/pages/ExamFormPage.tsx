@@ -13,6 +13,7 @@ type Form = {
   papers: Record<number, number>
   sessionPin: string
   invigilatorPassword: string
+  sebConfigKey: string
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -25,7 +26,7 @@ export function ExamFormPage({ examId }: { examId?: number }) {
   const isNew = examId === undefined
   const { data: types } = useLoad(adminApi.examTypes, 'types')
   const { data: papers } = useLoad(adminApi.examPapers, 'exam-papers')
-  const [form, setForm] = useState<Form | null>(isNew ? { name: '', examTypeId: 0, scheduledDate: today(), room: '', papers: {}, sessionPin: '', invigilatorPassword: '' } : null)
+  const [form, setForm] = useState<Form | null>(isNew ? { name: '', examTypeId: 0, scheduledDate: today(), room: '', papers: {}, sessionPin: '', invigilatorPassword: '', sebConfigKey: '' } : null)
   const [hasStarted, setHasStarted] = useState(false)
   const [error, setError] = useState<unknown>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -45,6 +46,7 @@ export function ExamFormPage({ examId }: { examId?: number }) {
         papers: Object.fromEntries(exam.sections.map((s) => [s.sectionTemplateId, s.testPaperId])),
         sessionPin: exam.sessionPin,
         invigilatorPassword: exam.invigilatorPassword,
+        sebConfigKey: exam.sebConfigKey ?? '',
       })
     }, setError)
   }, [examId, isNew])
@@ -69,6 +71,7 @@ export function ExamFormPage({ examId }: { examId?: number }) {
       papers: (type?.sections ?? []).map((s) => ({ sectionTemplateId: s.id, testPaperId: form.papers[s.id] ?? 0 })),
       sessionPin: form.sessionPin || null,
       invigilatorPassword: form.invigilatorPassword || null,
+      sebConfigKey: form.sebConfigKey.trim(),
     }
     try {
       const saved = isNew ? await adminApi.createExam(body) : await adminApi.updateExam(examId, body)
@@ -123,6 +126,19 @@ export function ExamFormPage({ examId }: { examId?: number }) {
             <input value={form.invigilatorPassword} onChange={(e) => update({ invigilatorPassword: e.target.value })} placeholder="Leave empty to generate one" />
           </label>
         </div>
+        <label className="st-field">
+          Safe Exam Browser config key <span className="st-faint">(optional)</span>
+          <input
+            className="st-mono"
+            value={form.sebConfigKey}
+            onChange={(e) => update({ sebConfigKey: e.target.value })}
+            placeholder="Leave empty to allow any browser"
+            maxLength={64}
+            pattern="[0-9A-Fa-f]{64}"
+            spellCheck={false}
+          />
+          <span className="st-faint">From the SEB Config Tool (Config Key, 64 characters). When set, candidates can only sign in and work through Safe Exam Browser with that settings file.</span>
+        </label>
 
         <ErrorBox error={error} />
         <div className="st-form-actions">

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using ExamPrep.Api.Monitoring;
+using ExamPrep.Api.Security;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
@@ -100,18 +101,26 @@ public sealed class RoomBroadcaster(RoomNotifier notifier, IServiceScopeFactory 
         }
     }
 
-    /// <summary>Sections with a running attempt whose last heartbeat crossed the online window since the last check.</summary>
+    /// <summary>
+    /// Running attempts whose last heartbeat crossed the online window since the last check: their section's page is
+    /// out of date, and each raises a <see cref="SecurityEventType.ConnectionLost"/> warning (VE-29).
+    /// </summary>
     private async Task MarkSilencedAsync(DateTime from, DateTime to, CancellationToken cancellationToken)
     {
         var window = InvigilatorMonitorController.OnlineWindow;
         var (after, upTo) = (from - window, to - window);
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
-        var sections = await db.Attempts.AsNoTracking()
+        var silenced = await db.Attempts.AsNoTracking()
             .Where(a => a.Status != AttemptStatus.Submitted && a.LastHeartbeatAt > after && a.LastHeartbeatAt <= upTo)
-            .Select(a => a.ExamSectionId)
-            .Distinct()
+            .Select(a => new { a.Id, a.ExamSectionId })
             .ToListAsync(cancellationToken);
-        sections.ForEach(notifier.SectionChanged);
+        var events = scope.ServiceProvider.GetRequiredService<SecurityEventRecorder>();
+        foreach (var attempt in silenced)
+        {
+            notifier.SectionChanged(attempt.ExamSectionId);
+            await events.RecordAsync(attempt.Id, attempt.ExamSectionId, SecurityEventType.ConnectionLost,
+                "The computer stopped responding (no heartbeat for 15 seconds).", TimeSpan.FromMinutes(1), cancellationToken);
+        }
     }
 }

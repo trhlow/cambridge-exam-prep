@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Monitoring;
 using ExamPrep.Api.Realtime;
+using ExamPrep.Api.Security;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Persistence;
@@ -34,10 +35,16 @@ public sealed record SaveResponsesRequest([Required, MinLength(1), MaxLength(100
 [ApiController]
 [Route("api/candidate/sections/{sectionId:int}")]
 [Authorize(Policy = CandidateAuthDefaults.ExamPolicy)]
-public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateSectionQuery sectionQuery, TimeProvider clock, RoomNotifier notifier) : ControllerBase
+public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateSectionQuery sectionQuery, TimeProvider clock, RoomNotifier notifier, SecurityEventRecorder events) : ControllerBase
 {
     /// <summary>Answers that arrive this soon after the end (network delay) are still kept.</summary>
     private static readonly TimeSpan AutosaveGrace = TimeSpan.FromSeconds(5);
+
+    /// <summary>The browser's clock in Unix milliseconds, sent with every heartbeat (VE-29).</summary>
+    public const string ClientTimeHeader = "X-Client-Time";
+
+    /// <summary>A computer clock further than this from the server's raises a warning.</summary>
+    private static readonly TimeSpan ClockSkewLimit = TimeSpan.FromMinutes(2);
 
     /// <summary>Starts the section, or returns the running attempt unchanged (reload, other computer).</summary>
     [HttpPost("attempt")]
@@ -146,6 +153,8 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
             notifier.SectionChanged(sectionId);
         }
 
+        await CheckClockAsync(attempt, now, cancellationToken);
+
         return await StateAsync(attempt, section, candidate, now, cancellationToken);
     }
 
@@ -243,6 +252,28 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
             {
                 db.Responses.Add(new Response { AttemptId = attempt.Id, QuestionId = questionId, Value = value, UpdatedAt = now });
             }
+        }
+    }
+
+    /// <summary>
+    /// The candidate's own clock does not decide anything, but a computer set far off is worth the invigilator's look
+    /// (Cambridge: an accurate clock in the room; a wrong clock can hide a wrong time zone or a tampered machine).
+    /// </summary>
+    private async Task CheckClockAsync(Attempt attempt, DateTime now, CancellationToken cancellationToken)
+    {
+        if (attempt.Status == AttemptStatus.Submitted
+            || !long.TryParse(Request.Headers[ClientTimeHeader].FirstOrDefault(), out var clientMs)
+            || clientMs <= 0)
+        {
+            return;
+        }
+
+        var skew = DateTimeOffset.FromUnixTimeMilliseconds(clientMs).UtcDateTime - now;
+        if (skew.Duration() > ClockSkewLimit)
+        {
+            var minutes = (int)Math.Round(skew.Duration().TotalMinutes);
+            await events.RecordAsync(attempt.Id, attempt.ExamSectionId, SecurityEventType.ClockSkew,
+                $"The computer's clock is {minutes} min {(skew > TimeSpan.Zero ? "ahead of" : "behind")} the server.", TimeSpan.FromMinutes(30), cancellationToken);
         }
     }
 
