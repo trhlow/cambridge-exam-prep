@@ -1,0 +1,27 @@
+{
+  "title": "Giám thị tạm dừng thí sinh (cập nhật tức thì qua SignalR)",
+  "participants": [
+    {"id": "gt", "label": "Giám thị", "actor": true},
+    {"id": "mon", "label": "Trang theo dõi"},
+    {"id": "api", "label": "API"},
+    {"id": "db", "label": "MySQL"},
+    {"id": "fe", "label": "Máy thí sinh"}
+  ],
+  "messages": [
+    {"from": "mon", "to": "api", "label": "SignalR /hubs/staff: WatchSection", "async": true},
+    {"from": "gt", "to": "mon", "label": "Chọn thí sinh, bấm Pause"},
+    {"from": "mon", "to": "api", "label": "POST .../sections/{id}/actions {Pause}"},
+    {"from": "api", "to": "db", "label": "Đọc attempts (kiểm tra online, đang làm)"},
+    {"from": "db", "to": "api", "label": "attempts", "return": true},
+    {"from": "api", "to": "db", "label": "AttemptClock.Pause; ghi invigilator_actions"},
+    {"from": "db", "to": "api", "label": "OK", "return": true},
+    {"from": "api", "to": "fe", "label": "SignalR /hubs/candidate: refresh", "async": true},
+    {"from": "api", "to": "mon", "label": "ActionOutcome (áp dụng / bỏ qua)", "return": true},
+    {"from": "fe", "to": "api", "label": "POST .../heartbeat"},
+    {"from": "api", "to": "fe", "label": "AttemptState (Paused)", "return": true},
+    {"from": "fe", "to": "fe", "label": "Dừng đồng hồ, khoá làm bài"},
+    {"from": "api", "to": "mon", "label": "SignalR: sectionChanged (≤ 0,5 giây)", "async": true},
+    {"from": "mon", "to": "api", "label": "GET .../monitor"},
+    {"from": "api", "to": "mon", "label": "MonitorView (trạng thái Paused)", "return": true}
+  ]
+}

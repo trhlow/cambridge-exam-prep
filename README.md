@@ -94,6 +94,18 @@ Sơ đồ nguồn `.drawio` mở bằng [draw.io](https://www.drawio.com/); file
 
 ![ERD](thesis/diagrams/erd.drawio.png)
 
+### Sơ đồ trạng thái lượt làm bài
+
+![Trạng thái lượt làm bài](thesis/diagrams/attempt-state.drawio.png)
+
+### Sơ đồ tuần tự
+
+- [Thí sinh đăng nhập và bắt đầu phần thi](thesis/diagrams/seq-candidate-login.drawio.png)
+- [Giám thị tạm dừng thí sinh (SignalR)](thesis/diagrams/seq-invigilator-pause.drawio.png)
+- [Duyệt chéo hai admin](thesis/diagrams/seq-approval.drawio.png)
+
+Đặc tả yêu cầu và đặc tả thiết kế + API (Word) nằm trong [thesis/doc](thesis/doc).
+
 ## Kế hoạch thực hiện
 
 | Tuần | Thời gian | Nội dung |
@@ -160,7 +172,7 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Sơ đồ use case tổng quát, ERD
 - [x] Khảo sát giao diện bài thi mẫu A2 Key for Schools
 - [x] Cơ sở dữ liệu: 24 bảng (EF Core + MySQL), migration, dữ liệu mẫu A2/B1, 16 test tích hợp
-- [ ] Đặc tả yêu cầu, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API
+- [x] Đặc tả yêu cầu, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API; hướng dẫn cài đặt (`setup/INSTALL.md`)
 - [x] Backend: đăng nhập nhân viên (admin, giám thị) và thí sinh (username/password + PIN phòng thi), phân quyền, đồng hồ server — 78 test
 - [x] Nhập đề: định dạng gói đề (`setup/exam-package/FORMAT.md`), import có kiểm tra lỗi, đề mẫu A2 tự soạn — 116 test
 - [x] Bộ chuyển đề PDF → gói đề cho Reading & Writing A2 (đề mẫu A2 2022: 32 câu, 12 hình, import được) — 35 test Python
@@ -173,7 +185,7 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Chấm Writing cho giáo viên, tổng điểm cuối, xuất kết quả CSV mở bằng Excel
 - [x] Rà soát bảo mật 13/10: khoá tài khoản khi sai mật khẩu/PIN liên tục, lưu khoá mã hoá, security header, xử lý lỗi an toàn — 231 test backend, 71 test frontend
 - [x] Vai trò mới của Victory (16/10): quản trị viên theo mảng, giám khảo (chỉ giám khảo xem bài làm), hai admin duyệt chéo mọi thao tác xoá và thay đổi tài khoản, trang Approvals — 268 test backend, 82 test frontend
-- [ ] Cập nhật thời gian thực bằng SignalR (hiện làm mới 3–5 giây)
+- [x] Cập nhật thời gian thực bằng SignalR: trang giám thị đổi trong ≤ 2 giây, lệnh tạm dừng đến máy thí sinh ngay — 274 test backend, 84 test frontend
 - [ ] Tích hợp Safe Exam Browser, đóng gói
 - [ ] Kiểm thử tình huống, kiểm thử tải, buổi thi thử
 - [ ] Quyển báo cáo

@@ -1,0 +1,24 @@
+{
+  "title": "Duyệt chéo hai admin: yêu cầu xoá kỳ thi",
+  "participants": [
+    {"id": "qtv", "label": "Quản trị viên kỳ thi", "actor": true},
+    {"id": "api", "label": "API"},
+    {"id": "db", "label": "MySQL"},
+    {"id": "ad", "label": "Admin (người khác)", "actor": true}
+  ],
+  "messages": [
+    {"from": "qtv", "to": "api", "label": "DELETE /api/admin/exams/{id}"},
+    {"from": "api", "to": "db", "label": "Kiểm tra: chưa thí sinh nào làm bài"},
+    {"from": "db", "to": "api", "label": "OK", "return": true},
+    {"from": "api", "to": "db", "label": "Thêm approval_requests (Pending)"},
+    {"from": "api", "to": "qtv", "label": "202 Accepted + ApprovalView", "return": true},
+    {"from": "ad", "to": "api", "label": "GET /api/staff/approvals"},
+    {"from": "api", "to": "ad", "label": "Danh sách yêu cầu chờ duyệt", "return": true},
+    {"from": "ad", "to": "api", "label": "POST /approvals/{id}/approve"},
+    {"from": "api", "to": "api", "label": "Người duyệt ≠ người yêu cầu; kiểm tra lại điều kiện"},
+    {"from": "api", "to": "db", "label": "Xoá kỳ thi + đặt Approved (cùng một giao dịch)"},
+    {"from": "db", "to": "api", "label": "OK", "return": true},
+    {"from": "api", "to": "ad", "label": "200 ApprovalView (Approved)", "return": true},
+    {"note": "Từ chối: Rejected kèm lý do. Điều kiện không còn đúng: Failed kèm lý do. Người yêu cầu có thể huỷ khi còn Pending.", "over": "db"}
+  ]
+}
