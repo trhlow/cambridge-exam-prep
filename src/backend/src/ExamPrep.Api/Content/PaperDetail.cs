@@ -11,7 +11,7 @@ public sealed record PaperDetail(int Id, string Title, string ExamType, string S
 
 public sealed record PaperDetailPart(int PartNo, string? Title, string Layout, string? StimulusHtml, string? AudioUrl, IReadOnlyList<PaperDetailGroup> Groups);
 
-public sealed record PaperDetailGroup(string InteractionType, string Instructions, string? BodyHtml, IReadOnlyList<CandidateOption>? OptionPool, IReadOnlyList<PaperDetailQuestion> Questions);
+public sealed record PaperDetailGroup(int OrderNo, string InteractionType, string Instructions, string? BodyHtml, IReadOnlyList<CandidateOption>? OptionPool, IReadOnlyList<PaperDetailQuestion> Questions);
 
 public sealed record PaperDetailQuestion(int Number, string? PromptHtml, string? StimulusHtml, IReadOnlyList<CandidateOption>? Options, IReadOnlyList<string> Answers, decimal Points, int? MinWords);
 
@@ -30,6 +30,7 @@ internal static class PaperDetailMapper
             part.StimulusHtml,
             part.AudioAssetId is { } audio ? CandidatePaperMapper.AssetUrl(audio) : null,
             part.Groups.OrderBy(g => g.OrderNo).Select(group => new PaperDetailGroup(
+                group.OrderNo,
                 group.InteractionType.ToString(),
                 group.Instructions,
                 group.BodyHtml,
