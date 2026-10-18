@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Monitoring;
+using ExamPrep.Api.Realtime;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Persistence;
@@ -33,7 +34,7 @@ public sealed record SaveResponsesRequest([Required, MinLength(1), MaxLength(100
 [ApiController]
 [Route("api/candidate/sections/{sectionId:int}")]
 [Authorize(Policy = CandidateAuthDefaults.ExamPolicy)]
-public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateSectionQuery sectionQuery, TimeProvider clock) : ControllerBase
+public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateSectionQuery sectionQuery, TimeProvider clock, RoomNotifier notifier) : ControllerBase
 {
     /// <summary>Answers that arrive this soon after the end (network delay) are still kept.</summary>
     private static readonly TimeSpan AutosaveGrace = TimeSpan.FromSeconds(5);
@@ -67,6 +68,7 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
             await db.SaveChangesAsync(cancellationToken);
         }
 
+        notifier.SectionChanged(sectionId);
         return await StateAsync(attempt, section, candidate, now, cancellationToken);
     }
 
@@ -127,6 +129,12 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         }
 
         var now = Now();
+        if (!InvigilatorMonitorController.IsOnline(attempt, now))
+        {
+            // Back online (or online for the first time): the invigilator sees it without waiting for a poll.
+            notifier.SectionChanged(sectionId);
+        }
+
         // A direct update: the heartbeat must not rotate the attempt's concurrency stamp and clash with timer changes.
         await db.Attempts.Where(a => a.Id == attempt.Id)
             .ExecuteUpdateAsync(set => set.SetProperty(a => a.LastHeartbeatAt, now).SetProperty(a => a.ConnectionStatus, ConnectionStatus.Online), cancellationToken);
@@ -135,6 +143,7 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         if (AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now))
         {
             await db.SaveChangesAsync(cancellationToken);
+            notifier.SectionChanged(sectionId);
         }
 
         return await StateAsync(attempt, section, candidate, now, cancellationToken);
@@ -173,6 +182,7 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        notifier.SectionChanged(sectionId);
         return await StateAsync(attempt, section, candidate, now, cancellationToken);
     }
 
@@ -210,6 +220,7 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
 
         await UpsertAsync(attempt, request.Responses, questionIds, now, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        notifier.SectionChanged(sectionId);
         return NoContent();
     }
 

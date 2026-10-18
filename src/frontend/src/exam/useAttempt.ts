@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { candidateApi } from '../api/client'
+import { useLive } from '../api/live'
 import type { Answers, AttemptState, CandidateMessage } from '../api/types'
 import { AutosaveQueue, type SaveStatus } from './autosave'
 import { remainingSecondsNow } from './timing'
@@ -53,6 +54,9 @@ export function useAttempt(sectionId: number): AttemptView {
   const sync = useCallback(() => {
     candidateApi.heartbeat(sectionId).then(apply, () => setSaveStatus('offline'))
   }, [sectionId, apply])
+
+  // VE-13: the invigilator's pause, time change, rewind or message arrives now instead of at the next heartbeat.
+  useLive('/hubs/candidate', { refresh: sync })
 
   useEffect(() => {
     const queue = new AutosaveQueue((items) => candidateApi.saveResponses(sectionId, items), {

@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLive } from '../../api/live'
 import { staffApi, type ActionOutcome, type MonitorRow, type MonitorView } from '../api'
-import { actionAvailability, clockText, extraTimeText, type ActionButton } from '../monitorLogic'
+import { actionAvailability, clockText, extraTimeText, rowAt, type ActionButton } from '../monitorLogic'
 import { Link } from '../Link'
 import { Badge, ErrorBox, PageHeader } from '../ui'
 import { formatTime } from '../format'
 import { ActionDialog, type DialogKind } from './MonitorDialogs'
 
-/** The candidates' browsers beat every 5 s; the page follows a little faster than that. */
+/** Without the live connection the page polls a little faster than the candidates' 5 s heartbeat. */
 const REFRESH_MS = 3_000
+
+/** With it (VE-13) the server says when something changed; a slow poll only guards against a missed message. */
+const LIVE_REFRESH_MS = 20_000
 
 const BUTTON_LABELS: Record<ActionButton, string> = {
   Pause: 'Pause',
@@ -28,6 +32,14 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
   const [dialog, setDialog] = useState<DialogKind | null>(null)
   const [outcome, setOutcome] = useState<{ text: string; skipped: ActionOutcome['skipped'] } | null>(null)
   const [version, setVersion] = useState(0)
+  const [receivedAt, setReceivedAt] = useState(() => Date.now())
+  const [now, setNow] = useState(() => Date.now())
+  const isLive = useLive(
+    '/hubs/staff',
+    { sectionChanged: () => setVersion((v) => v + 1) },
+    (connection) => connection.invoke('WatchSection', examId, sectionId),
+    `${examId}/${sectionId}`,
+  )
 
   useEffect(() => {
     let isCurrent = true
@@ -36,20 +48,27 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
         (next) => {
           if (isCurrent) {
             setView(next)
+            setReceivedAt(Date.now())
             setError(null)
           }
         },
         (e: unknown) => isCurrent && setError(e),
       )
     void load()
-    const timer = setInterval(load, REFRESH_MS)
+    const timer = setInterval(load, isLive ? LIVE_REFRESH_MS : REFRESH_MS)
     return () => {
       isCurrent = false
       clearInterval(timer)
     }
-  }, [examId, sectionId, version])
+  }, [examId, sectionId, version, isLive])
 
-  const rows = useMemo(() => view?.candidates ?? [], [view])
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1_000)
+    return () => clearInterval(tick)
+  }, [])
+
+  const elapsed = Math.max(0, Math.floor((now - receivedAt) / 1_000))
+  const rows = useMemo(() => (view?.candidates ?? []).map((r) => rowAt(r, elapsed)), [view, elapsed])
   const selectedRows = rows.filter((r) => selected.has(r.candidateId))
   const availability = actionAvailability(selectedRows, view?.hasAudio ?? false)
 
@@ -83,7 +102,7 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
         title={view.sectionTitle}
         meta={
           <>
-            <Link to={`/staff/exams/${examId}`}>{view.examName}</Link> · {view.durationMinutes} minutes · refreshed {formatTime(view.serverNow)}
+            <Link to={`/staff/exams/${examId}`}>{view.examName}</Link> · {view.durationMinutes} minutes · {isLive ? 'live' : `refreshed ${formatTime(view.serverNow)}`}
           </>
         }
         actions={

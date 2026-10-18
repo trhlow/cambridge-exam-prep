@@ -3,6 +3,7 @@ using ExamPrep.Api.Auth;
 using ExamPrep.Api.Content;
 using ExamPrep.Api.Delivery;
 using ExamPrep.Api.Demo;
+using ExamPrep.Api.Realtime;
 using ExamPrep.Infrastructure;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.DataProtection;
@@ -29,6 +30,14 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(string.IsNullOrWhiteSpace(keysPath)
         ? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys")
         : Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, keysPath))));
+builder.Services.AddSignalR(options =>
+{
+    // VE-13: a candidate whose network drops is seen offline within seconds, not after the default 30 s.
+    options.KeepAliveInterval = TimeSpan.FromSeconds(5);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(12);
+});
+builder.Services.AddSingleton<RoomNotifier>();
+builder.Services.AddHostedService<RoomBroadcaster>();
 builder.Services.AddScoped<AttemptExpiry>();
 builder.Services.AddHostedService<AttemptExpiryWorker>();
 builder.Services.AddProblemDetails();
@@ -87,6 +96,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<StaffRoomHub>(StaffRoomHub.Path);
+app.MapHub<CandidateRoomHub>(CandidateRoomHub.Path);
 app.MapHealthChecks("/health");
 
 app.Run();
