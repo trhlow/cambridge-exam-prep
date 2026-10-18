@@ -147,7 +147,7 @@
 ## Session: 2026-10-15
 
 ### Docker, Listening, nhập đề từ PDF trên web (VE-12, VE-56, VE-57)
-- **Status:** complete — commit 3ace003 (báo cáo tuần 1), f22e4db (bộ chuyển Listening), 9d119d4 (tài khoản demo), ff56e54 (Docker một lệnh), 8f317dd (Import from PDF + trang duyệt đề)
+- **Status:** complete — commit cf049bf (báo cáo tuần 1), 22eec20 (bộ chuyển Listening), 6866f98 (tài khoản demo), 13462ed (Docker một lệnh), 32e1c6a (Import from PDF + trang duyệt đề)
 - Toàn bộ: backend 244/244, frontend 74/74, converter 55/55
 - Báo cáo tuần 1 điền vào tab "Trần Hoàng Long" của file tiến độ chung (Google Sheets)
 
@@ -161,7 +161,7 @@
 ## Session: 2026-10-16
 
 ### Vai trò mới của Victory (E14: VE-59…VE-63)
-- **Status:** complete — commit cb91a56 (kế hoạch), 2ab4d38 (quản trị viên theo mảng, giám khảo), bd8299a (hai admin duyệt chéo), 4a564c5 (cổng nhân viên theo vai trò, trang Approvals), commit tài liệu VE-63
+- **Status:** complete — commit 514a5e8 (kế hoạch), bb3d386 (quản trị viên theo mảng, giám khảo), 81793a0 (hai admin duyệt chéo), c64649a (cổng nhân viên theo vai trò, trang Approvals), commit tài liệu VE-63
 - Quyết định với người dùng: admin chỉ xem bảng điểm, giám khảo xem bài làm + chấm Writing + xem kết quả kỳ được phân công; cần duyệt = mọi thao tác xoá + thay đổi tài khoản; quản trị viên bốn mảng (đề thi, kỳ thi, thí sinh, trung tâm), tạo + sửa, không xoá
 - CSDL 24 bảng (thêm `user_areas`, `exam_examiners`, `approval_requests`); ERD và use case (5 tác nhân) vẽ lại
 - Toàn bộ: backend 268/268, frontend 82/82
@@ -170,11 +170,11 @@
 ## Session: 2026-10-18
 
 ### Sprint 2 hoàn tất (VE-13, VE-45, VE-46, VE-58, VE-20)
-- **Status:** complete — commit be5c2e5 (SignalR), a2361a3 (hướng dẫn cài đặt), e8ef191 (đặc tả yêu cầu, sơ đồ trạng thái, 3 sơ đồ tuần tự, đặc tả API), ef03820 (CLAUDE.md), 6c4798b (báo cáo tuần 2)
+- **Status:** complete — commit b11ec0f (SignalR), e7b7e9b (hướng dẫn cài đặt), 06cc6bb (đặc tả yêu cầu, sơ đồ trạng thái, 3 sơ đồ tuần tự, đặc tả API), d4bafa4 (CLAUDE.md), 2b3e342 (báo cáo tuần 2)
 - Báo cáo tuần 2: file docx trong progress-report/ và dòng tuần 2 trong Google Sheet (mục 6 để trống theo ý người dùng)
 - Jira: VE-13 kéo vào Sprint 2; 10/10 story Sprint 2 Done. Đóng Sprint 1 / mở Sprint 2 trên Jira bị chặn quyền (cần người dùng tự làm hoặc cho phép)
 
 ### Sprint 3 làm sớm (VE-24, VE-25, VE-28, VE-29)
-- **Status:** VE-24, VE-28 Done; VE-25 In Progress (sửa đề nháp xong, còn tạo đề mới từ đầu trên web); VE-29 In Progress (3/5 cảnh báo, còn "làm sớm" cần nút Announce start); VE-27 làm cuối tuần 3 — commit a97fccd (tên + logo trung tâm), e6563fb (SEB + cảnh báo), 82a151a (sửa đề nháp trên web)
+- **Status:** VE-24, VE-28 Done; VE-25 In Progress (sửa đề nháp xong, còn tạo đề mới từ đầu trên web); VE-29 In Progress (3/5 cảnh báo, còn "làm sớm" cần nút Announce start); VE-27 làm cuối tuần 3 — commit 6d4a67b (tên + logo trung tâm), 66a9475 (SEB + cảnh báo), 78b4a79 (sửa đề nháp trên web)
 - Toàn bộ: backend 287/287, frontend 87/87; Docker build lại, kiểm tra /api/site, đăng nhập thí sinh
 - Tài liệu đặc tả cập nhật trạng thái và 64 API
