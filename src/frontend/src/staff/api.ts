@@ -1,5 +1,6 @@
 // Staff portal calls (src/backend/src/ExamPrep.Api: Auth, Admin, Exams, Monitoring, Content, Results).
 import { ApiError, post as rawPost, put as rawPut, request as rawRequest } from '../api/client'
+import type { SiteView } from '../ui/site'
 
 /** Fired when the staff session has ended (expired, signed out elsewhere, password reset): the portal shows the sign-in. */
 export const SESSION_ENDED_EVENT = 'victory:staff-session-ended'
@@ -425,4 +426,11 @@ export const adminApi = {
   /** A third administrator waits for approval: the answer is then the request, not the account. */
   createUser: (body: NewStaffAccount) => post<StaffProfile | ApprovalView>('/api/admin/users', body),
   updateUser: (id: number, body: StaffAccountUpdate) => put<UpdateStaffResult>(`/api/admin/users/${id}`, body),
+
+  updateSite: (centreName: string) => put<SiteView>('/api/admin/site', { centreName }),
+  uploadLogo: (file: File) => {
+    const form = new FormData()
+    form.append('logo', file)
+    return request<SiteView>('/api/admin/site/logo', { method: 'POST', body: form })
+  },
 }

@@ -12,6 +12,7 @@ describe('parseRoute', () => {
     expect(parseRoute('/staff/papers/5')).toEqual({ page: 'paper', paperId: 5 })
     expect(parseRoute('/staff/exams/12/marking/77')).toEqual({ page: 'marking', examId: 12, attemptId: 77 })
     expect(parseRoute('/staff/approvals')).toEqual({ page: 'approvals' })
+    expect(parseRoute('/staff/centre')).toEqual({ page: 'centre' })
   })
 
   it('rejects anything else', () => {

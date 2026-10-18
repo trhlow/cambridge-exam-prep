@@ -974,3 +974,15 @@ ul.st-error {
   border-color: #2f7d4f;
   background: #eef7f1;
 }
+
+/* VE-24: the logo as the header shows it. */
+.st-logo-preview {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  border: 1px dashed var(--st-hairline);
+  border-radius: 12px;
+  background: #fff;
+}
