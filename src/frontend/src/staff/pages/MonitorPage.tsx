@@ -3,7 +3,7 @@ import { useLive } from '../../api/live'
 import { staffApi, type ActionOutcome, type MonitorRow, type MonitorView } from '../api'
 import { actionAvailability, clockText, extraTimeText, rowAt, type ActionButton } from '../monitorLogic'
 import { Link } from '../Link'
-import { Badge, ErrorBox, PageHeader } from '../ui'
+import { Badge, ConfirmButton, ErrorBox, PageHeader } from '../ui'
 import { formatTime } from '../format'
 import { ActionDialog, type DialogKind } from './MonitorDialogs'
 import { WarningsDialog } from './WarningsDialog'
@@ -110,6 +110,24 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
         }
         actions={
           <>
+            {view.startAnnouncedAt ? (
+              <span className="st-faint">Start announced {formatTime(view.startAnnouncedAt)}</span>
+            ) : (
+              <ConfirmButton
+                className="st-btn"
+                label="Announce start"
+                confirmLabel="Click again: the room may begin"
+                onConfirm={() =>
+                  void staffApi.announceStart(examId, sectionId).then(
+                    (next) => {
+                      setView(next)
+                      setReceivedAt(Date.now())
+                    },
+                    setError,
+                  )
+                }
+              />
+            )}
             <button type="button" className="st-btn" onClick={() => setWarningsFor({ candidateId: null, title: 'Warnings in this section' })}>
               Warnings{totalWarnings > 0 ? ` (${totalWarnings})` : ''}
             </button>
