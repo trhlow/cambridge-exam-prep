@@ -117,7 +117,9 @@ function HtmlField({ label, value, onChange, rows = 6, upload }: { label: string
   return (
     <div className="st-field">
       <label className="st-field">
-        {label} <span className="st-faint">(HTML)</span>
+        <span>
+          {label} <span className="st-faint">(HTML)</span>
+        </span>
         <textarea className="st-mono" value={value} onChange={(e) => onChange(e.target.value)} rows={rows} spellCheck={false} />
       </label>
       {upload && (
