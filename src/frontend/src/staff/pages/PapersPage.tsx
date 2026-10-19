@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { adminApi, type ApprovalView, type PaperConversionResult, type PaperImportSummary, type PaperListItem } from '../api'
+import { navigate } from '../router'
 import { Link } from '../Link'
 import { Badge, ConfirmButton, ErrorBox, Modal, PageHeader, RequestSent } from '../ui'
 import { useLoad } from '../useLoad'
@@ -19,6 +20,7 @@ export function PapersPage() {
   const [isConverting, setIsConverting] = useState(false)
   const [converted, setConverted] = useState<PaperConversionResult | null>(null)
   const [sent, setSent] = useState<ApprovalView | null>(null)
+  const [isStartingBlank, setIsStartingBlank] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const upload = async (file: File | undefined) => {
@@ -62,6 +64,9 @@ export function PapersPage() {
             <button type="button" className="st-btn st-btn--primary" onClick={() => setIsConverting(true)}>
               Import from PDF
             </button>
+            <button type="button" className="st-btn" onClick={() => setIsStartingBlank(true)}>
+              New blank paper
+            </button>
             <label className={isImporting ? 'st-btn is-busy' : 'st-btn'}>
             {isImporting ? 'Importing…' : 'Import package (.zip)'}
               <input ref={fileRef} type="file" accept=".zip,application/zip" className="visually-hidden" onChange={(e) => void upload(e.target.files?.[0])} disabled={isImporting} />
@@ -75,6 +80,7 @@ export function PapersPage() {
         <span>3. Publish it</span>
         <span>4. Choose it when creating an exam</span>
       </div>
+      {isStartingBlank && <BlankPaperDialog onClose={() => setIsStartingBlank(false)} />}
       {isConverting && (
         <ConvertDialog
           onClose={() => setIsConverting(false)}
@@ -239,6 +245,66 @@ function ConvertDialog({ onClose, onConverted }: { onClose: () => void; onConver
         <div className="st-form-actions">
           <button type="submit" className={isBusy ? 'st-btn st-btn--primary is-busy' : 'st-btn st-btn--primary'} disabled={isBusy}>
             {isBusy ? 'Converting… (up to a minute)' : 'Convert and import'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+/**
+ * VE-25: a paper written entirely on the web. The draft has the exam's parts, question types and numbering; every
+ * text, picture and recording still to write is marked, and publishing refuses the paper until none is left.
+ */
+function BlankPaperDialog({ onClose }: { onClose: () => void }) {
+  const { data: layouts, error: loadError } = useLoad(adminApi.blankLayouts, 'blank-layouts')
+  const [sectionTemplateId, setSectionTemplateId] = useState<number | null>(null)
+  const [title, setTitle] = useState('')
+  const [error, setError] = useState<unknown>(null)
+  const [isBusy, setIsBusy] = useState(false)
+  const chosen = sectionTemplateId ?? layouts?.[0]?.sectionTemplateId ?? null
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (chosen === null) {
+      return
+    }
+
+    setIsBusy(true)
+    setError(null)
+    try {
+      const created = await adminApi.createBlankPaper(chosen, title.trim())
+      navigate(`/staff/papers/${created.id}`)
+    } catch (e) {
+      setError(e)
+      setIsBusy(false)
+    }
+  }
+
+  return (
+    <Modal title="New blank paper" onClose={onClose}>
+      <form className="st-form" onSubmit={submit}>
+        <p className="st-faint">
+          The draft has the exam's parts, question types and numbering. Write every text marked “[to write…]”, upload the pictures and recordings and set the answers on the paper's page; it can be published once nothing is left to write.
+        </p>
+        <ErrorBox error={loadError ?? error} />
+        <label className="st-field">
+          Section
+          <select value={chosen ?? ''} onChange={(e) => setSectionTemplateId(Number(e.target.value))} required>
+            {(layouts ?? []).map((layout) => (
+              <option key={layout.sectionTemplateId} value={layout.sectionTemplateId}>
+                {layout.examType} — {layout.section}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="st-field">
+          Title
+          <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={256} placeholder="A2 Key for Schools – Reading & Writing – November" />
+        </label>
+        <div className="st-form-actions">
+          <button type="submit" className="st-btn st-btn--primary" disabled={isBusy || chosen === null}>
+            Create draft
           </button>
         </div>
       </form>

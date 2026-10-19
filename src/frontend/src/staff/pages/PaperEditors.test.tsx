@@ -54,4 +54,14 @@ describe('PaperEditor (VE-25)', () => {
     })
     expect(onSaved).toHaveBeenCalledWith(paper)
   })
+
+  it('inserts an uploaded picture into a passage', async () => {
+    vi.spyOn(adminApi, 'uploadPaperImage').mockResolvedValue({ url: '/api/assets/42' })
+    const part = { partNo: 7, title: null, layout: 'Single', stimulusHtml: '<p>Look at the three pictures.</p>', audioUrl: null, groups: [] }
+    render(<PaperEditor paper={paper} edit={{ kind: 'part', part }} onClose={() => {}} onSaved={() => {}} />)
+
+    await userEvent.upload(screen.getByLabelText('Insert picture…'), new File(['png'], 'story.png', { type: 'image/png' }))
+
+    expect(await screen.findByDisplayValue(/<img src="\/api\/assets\/42" alt="">/)).toBeInTheDocument()
+  })
 })

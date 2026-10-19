@@ -22,6 +22,9 @@ public sealed record EditOption([Required] string Key, [StringLength(500)] strin
 
 public sealed record EditGroupRequest([Required, StringLength(1000, MinimumLength = 1)] string Instructions, string? BodyHtml, List<EditOption>? OptionPool);
 
+/// <summary>Where an uploaded picture can be referenced from the paper's HTML (an &lt;img src&gt;).</summary>
+public sealed record UploadedImage(string Url);
+
 public sealed record EditQuestionRequest(
     string? PromptHtml,
     string? StimulusHtml,
@@ -147,22 +150,8 @@ public sealed class AdminPaperEditorController(ExamPrepDbContext db, IAssetStora
             return Problems.Invalid("The audio file must be at most 60 MB.");
         }
 
-        using var buffer = new MemoryStream();
-        await audio.CopyToAsync(buffer, cancellationToken);
-        var content = buffer.ToArray();
-        var sha = Convert.ToHexStringLower(SHA256.HashData(content));
-        var extension = Path.GetExtension(audio.FileName).ToLowerInvariant();
-        var asset = await db.Assets.FirstOrDefaultAsync(a => a.Sha256 == sha, cancellationToken) ?? new Asset
-        {
-            Kind = AssetKind.Audio,
-            OriginalFileName = Path.GetFileName(audio.FileName),
-            StoredPath = await storage.SaveAsync(content, sha, extension, cancellationToken),
-            ContentType = PackageFileTypes.Audio[extension],
-            SizeBytes = content.Length,
-            Sha256 = sha,
-            UploadedByUserId = User.GetStaffId(),
-            CreatedAt = clock.GetUtcNow().UtcDateTime,
-        };
+        var content = await AssetUploads.ReadAsync(audio, cancellationToken);
+        var asset = await AssetUploads.StoreAsync(db, storage, content, audio.FileName, AssetKind.Audio, User.GetStaffId(), clock.GetUtcNow().UtcDateTime, cancellationToken);
 
         return await EditAsync(paperId, paper =>
         {
@@ -172,6 +161,78 @@ public sealed class AdminPaperEditorController(ExamPrepDbContext db, IAssetStora
             }
 
             part.AudioAsset = asset;
+            return [];
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// A picture for the paper's text (a notice, the three pictures of a story task…); the answer is the URL to put in
+    /// an &lt;img src&gt;. Candidates can load it once the paper is in their exam and its HTML refers to it.
+    /// </summary>
+    [HttpPost("images")]
+    [RequestSizeLimit(AssetUploads.MaxImageBytes + 64 * 1024)]
+    public async Task<ActionResult<UploadedImage>> UploadImage(int paperId, IFormFile? image, CancellationToken cancellationToken)
+    {
+        if (image is null || image.Length == 0)
+        {
+            return Problems.Invalid("Choose a picture (png, jpg, gif or webp).");
+        }
+
+        var content = await AssetUploads.ReadAsync(image, cancellationToken);
+        if (AssetUploads.ImageProblem(content, image.FileName) is { } problem)
+        {
+            return Problems.Invalid(problem);
+        }
+
+        var status = await db.TestPapers.Where(p => p.Id == paperId).Select(p => (PaperStatus?)p.Status).SingleOrDefaultAsync(cancellationToken);
+        if (status is null)
+        {
+            return NotFound();
+        }
+
+        if (status != PaperStatus.Draft)
+        {
+            return Problems.Conflict("Only draft papers can be edited: a published paper may already be in an exam. Import a corrected copy instead.");
+        }
+
+        var asset = await AssetUploads.StoreAsync(db, storage, content, image.FileName, AssetKind.Image, User.GetStaffId(), clock.GetUtcNow().UtcDateTime, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return new UploadedImage($"{PaperPackageImporter.AssetUrlPrefix}{asset.Id}");
+    }
+
+    /// <summary>The picture of one option (picture questions, e.g. A2 Listening Part 1).</summary>
+    [HttpPost("questions/{number:int}/options/{key}/image")]
+    [RequestSizeLimit(AssetUploads.MaxImageBytes + 64 * 1024)]
+    public async Task<ActionResult<PaperDetail>> ReplaceOptionImage(int paperId, int number, string key, IFormFile? image, CancellationToken cancellationToken)
+    {
+        if (image is null || image.Length == 0)
+        {
+            return Problems.Invalid("Choose a picture (png, jpg, gif or webp).");
+        }
+
+        var content = await AssetUploads.ReadAsync(image, cancellationToken);
+        if (AssetUploads.ImageProblem(content, image.FileName) is { } problem)
+        {
+            return Problems.Invalid(problem);
+        }
+
+        var asset = await AssetUploads.StoreAsync(db, storage, content, image.FileName, AssetKind.Image, User.GetStaffId(), clock.GetUtcNow().UtcDateTime, cancellationToken);
+        if (db.Entry(asset).State == EntityState.Added)
+        {
+            // The option refers to the asset by id, so it needs one before the option JSON is written.
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return await EditAsync(paperId, paper =>
+        {
+            var question = paper.Parts.SelectMany(p => p.Groups).SelectMany(g => g.Questions).SingleOrDefault(q => q.Number == number);
+            var options = question?.OptionsJson is null ? null : JsonSerializer.Deserialize<List<StoredOption>>(question.OptionsJson, Json)!;
+            if (options is null || options.All(o => o.Key != key))
+            {
+                return null;
+            }
+
+            question!.OptionsJson = JsonSerializer.Serialize(options.Select(o => o.Key == key ? o with { ImageAssetId = asset.Id } : o), Json);
             return [];
         }, cancellationToken);
     }

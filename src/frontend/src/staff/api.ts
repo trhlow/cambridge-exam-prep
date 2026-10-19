@@ -193,6 +193,13 @@ export interface PaperDetail {
   parts: PaperPartDetail[]
 }
 
+/** A section a blank paper can be started for (VE-25). */
+export interface BlankLayout {
+  sectionTemplateId: number
+  examType: string
+  section: string
+}
+
 export interface OptionEdit {
   key: string
   text: string | null
@@ -466,6 +473,18 @@ export const adminApi = {
   editPart: (id: number, partNo: number, body: { title: string | null; stimulusHtml: string | null }) => put<PaperDetail>(`/api/admin/papers/${id}/parts/${partNo}`, body),
   editGroup: (id: number, partNo: number, orderNo: number, body: GroupEdit) => put<PaperDetail>(`/api/admin/papers/${id}/parts/${partNo}/groups/${orderNo}`, body),
   editQuestion: (id: number, number: number, body: QuestionEdit) => put<PaperDetail>(`/api/admin/papers/${id}/questions/${number}`, body),
+  blankLayouts: () => request<BlankLayout[]>('/api/admin/papers/blank-layouts'),
+  createBlankPaper: (sectionTemplateId: number, title: string) => post<PaperImportSummary>('/api/admin/papers/blank', { sectionTemplateId, title }),
+  uploadPaperImage: (id: number, file: File) => {
+    const form = new FormData()
+    form.append('image', file)
+    return request<{ url: string }>(`/api/admin/papers/${id}/images`, { method: 'POST', body: form })
+  },
+  replaceOptionImage: (id: number, number: number, key: string, file: File) => {
+    const form = new FormData()
+    form.append('image', file)
+    return request<PaperDetail>(`/api/admin/papers/${id}/questions/${number}/options/${encodeURIComponent(key)}/image`, { method: 'POST', body: form })
+  },
   replaceAudio: (id: number, partNo: number, file: File) => {
     const form = new FormData()
     form.append('audio', file)
