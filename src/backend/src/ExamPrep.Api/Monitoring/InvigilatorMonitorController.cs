@@ -39,7 +39,8 @@ public sealed record MonitorRow(
 /// <summary>VE-29: a warning in the Warnings column, with who resolved it.</summary>
 public sealed record WarningView(long Id, int CandidateId, string FullName, string Type, string? Detail, DateTime DetectedAt, DateTime? ResolvedAt, string? ResolvedBy);
 
-public sealed record MonitorView(int ExamId, string ExamName, int SectionId, string SectionTitle, bool HasAudio, int DurationMinutes, DateTime ServerNow, IReadOnlyList<MonitorRow> Candidates);
+/// <param name="StartAnnouncedAt">When the invigilator told the room to begin (VE-29); null until then.</param>
+public sealed record MonitorView(int ExamId, string ExamName, int SectionId, string SectionTitle, bool HasAudio, int DurationMinutes, DateTime ServerNow, IReadOnlyList<MonitorRow> Candidates, DateTime? StartAnnouncedAt);
 
 public sealed record InvigilatorActionRequest(
     [Required] string Action,
@@ -100,7 +101,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
         var rows = candidates.Select(c => Row(c, attempts.GetValueOrDefault(c.Id), section, answered, now) is var row && row.AttemptId is { } id
             ? row with { Warnings = warnings.GetValueOrDefault(id) }
             : row).ToList();
-        return new MonitorView(examId, section.Exam!.Name, sectionId, section.SectionTemplate!.Title, hasAudio, section.DurationMinutes, now, rows);
+        return new MonitorView(examId, section.Exam!.Name, sectionId, section.SectionTemplate!.Title, hasAudio, section.DurationMinutes, now, rows, section.StartAnnouncedAt);
     }
 
     [HttpPost("sections/{sectionId:int}/actions")]
@@ -137,6 +138,52 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
                 db.ChangeTracker.Clear();
             }
         }
+    }
+
+    /// <summary>
+    /// VE-29: the invigilator tells the room to begin. Inspera warns about candidates who started before that, so every
+    /// attempt already started gets a StartedEarly warning; it never blocks anyone. Announcing twice changes nothing.
+    /// </summary>
+    [HttpPost("sections/{sectionId:int}/announce-start")]
+    public async Task<ActionResult<MonitorView>> AnnounceStart(int examId, int sectionId, [FromServices] Security.SecurityEventRecorder events, CancellationToken cancellationToken)
+    {
+        if (await FindSectionAsync(examId, sectionId, cancellationToken) is null)
+        {
+            return NotFound();
+        }
+
+        var section = await db.ExamSections.SingleAsync(s => s.Id == sectionId, cancellationToken);
+        if (section.StartAnnouncedAt is null)
+        {
+            var now = Now();
+            section.StartAnnouncedAt = now;
+            db.InvigilatorActions.Add(new InvigilatorAction
+            {
+                ExamId = examId,
+                UserId = User.GetStaffId(),
+                ActionType = InvigilatorActionType.AnnounceStart,
+                PayloadJson = JsonSerializer.Serialize(new { sectionId }),
+                BatchId = Guid.NewGuid(),
+                CreatedAt = now,
+            });
+            await db.SaveChangesAsync(cancellationToken);
+
+            var early = await db.Attempts.AsNoTracking()
+                .Where(a => a.ExamSectionId == sectionId && a.StartedAt != null && a.StartedAt < now)
+                .Select(a => new { a.Id, StartedAt = a.StartedAt!.Value })
+                .ToListAsync(cancellationToken);
+            foreach (var attempt in early)
+            {
+                var minutes = Math.Max(1, (int)Math.Round((now - attempt.StartedAt).TotalMinutes));
+                await events.RecordAsync(attempt.Id, sectionId, SecurityEventType.StartedEarly,
+                    $"Started {minutes} min before the invigilator announced the start.", TimeSpan.FromDays(1), cancellationToken);
+            }
+
+            notifier.SectionChanged(sectionId);
+            logger.LogInformation("Staff {UserId} announced the start of section {SectionId}; {Early} candidate(s) had started early", User.GetStaffId(), sectionId, early.Count);
+        }
+
+        return await Monitor(examId, sectionId, cancellationToken);
     }
 
     /// <summary>VE-29: the section's warnings, unresolved first, newest first.</summary>

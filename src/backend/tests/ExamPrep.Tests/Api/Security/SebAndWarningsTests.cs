@@ -157,6 +157,29 @@ public sealed class SebAndWarningsTests(ApiFixture api) : IClassFixture<ApiFixtu
     }
 
     [Fact]
+    public async Task AnnouncingTheStart_WarnsAboutCandidatesWhoStartedBefore_Once()
+    {
+        api.SkipIfUnavailable();
+        var early = await api.CreateCandidateAsync(Password);
+        var section = early.ReadingWritingSectionId;
+        await api.StartAttemptAsync(early.CandidateId, section);
+        var (onTimeId, _) = await api.AddCandidateAsync(early.ExamId, Password, "Chi", "Le");
+        using var admin = await api.AdminClientAsync();
+        var announceUrl = $"/api/staff/exams/{early.ExamId}/sections/{section}/announce-start";
+
+        var first = await (await admin.PostAsync(announceUrl, null, ct)).Content.ReadFromJsonAsync<JsonObject>(ct);
+        await api.StartAttemptAsync(onTimeId, section);
+        var second = await (await admin.PostAsync(announceUrl, null, ct)).Content.ReadFromJsonAsync<JsonObject>(ct);
+        var warnings = await WarningsAsync(admin, early);
+
+        Assert.NotNull(first!["startAnnouncedAt"]);
+        Assert.Equal((string)first["startAnnouncedAt"]!, (string)second!["startAnnouncedAt"]!);
+        var warning = Assert.Single(warnings);
+        Assert.Equal("StartedEarly", (string)warning["type"]!);
+        Assert.Equal(early.CandidateId, (int)warning["candidateId"]!);
+    }
+
+    [Fact]
     public async Task TheExamForm_TakesAConfigKey_AndShowsItOnlyToThoseWhoRunTheRoom()
     {
         api.SkipIfUnavailable();

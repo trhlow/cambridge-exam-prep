@@ -11,4 +11,7 @@ public enum InvigilatorActionType
     UseTestEndTime,
     RewindAudio,
     SendMessage,
+
+    /// <summary>The invigilator told the room to begin; candidates already working get a StartedEarly warning.</summary>
+    AnnounceStart,
 }

@@ -290,6 +290,8 @@ export interface MonitorView {
   durationMinutes: number
   serverNow: string
   candidates: MonitorRow[]
+  /** When the invigilator told the room to begin (VE-29); null until then. */
+  startAnnouncedAt: string | null
 }
 
 export type MonitorAction = 'Pause' | 'Resume' | 'AddIncidentTime' | 'EndNow' | 'EndAt' | 'EndIn' | 'UseTestEndTime' | 'RewindAudio'
@@ -412,6 +414,7 @@ export const staffApi = {
   act: (examId: number, sectionId: number, body: MonitorActionRequest) => post<ActionOutcome>(`${exam(examId)}/sections/${sectionId}/actions`, body),
   messages: (examId: number) => request<MessageView[]>(`${exam(examId)}/messages`),
   sendMessage: (examId: number, text: string, candidateIds: number[]) => post<MessageView[]>(`${exam(examId)}/messages`, { text, candidateIds }),
+  announceStart: (examId: number, sectionId: number) => post<MonitorView>(`${exam(examId)}/sections/${sectionId}/announce-start`),
   warnings: (examId: number, sectionId: number) => request<WarningView[]>(`${exam(examId)}/sections/${sectionId}/warnings`),
   resolveWarning: (examId: number, sectionId: number, id: number) => post<WarningView>(`${exam(examId)}/sections/${sectionId}/warnings/${id}/resolve`),
 
