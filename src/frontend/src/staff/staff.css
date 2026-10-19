@@ -345,7 +345,7 @@
   border-right: none;
 }
 
-.st-segmented button:hover:not(:disabled) {
+.st-segmented button:hover:not(:disabled, .is-on) {
   background: var(--st-hover);
 }
 
