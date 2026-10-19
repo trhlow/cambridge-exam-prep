@@ -178,3 +178,11 @@
 - **Status:** VE-24, VE-28 Done; VE-25 In Progress (sửa đề nháp xong, còn tạo đề mới từ đầu trên web); VE-29 In Progress (3/5 cảnh báo, còn "làm sớm" cần nút Announce start); VE-27 làm cuối tuần 3 — commit 6d4a67b (tên + logo trung tâm), 66a9475 (SEB + cảnh báo), 78b4a79 (sửa đề nháp trên web)
 - Toàn bộ: backend 287/287, frontend 87/87; Docker build lại, kiểm tra /api/site, đăng nhập thí sinh
 - Tài liệu đặc tả cập nhật trạng thái và 64 API
+
+## Session: 2026-10-19
+
+### Sprint 3: xong VE-25 và VE-29
+- VE-29: nút Announce start trên trang giám thị; thí sinh đã làm trước đó nhận cảnh báo StartedEarly (một lần). "Thoát trình duyệt khoá" vẫn tính là ConnectionLost (server không phân biệt được)
+- VE-25: "New blank paper" tạo đề nháp theo khung A2 (R&W 7 part/32 câu, Listening 5 part/25 câu), chữ "[to write…]", hình/file nghe giữ chỗ; editor tải hình cho đoạn văn và thay hình lựa chọn; xuất bản bị chặn khi còn chỗ chưa viết
+- Toàn bộ: backend 291/291, frontend 88/88; Docker build lại, thử tạo đề trắng qua nginx (đề thử đã xoá qua duyệt chéo)
+- Còn lại Sprint 3: VE-27 báo cáo tuần 3 (cuối tuần 3)

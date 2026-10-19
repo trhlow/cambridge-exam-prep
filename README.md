@@ -186,7 +186,7 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Rà soát bảo mật 13/10: khoá tài khoản khi sai mật khẩu/PIN liên tục, lưu khoá mã hoá, security header, xử lý lỗi an toàn — 231 test backend, 71 test frontend
 - [x] Vai trò mới của Victory (16/10): quản trị viên theo mảng, giám khảo (chỉ giám khảo xem bài làm), hai admin duyệt chéo mọi thao tác xoá và thay đổi tài khoản, trang Approvals — 268 test backend, 82 test frontend
 - [x] Cập nhật thời gian thực bằng SignalR: trang giám thị đổi trong ≤ 2 giây, lệnh tạm dừng đến máy thí sinh ngay — 274 test backend, 84 test frontend
-- [x] Safe Exam Browser (kiểm tra Config Key trên mọi yêu cầu của thí sinh), cột cảnh báo cho giám thị (không dùng SEB, mất kết nối, đồng hồ máy lệch); sửa đề nháp trên web; đổi tên và logo trung tâm — 287 test backend, 87 test frontend
+- [x] Safe Exam Browser (kiểm tra Config Key trên mọi yêu cầu của thí sinh), cột cảnh báo cho giám thị (không dùng SEB, mất kết nối, đồng hồ máy lệch, làm trước khi giám thị báo bắt đầu); viết cả đề A2 trên web (đề trắng theo khung A2) và sửa đề nháp; đổi tên và logo trung tâm — 291 test backend, 88 test frontend
 - [ ] Triển khai HTTPS cho phòng thi thật
 - [ ] Kiểm thử tình huống, kiểm thử tải, buổi thi thử
 - [ ] Quyển báo cáo
