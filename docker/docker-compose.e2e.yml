@@ -1,0 +1,10 @@
+# VE-31: a separate stack for the Playwright end-to-end tests, so they never touch the demo database.
+# Run from the repo root (own project name, ports and MySQL volume; the demo exam uses the self-written samples):
+#   WEB_PORT=8090 MYSQL_PORT=3307 docker compose -p examprep-e2e -f docker/docker-compose.yml -f docker/docker-compose.e2e.yml --env-file docker/.env up -d --build
+#   (cd src/frontend && npm run e2e)
+#   WEB_PORT=8090 MYSQL_PORT=3307 docker compose -p examprep-e2e -f docker/docker-compose.yml -f docker/docker-compose.e2e.yml --env-file docker/.env down -v
+services:
+  api:
+    environment:
+      Demo__ReadingWritingFolder: ""
+      Demo__ListeningFolder: ""
