@@ -9,25 +9,77 @@ export type PaperEdit =
   | { kind: 'group'; part: PaperPartDetail; group: PaperGroupDetail }
   | { kind: 'question'; group: PaperGroupDetail; question: PaperQuestionDetail }
 
-type Props = { paper: PaperDetail; edit: PaperEdit; onClose: () => void; onSaved: (paper: PaperDetail) => void }
+/** onChanged: the paper changed while the editor stays open (a picture was replaced). */
+type Props = { paper: PaperDetail; edit: PaperEdit; onClose: () => void; onSaved: (paper: PaperDetail) => void; onChanged?: (paper: PaperDetail) => void }
 
 /**
  * VE-25: fixing a converted draft on the web. HTML fields are edited as HTML (the server sanitises them); option
  * and card keys stay as imported so the answer key keeps pointing at them; the server applies the importer's rules
  * and lists every problem.
  */
-export function PaperEditor({ paper, edit, onClose, onSaved }: Props) {
+export function PaperEditor({ paper, edit, onClose, onSaved, onChanged }: Props) {
   const save = (call: () => Promise<PaperDetail>) => call().then(onSaved)
+  const upload: Upload = (file) => adminApi.uploadPaperImage(paper.id, file).then((uploaded) => uploaded.url)
   switch (edit.kind) {
     case 'title':
       return <TitleEditor title={paper.title} onClose={onClose} onSave={(title) => save(() => adminApi.editPaperTitle(paper.id, title))} />
     case 'part':
-      return <PartEditor part={edit.part} onClose={onClose} onSave={(body) => save(() => adminApi.editPart(paper.id, edit.part.partNo, body))} />
+      return <PartEditor part={edit.part} upload={upload} onClose={onClose} onSave={(body) => save(() => adminApi.editPart(paper.id, edit.part.partNo, body))} />
     case 'group':
-      return <GroupEditor group={edit.group} partNo={edit.part.partNo} onClose={onClose} onSave={(body) => save(() => adminApi.editGroup(paper.id, edit.part.partNo, edit.group.orderNo, body))} />
+      return (
+        <GroupEditor group={edit.group} partNo={edit.part.partNo} upload={upload} onClose={onClose} onSave={(body) => save(() => adminApi.editGroup(paper.id, edit.part.partNo, edit.group.orderNo, body))} />
+      )
     case 'question':
-      return <QuestionEditor group={edit.group} question={edit.question} onClose={onClose} onSave={(body) => save(() => adminApi.editQuestion(paper.id, edit.question.number, body))} />
+      return (
+        <QuestionEditor
+          group={edit.group}
+          question={edit.question}
+          upload={upload}
+          onReplacePicture={(key, file) =>
+            adminApi.replaceOptionImage(paper.id, edit.question.number, key, file).then((changed) => {
+              onChanged?.(changed)
+              return changed
+            })
+          }
+          onClose={onClose}
+          onSave={(body) => save(() => adminApi.editQuestion(paper.id, edit.question.number, body))}
+        />
+      )
   }
+}
+
+/** Uploads a picture for the paper and answers with the URL to put in an <img src>. */
+type Upload = (file: File) => Promise<string>
+
+/** A file input styled as a link; the chosen file is handed over and the input is cleared. */
+function FilePicker({ label, accept, onFile }: { label: string; accept: string; onFile: (file: File) => Promise<unknown> }) {
+  const [isBusy, setIsBusy] = useState(false)
+  const [error, setError] = useState<unknown>(null)
+  return (
+    <span>
+      <label className="st-link">
+        {isBusy ? 'Uploading…' : label}
+        <input
+          type="file"
+          accept={accept}
+          hidden
+          disabled={isBusy}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ''
+            if (file) {
+              setIsBusy(true)
+              setError(null)
+              onFile(file)
+                .catch(setError)
+                .finally(() => setIsBusy(false))
+            }
+          }}
+        />
+      </label>
+      <ErrorBox error={error} />
+    </span>
+  )
 }
 
 function EditorForm({ title, onClose, onSubmit, children }: { title: string; onClose: () => void; onSubmit: () => Promise<unknown>; children: ReactNode }) {
@@ -61,12 +113,21 @@ function EditorForm({ title, onClose, onSubmit, children }: { title: string; onC
   )
 }
 
-function HtmlField({ label, value, onChange, rows = 6 }: { label: string; value: string; onChange: (value: string) => void; rows?: number }) {
+function HtmlField({ label, value, onChange, rows = 6, upload }: { label: string; value: string; onChange: (value: string) => void; rows?: number; upload?: Upload }) {
   return (
-    <label className="st-field">
-      {label} <span className="st-faint">(HTML)</span>
-      <textarea className="st-mono" value={value} onChange={(e) => onChange(e.target.value)} rows={rows} spellCheck={false} />
-    </label>
+    <div className="st-field">
+      <label className="st-field">
+        {label} <span className="st-faint">(HTML)</span>
+        <textarea className="st-mono" value={value} onChange={(e) => onChange(e.target.value)} rows={rows} spellCheck={false} />
+      </label>
+      {upload && (
+        <FilePicker
+          label="Insert picture…"
+          accept="image/png,image/jpeg,image/gif,image/webp"
+          onFile={async (file) => onChange(`${value.trimEnd()}\n<p><img src="${await upload(file)}" alt=""></p>`)}
+        />
+      )}
+    </div>
   )
 }
 
@@ -82,7 +143,8 @@ function TitleEditor({ title, onClose, onSave }: { title: string; onClose: () =>
   )
 }
 
-function PartEditor({ part, onClose, onSave }: { part: PaperPartDetail; onClose: () => void; onSave: (body: { title: string | null; stimulusHtml: string | null }) => Promise<unknown> }) {
+function PartEditor(props: { part: PaperPartDetail; upload: Upload; onClose: () => void; onSave: (body: { title: string | null; stimulusHtml: string | null }) => Promise<unknown> }) {
+  const { part, upload, onClose, onSave } = props
   const [title, setTitle] = useState(part.title ?? '')
   const [stimulus, setStimulus] = useState(part.stimulusHtml ?? '')
   return (
@@ -91,7 +153,7 @@ function PartEditor({ part, onClose, onSave }: { part: PaperPartDetail; onClose:
         Title
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={256} />
       </label>
-      <HtmlField label="Passage" value={stimulus} onChange={setStimulus} rows={10} />
+      <HtmlField label="Passage" value={stimulus} onChange={setStimulus} rows={10} upload={upload} />
     </EditorForm>
   )
 }
@@ -112,8 +174,8 @@ function OptionFields({ label, options, onChange }: { label: string; options: Op
 
 const asEdits = (options: PaperOption[] | null): OptionEdit[] | undefined => options?.map((o) => ({ key: o.key, text: o.text }))
 
-function GroupEditor(props: { group: PaperGroupDetail; partNo: number; onClose: () => void; onSave: (body: { instructions: string; bodyHtml: string | null; optionPool?: OptionEdit[] }) => Promise<unknown> }) {
-  const { group, partNo, onClose, onSave } = props
+function GroupEditor(props: { group: PaperGroupDetail; partNo: number; upload: Upload; onClose: () => void; onSave: (body: { instructions: string; bodyHtml: string | null; optionPool?: OptionEdit[] }) => Promise<unknown> }) {
+  const { group, partNo, upload, onClose, onSave } = props
   const [instructions, setInstructions] = useState(group.instructions)
   const [body, setBody] = useState(group.bodyHtml ?? '')
   const [pool, setPool] = useState(asEdits(group.optionPool))
@@ -124,15 +186,23 @@ function GroupEditor(props: { group: PaperGroupDetail; partNo: number; onClose: 
         Instructions
         <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={3} required maxLength={1000} />
       </label>
-      <HtmlField label="Text" value={body} onChange={setBody} rows={10} />
+      <HtmlField label="Text" value={body} onChange={setBody} rows={10} upload={upload} />
       {hasGaps && <p className="st-faint">Each question of the group appears once in the text as {'{{q:19}}'}.</p>}
       {pool && <OptionFields label="Cards" options={pool} onChange={setPool} />}
     </EditorForm>
   )
 }
 
-function QuestionEditor(props: { group: PaperGroupDetail; question: PaperQuestionDetail; onClose: () => void; onSave: (body: Parameters<typeof adminApi.editQuestion>[2]) => Promise<unknown> }) {
-  const { group, question, onClose, onSave } = props
+function QuestionEditor(props: {
+  group: PaperGroupDetail
+  question: PaperQuestionDetail
+  upload: Upload
+  onReplacePicture: (key: string, file: File) => Promise<PaperDetail>
+  onClose: () => void
+  onSave: (body: Parameters<typeof adminApi.editQuestion>[2]) => Promise<unknown>
+}) {
+  const { group, question, upload, onReplacePicture, onClose, onSave } = props
+  const [pictures, setPictures] = useState(() => Object.fromEntries((question.options ?? []).map((o) => [o.key, o.imageUrl])))
   const type = group.interactionType
   const [prompt, setPrompt] = useState(question.promptHtml ?? '')
   const [stimulus, setStimulus] = useState(question.stimulusHtml ?? '')
@@ -157,8 +227,36 @@ function QuestionEditor(props: { group: PaperGroupDetail; question: PaperQuestio
   return (
     <EditorForm title={`Question ${question.number} · ${type}`} onClose={onClose} onSubmit={submit}>
       <HtmlField label="Question" value={prompt} onChange={setPrompt} rows={3} />
-      <HtmlField label="Text above the question" value={stimulus} onChange={setStimulus} rows={3} />
+      <HtmlField label="Text above the question" value={stimulus} onChange={setStimulus} rows={3} upload={upload} />
       {options && <OptionFields label="Options" options={options} onChange={setOptions} />}
+      {Object.values(pictures).some((url) => url) && (
+        <fieldset className="st-fieldset">
+          <legend>Pictures</legend>
+          <div className="st-paper-options">
+            {Object.entries(pictures).map(([key, url]) =>
+              url ? (
+                <span key={key} className="st-paper-option">
+                  <strong>{key}</strong>
+                  <img src={url} alt={`Option ${key}`} />
+                  <FilePicker
+                    label="Replace picture…"
+                    accept="image/png,image/jpeg,image/gif,image/webp"
+                    onFile={async (file) => {
+                      const changed = await onReplacePicture(key, file)
+                      const option = changed.parts
+                        .flatMap((p) => p.groups)
+                        .flatMap((g) => g.questions)
+                        .find((q) => q.number === question.number)
+                        ?.options?.find((o) => o.key === key)
+                      setPictures((current) => ({ ...current, [key]: option?.imageUrl ?? current[key] }))
+                    }}
+                  />
+                </span>
+              ) : null,
+            )}
+          </div>
+        </fieldset>
+      )}
       {!isEssay &&
         (isChoice ? (
           <label className="st-field">

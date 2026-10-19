@@ -78,6 +78,7 @@ export function PaperPage({ paperId }: { paperId: number }) {
           paper={paper}
           edit={edit}
           onClose={() => setEdit(null)}
+          onChanged={setData}
           onSaved={(saved) => {
             setData(saved)
             setEdit(null)
