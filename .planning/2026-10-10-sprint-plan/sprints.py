@@ -23,11 +23,14 @@ EPICS = {
     "E12": "Báo cáo đồ án & tài liệu",
     "E13": "IELTS (nếu kịp)",
     "E14": "Phân quyền nhiều tác nhân và duyệt chéo hai admin",
+    "E15": "Trộn đề: 2 đề gốc thành 4 đề, hai máy kế nhau khác đề",
 }
 
 # (sprint, start, end, goal, stories); story = (key, epic, points, summary, acceptance)
 # Re-planned 15/10/2026 to match Jira (board SCRUM): ahead of schedule, so later stories moved up one sprint.
 # 16/10: Victory asked for more roles and two-admin approval (E14, VE-59…63, Sprint 2); VE-13 and VE-25 moved to Sprint 3.
+# 20/10: Victory asked for paper shuffling (E15, VE-64…68): two source papers per section mixed part by part
+# into four papers, neighbouring computers never get the same one; A2 in Sprints 3–4, B1 with E10 in Sprint 6.
 # On Jira, Sprint 0 and Sprint 1 run as one sprint, "SCRUM Sprint 1" (10/10 – 18/10).
 SPRINTS = [
     ("Sprint 0", "2026-10-10", "2026-10-11", "Khởi động: CSDL và khảo sát giao diện", [
@@ -70,17 +73,21 @@ SPRINTS = [
         ("VE-46", "E11", 3, "Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/", "Máy mới cài theo hướng dẫn chạy được"),
         ("VE-20", "E12", 1, "Báo cáo tiến độ tuần 2", "File báo cáo có trong progress-report/"),
     ]),
-    ("Sprint 3", "2026-10-26", "2026-11-01", "SignalR; sửa đề trên web; Safe Exam Browser và cảnh báo vi phạm; tên trung tâm và logo", [
+    ("Sprint 3", "2026-10-26", "2026-11-01", "SignalR; sửa đề trên web; Safe Exam Browser và cảnh báo vi phạm; tên trung tâm và logo; trộn đề A2 (Victory 20/10)", [
         ("VE-13", "E7", 5, "SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì", "Bảng giám thị đổi trong ≤2 giây khi thí sinh làm bài, mất kết nối hoặc nộp"),
         ("VE-25", "E3", 8, "Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)", "Tạo được một đề A2 đầy đủ không cần file JSON; sửa được bản nháp nhập từ PDF"),
         ("VE-28", "E9", 5, "Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi", "Mở bằng trình duyệt thường bị chặn và sinh cảnh báo"),
         ("VE-29", "E9", 3, "Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm", "Cảnh báo hiện ở cột Warnings, giám thị đánh dấu đã xử lý"),
         ("VE-24", "E4", 2, "Đổi tên trung tâm và logo (tải PNG)", "Logo mới hiện trên thanh trên của thí sinh"),
+        ("VE-64", "E15", 3, "Đề gốc thứ hai cho A2 (A2 Key sample): tách audio 5 part, chuyển PDF thành gói, kiểm tra hai đề cùng khuôn", "Hai đề gốc A2 (R&W, Listening) đã Publish; hai đề khác khuôn (số part, số câu, kiểu câu từng part) bị từ chối với lý do rõ ràng"),
+        ("VE-65", "E15", 8, "Sinh 4 đề trộn từ 2 đề gốc: mỗi part lấy nguyên từ đề gốc 1 hoặc 2 (kèm hình, audio, đáp án)", "4 đề khác nhau từng đôi, đề nào cũng có part của cả hai đề gốc; là đề Published bình thường, chấm tự động đúng; cùng seed ra cùng kết quả"),
+        ("VE-66", "E15", 5, "Sơ đồ phòng máy và chia đề theo vị trí máy (ô 2×2): hai máy kề nhau ngang, dọc, chéo luôn khác đề", "Test tự động kiểm tra mọi cặp máy kề nhau; thí sinh đổi máy giữa giờ vẫn giữ đề đã bắt đầu"),
         ("VE-27", "E12", 1, "Báo cáo tiến độ tuần 3", "File báo cáo có trong progress-report/"),
     ]),
     ("Sprint 4", "2026-11-02", "2026-11-08", "Kiểm thử đầu-cuối A2; bắt đầu B1 Preliminary for Schools", [
         ("VE-31", "E11", 5, "Test đầu-cuối Playwright cho luồng thi A2 và thao tác giám thị chính", "Chạy được bằng một lệnh; bao phủ đăng nhập → làm bài → nộp → chấm"),
         ("VE-33", "E10", 2, "Khảo sát giao diện bài thi mẫu B1 PfS (Reading, Writing, Listening)", "thesis/refs/inspera-ui-b1.md đầy đủ như bản A2"),
+        ("VE-67", "E15", 5, "Cổng nhân viên cho trộn đề: chọn 2 đề gốc, xem 4 đề trộn, in sơ đồ phòng kèm mã đề; mã đề trên trang giám thị và bảng kết quả", "Quản trị viên kỳ thi trộn đề trên web; giám thị và giám khảo thấy mã đề từng thí sinh; giám khảo chấm theo đúng đề của thí sinh"),
         ("VE-34", "E10", 5, "Bổ sung kiểu câu còn thiếu cho B1 Reading (6 part)", "Import và làm được đề Reading B1 mẫu"),
         ("VE-32", "E12", 1, "Báo cáo tiến độ tuần 4", "File báo cáo có trong progress-report/"),
     ]),
@@ -91,6 +98,7 @@ SPRINTS = [
     ]),
     ("Sprint 6", "2026-11-16", "2026-11-22", "Kỳ thi B1 chạy đầu-cuối, sửa lỗi tồn đọng A2/B1", [
         ("VE-38", "E10", 3, "Kỳ thi B1 3 phần thi chạy đầu-cuối, chấm tự động", "Test Playwright cho luồng B1"),
+        ("VE-68", "E15", 3, "Trộn đề B1 (Reading, Writing, Listening) từ hai đề gốc B1 Preliminary 2022 và B1 Preliminary for Schools", "Kỳ thi B1 có 4 đề trộn mỗi phần thi; test Playwright cho máy kề nhau khác đề"),
         ("VE-39", "E11", 3, "Sửa lỗi tồn đọng A2/B1", "Không còn lỗi mức Cao trên backlog"),
         ("VE-40", "E12", 1, "Báo cáo tiến độ tuần 6", "File báo cáo có trong progress-report/"),
     ]),
@@ -119,7 +127,8 @@ SPRINTS = [
     ]),
 ]
 
-DONE = {"VE-1", "VE-2", "VE-3", "VE-4", "VE-5", "VE-6", "VE-7", "VE-8", "VE-9", "VE-10", "VE-11", "VE-12", "VE-14", "VE-15", "VE-16", "VE-17", "VE-18", "VE-19", "VE-21", "VE-22", "VE-23", "VE-26", "VE-30", "VE-56", "VE-57"}
+DONE = {"VE-1", "VE-2", "VE-3", "VE-4", "VE-5", "VE-6", "VE-7", "VE-8", "VE-9", "VE-10", "VE-11", "VE-12", "VE-14", "VE-15", "VE-16", "VE-17", "VE-18", "VE-19", "VE-21", "VE-22", "VE-23", "VE-26", "VE-30", "VE-56", "VE-57",
+        "VE-13", "VE-20", "VE-24", "VE-25", "VE-28", "VE-29", "VE-31", "VE-45", "VE-46", "VE-58", "VE-59", "VE-60", "VE-61", "VE-62", "VE-63"}
 
 
 def render_markdown() -> str:

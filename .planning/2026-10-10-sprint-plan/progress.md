@@ -186,3 +186,10 @@
 - VE-25: "New blank paper" tạo đề nháp theo khung A2 (R&W 7 part/32 câu, Listening 5 part/25 câu), chữ "[to write…]", hình/file nghe giữ chỗ; editor tải hình cho đoạn văn và thay hình lựa chọn; xuất bản bị chặn khi còn chỗ chưa viết
 - Toàn bộ: backend 291/291, frontend 88/88; Docker build lại, thử tạo đề trắng qua nginx (đề thử đã xoá qua duyệt chéo)
 - Còn lại Sprint 3: VE-27 báo cáo tuần 3 (cuối tuần 3)
+
+## Session: 2026-10-20
+
+### Victory: trộn đề (E15) và hai bộ đề mới
+- Thư mục `đề a2/`, `đề b1/` chuyển vào `setup/exam-package/sources/` (git-ignored): `a2-key-2020-sample/` (A2 Key, mới), `b1-pet-2022-sample/`, `b1-pet-fs-sample/`; `504343-…` trùng từng byte với `a2-key-fs-2022-sample/` nên bỏ; bỏ các bản sao mp3 trùng; `_chua-phan-loai/B1 Q1 L P1 P2 V1.mp3` (~15 phút) chờ người dùng cho biết thuộc đề nào
+- Kế hoạch: E15 + VE-64…68 trong sprints.py (VE-64…66 Sprint 3, VE-67 Sprint 4, VE-68 Sprint 6); Jira E15 = SCRUM-82, VE-64…68 = SCRUM-83…87
+- Thiết kế dự kiến ghi trong findings.md; chờ Victory trả lời 3 câu hỏi trước khi làm
