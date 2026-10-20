@@ -108,3 +108,20 @@ Quyết định: đáp án tạm giữ trong sessionStorage của tab cho tới 
 | `width` ảnh = 2 px / pt in | Ảnh gốc 228–493 px làm ảnh Part 2 quá to, 3 tranh Part 7 xuống dòng |
 | Ô trống trước chữ hoa chỉ báo "cần xem", không tự thêm dấu chấm | Một ô trống mất dấu chấm câu, ô khác đứng trước chữ viết tắt viết hoa là đúng — máy không phân biệt được |
 | Đáp án Cambridge: số câu/đáp án xen kẽ sau "KEY"; header trang lặp lại kết thúc một KEY | Trang 2 của đáp án R&W lặp "EXAM / PAPER …" ngay sau Part 3 |
+
+## E15 — Trộn đề (Victory 20/10)
+Yêu cầu: mỗi phần thi có 2 đề gốc cùng cấp độ, trộn ngẫu nhiên thành 4 đề, hai máy kế nhau không cùng đề.
+
+| Quyết định (dự kiến, chờ xác nhận) | Lý do |
+|---|---|
+| Trộn theo **part**: mỗi part của đề trộn lấy nguyên từ đề gốc 1 hoặc 2 | Part là đơn vị tự đủ (đoạn văn, hình, audio Listening một track/part, đáp án); giữ đúng bố cục Inspera và cách chấm |
+| Hai đề gốc phải cùng khuôn (số part, số câu mỗi part, kiểu câu) | Đánh số 1..N và section template không đổi; importer đã có quy tắc này |
+| 4 tổ hợp khác nhau từng đôi, mỗi đề có part của cả hai đề gốc, chọn ngẫu nhiên, lưu seed | Tái tạo được khi cần đối chiếu |
+| Đề trộn là `test_papers` bình thường (Published), dùng chung asset theo SHA-256 | Chấm tự động, chấm Writing, trang duyệt đề chạy y như cũ |
+| Chia đề theo lưới phòng máy: mã đề = (hàng mod 2, máy mod 2), 4 mã gán ngẫu nhiên vào 4 ô | Lưới 2×2 lặp lại: mọi cặp máy kề nhau ngang, dọc, chéo đều khác đề |
+| Lượt làm bài lưu đề của nó (`attempts.test_paper_id`) khi bắt đầu | Đổi máy giữa giờ (mật khẩu giám thị) không đổi đề; chấm theo đúng đề |
+| Mỗi phần thi một bộ `exam_section_papers` (mã đề 1–4 → đề) thay cho một đề duy nhất | Một đề vẫn dùng được (cả 4 mã trỏ cùng đề) |
+
+Đề gốc: A2 = `a2-key-fs-2022-sample` + `a2-key-2020-sample`; B1 = `b1-pet-2022-sample` + `b1-pet-fs-sample`. Bộ chuyển PDF đọc được A2 Key R&W mới (32 câu, 7 part, không lỗi); Listening A2 Key còn chờ tách file mp3 ~30 phút thành 5 part.
+
+Cần hỏi Victory: (1) chỉ trộn part hay xáo cả thứ tự câu/phương án; (2) phòng máy đánh số thế nào (hàng × máy, hay một dãy); (3) trộn riêng từng phần thi hay một mã đề cho cả kỳ thi.

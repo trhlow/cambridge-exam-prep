@@ -33,31 +33,35 @@ Tổng: 23 story, 93 điểm.
 
 ### Phase 2: Sprint 2 (19/10 – 25/10) — Tuần gặp GV 1: phân quyền nhiều tác nhân, duyệt chéo hai admin (Victory 16/10); đặc tả, sơ đồ, đặc tả API; hướng dẫn cài đặt
 Tổng: 9 story, 34 điểm.
-- [ ] VE-58 [E12] (2đ) Bản đặc tả yêu cầu (quy trình thi máy, vai trò, chức năng, yêu cầu phi chức năng)
-- [ ] VE-45 [E12] (3đ) Sơ đồ trạng thái lượt làm bài, sơ đồ tuần tự, đặc tả API
-- [ ] VE-59 [E14] (5đ) Mô hình quyền: Admin, Quản trị viên theo mảng, Giám khảo, Giám thị
-- [ ] VE-60 [E14] (8đ) Duyệt chéo hai admin: yêu cầu xoá và thao tác tài khoản chờ duyệt
-- [ ] VE-61 [E14] (5đ) Giám khảo: xem bài làm, chấm Writing và xem kết quả theo kỳ thi được phân công
-- [ ] VE-62 [E14] (5đ) Cổng nhân viên theo quyền: tài khoản theo vai trò/mảng, trang yêu cầu chờ duyệt, nhật ký
-- [ ] VE-63 [E14] (2đ) Cập nhật sơ đồ use case, ERD và tài liệu cho các tác nhân mới
-- [ ] VE-46 [E11] (3đ) Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/
-- [ ] VE-20 [E12] (1đ) Báo cáo tiến độ tuần 2
-- **Status:** pending
+- [x] VE-58 [E12] (2đ) Bản đặc tả yêu cầu (quy trình thi máy, vai trò, chức năng, yêu cầu phi chức năng)
+- [x] VE-45 [E12] (3đ) Sơ đồ trạng thái lượt làm bài, sơ đồ tuần tự, đặc tả API
+- [x] VE-59 [E14] (5đ) Mô hình quyền: Admin, Quản trị viên theo mảng, Giám khảo, Giám thị
+- [x] VE-60 [E14] (8đ) Duyệt chéo hai admin: yêu cầu xoá và thao tác tài khoản chờ duyệt
+- [x] VE-61 [E14] (5đ) Giám khảo: xem bài làm, chấm Writing và xem kết quả theo kỳ thi được phân công
+- [x] VE-62 [E14] (5đ) Cổng nhân viên theo quyền: tài khoản theo vai trò/mảng, trang yêu cầu chờ duyệt, nhật ký
+- [x] VE-63 [E14] (2đ) Cập nhật sơ đồ use case, ERD và tài liệu cho các tác nhân mới
+- [x] VE-46 [E11] (3đ) Đóng gói triển khai (Docker) và hướng dẫn cài đặt trong setup/
+- [x] VE-20 [E12] (1đ) Báo cáo tiến độ tuần 2
+- **Status:** complete
 
-### Phase 3: Sprint 3 (26/10 – 01/11) — SignalR; sửa đề trên web; Safe Exam Browser và cảnh báo vi phạm; tên trung tâm và logo
-Tổng: 6 story, 24 điểm.
-- [ ] VE-13 [E7] (5đ) SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì
-- [ ] VE-25 [E3] (8đ) Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)
-- [ ] VE-28 [E9] (5đ) Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi
-- [ ] VE-29 [E9] (3đ) Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm
-- [ ] VE-24 [E4] (2đ) Đổi tên trung tâm và logo (tải PNG)
+### Phase 3: Sprint 3 (26/10 – 01/11) — SignalR; sửa đề trên web; Safe Exam Browser và cảnh báo vi phạm; tên trung tâm và logo; trộn đề A2 (Victory 20/10)
+Tổng: 9 story, 40 điểm.
+- [x] VE-13 [E7] (5đ) SignalR hub: trạng thái thí sinh, phút còn lại, cảnh báo cập nhật tức thì
+- [x] VE-25 [E3] (8đ) Giao diện nhập và sửa đề (part, nhóm câu, câu hỏi, đáp án, upload audio/hình)
+- [x] VE-28 [E9] (5đ) Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi
+- [x] VE-29 [E9] (3đ) Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm
+- [x] VE-24 [E4] (2đ) Đổi tên trung tâm và logo (tải PNG)
+- [ ] VE-64 [E15] (3đ) Đề gốc thứ hai cho A2 (A2 Key sample): tách audio 5 part, chuyển PDF thành gói, kiểm tra hai đề cùng khuôn
+- [ ] VE-65 [E15] (8đ) Sinh 4 đề trộn từ 2 đề gốc: mỗi part lấy nguyên từ đề gốc 1 hoặc 2 (kèm hình, audio, đáp án)
+- [ ] VE-66 [E15] (5đ) Sơ đồ phòng máy và chia đề theo vị trí máy (ô 2×2): hai máy kề nhau ngang, dọc, chéo luôn khác đề
 - [ ] VE-27 [E12] (1đ) Báo cáo tiến độ tuần 3
 - **Status:** pending
 
 ### Phase 4: Sprint 4 (02/11 – 08/11) — Kiểm thử đầu-cuối A2; bắt đầu B1 Preliminary for Schools
-Tổng: 4 story, 13 điểm.
-- [ ] VE-31 [E11] (5đ) Test đầu-cuối Playwright cho luồng thi A2 và thao tác giám thị chính
+Tổng: 5 story, 18 điểm.
+- [x] VE-31 [E11] (5đ) Test đầu-cuối Playwright cho luồng thi A2 và thao tác giám thị chính
 - [ ] VE-33 [E10] (2đ) Khảo sát giao diện bài thi mẫu B1 PfS (Reading, Writing, Listening)
+- [ ] VE-67 [E15] (5đ) Cổng nhân viên cho trộn đề: chọn 2 đề gốc, xem 4 đề trộn, in sơ đồ phòng kèm mã đề; mã đề trên trang giám thị và bảng kết quả
 - [ ] VE-34 [E10] (5đ) Bổ sung kiểu câu còn thiếu cho B1 Reading (6 part)
 - [ ] VE-32 [E12] (1đ) Báo cáo tiến độ tuần 4
 - **Status:** pending
@@ -70,8 +74,9 @@ Tổng: 3 story, 7 điểm.
 - **Status:** pending
 
 ### Phase 6: Sprint 6 (16/11 – 22/11) — Kỳ thi B1 chạy đầu-cuối, sửa lỗi tồn đọng A2/B1
-Tổng: 3 story, 7 điểm.
+Tổng: 4 story, 10 điểm.
 - [ ] VE-38 [E10] (3đ) Kỳ thi B1 3 phần thi chạy đầu-cuối, chấm tự động
+- [ ] VE-68 [E15] (3đ) Trộn đề B1 (Reading, Writing, Listening) từ hai đề gốc B1 Preliminary 2022 và B1 Preliminary for Schools
 - [ ] VE-39 [E11] (3đ) Sửa lỗi tồn đọng A2/B1
 - [ ] VE-40 [E12] (1đ) Báo cáo tiến độ tuần 6
 - **Status:** pending
