@@ -233,3 +233,8 @@
 - Chấm: `ChosenQuestions` (câu Yes; không chọn thì câu viết đầu tiên; No không bao giờ chấm); điểm tối đa nhóm = câu cao điểm nhất (B1 Writing 40); giám khảo chấm câu không được chọn → 400; Final khi đủ câu được tính
 - Bộ chuyển B1 đặt `chooseCount: 1` cho Writing Part 2; đề mẫu tự soạn `samples/b1-pfs-writing`
 - Test: `B1WritingTests`, `ChosenQuestionsTests`, validator, frontend `chooseQuestion.test.tsx`
+
+### Sprint 5 xong sớm (21/10): VE-69, VE-37, VE-35, VE-36
+- VE-36: `progress-report/BaoCaoTienDo_Tuan05_TranHoangLong.docx` (09–15/11, ký 15/11); Google Sheet chưa điền (chờ đúng ngày)
+- Toàn bộ: backend 379/379, frontend 98/98, bộ chuyển 69/69; Docker build lại, ERD vẽ lại
+- Tiếp theo Sprint 6: VE-38 kỳ thi B1 đầu-cuối (Playwright), VE-68 trộn đề B1, VE-39 sửa lỗi tồn đọng, VE-40 báo cáo tuần 6
