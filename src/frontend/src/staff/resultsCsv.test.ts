@@ -23,6 +23,16 @@ describe('resultsCsv', () => {
     ])
   })
 
+  it('adds the version each candidate sat for a section with mixed papers (VE-67)', () => {
+    const mixed = result('0004', 'Chi Lê', ['Submitted', 30, 60], ['Submitted', 20, 25])
+    mixed.sections[0].paperVersion = 3
+
+    expect(resultsCsv([mixed]).slice(1).split(String.fromCharCode(13, 10))).toEqual([
+      '"Candidate number","Name","Reading & Writing","Reading & Writing max","Reading & Writing version","Listening","Listening max"',
+      '"0004","Chi Lê",30,60,3,20,25',
+    ])
+  })
+
   it('neutralises text that Excel would run as a formula', () => {
     const csv = resultsCsv([result('0003', '=HYPERLINK("http://evil")', ['NotStarted', null, null], ['NotStarted', null, null])])
 

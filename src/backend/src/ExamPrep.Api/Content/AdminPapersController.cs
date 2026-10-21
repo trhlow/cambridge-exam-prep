@@ -21,7 +21,8 @@ public sealed record BlankPaperRequest(int SectionTemplateId, [System.ComponentM
 /// <summary>A section a blank paper can be started for.</summary>
 public sealed record BlankLayoutView(int SectionTemplateId, string ExamType, string Section);
 
-public sealed record PaperListItem(int Id, string Title, string ExamType, int SectionTemplateId, string Section, string Status, int Parts, int Questions, DateTime CreatedAt, int UsedByExams);
+/// <param name="PaperMixId">Set on the four papers of a mix (VE-65), with their <c>MixVersion</c>.</param>
+public sealed record PaperListItem(int Id, string Title, string ExamType, int SectionTemplateId, string Section, string Status, int Parts, int Questions, DateTime CreatedAt, int UsedByExams, int? PaperMixId = null, int? MixVersion = null);
 
 [ApiController]
 [Route("api/admin/papers")]
@@ -178,6 +179,7 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
     {
         var paper = await db.TestPapers.AsNoTracking()
             .Include(p => p.SectionTemplate!).ThenInclude(t => t.ExamType)
+            .Include(p => p.PaperMix)
             .Include(p => p.Parts).ThenInclude(p => p.Groups).ThenInclude(g => g.Questions).ThenInclude(q => q.AnswerKeys)
             .AsSplitQuery()
             .SingleOrDefaultAsync(p => p.Id == paperId, cancellationToken);
@@ -244,7 +246,9 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
             p.Parts.Count,
             db.Questions.Count(q => q.QuestionGroup!.PaperPart!.TestPaperId == p.Id),
             p.CreatedAt,
-            db.ExamSections.Where(s => s.TestPaperId == p.Id).Select(s => s.ExamId).Distinct().Count()));
+            db.ExamSections.Where(s => s.TestPaperId == p.Id).Select(s => s.ExamId).Distinct().Count(),
+            p.PaperMixId,
+            p.MixVersion));
 
     private BadRequestObjectResult InvalidPackage(IReadOnlyList<string> errors)
     {

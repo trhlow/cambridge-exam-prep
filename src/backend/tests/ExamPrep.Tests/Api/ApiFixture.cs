@@ -304,6 +304,18 @@ public sealed class ApiFixture : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Ends a started attempt as if its time had run out, so it can be marked.</summary>
+    public async Task SubmitStartedAttemptAsync(int candidateId, int sectionId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var attempt = db.Attempts.Single(a => a.CandidateId == candidateId && a.ExamSectionId == sectionId);
+        attempt.Status = AttemptStatus.Submitted;
+        attempt.SubmittedAt = DateTime.UtcNow;
+        attempt.SubmitReason = SubmitReason.TimeExpired;
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>The computer a candidate sits at, as staff type it on the candidate list.</summary>
     public async Task SetSeatAsync(int candidateId, string? seatNo)
     {

@@ -61,6 +61,7 @@ export function CandidatesPanel({ exam, canEdit, onChanged }: { exam: ExamDetail
               <th>Username</th>
               <th className="st-num">Extra time</th>
               <th>Seat</th>
+              {candidates.some((x) => x.paperVersion) && <th>Paper</th>}
               {canEdit && <th />}
             </tr>
           </thead>
@@ -73,6 +74,7 @@ export function CandidatesPanel({ exam, canEdit, onChanged }: { exam: ExamDetail
                 <td className="st-mono">{c.username}</td>
                 <td className="st-num">{c.plannedExtraPercent > 0 ? `${c.plannedExtraPercent} %` : '–'}</td>
                 <td>{c.seatNo ?? '–'}</td>
+                {candidates.some((x) => x.paperVersion) && <td>{c.paperVersion ? <span className={`room-version room-version--${c.paperVersion}`}>V{c.paperVersion}</span> : '–'}</td>}
                 {canEdit && (
                   <td className="st-row-actions">
                     <button type="button" className="st-link" onClick={() => setEditing(c)}>

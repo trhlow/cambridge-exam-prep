@@ -12,6 +12,7 @@ import { MarkingPage } from './pages/MarkingPage'
 import { MonitorPage } from './pages/MonitorPage'
 import { PaperPage } from './pages/PaperPage'
 import { PapersPage } from './pages/PapersPage'
+import { RoomPlanPage } from './pages/RoomPlanPage'
 import { ResultsPage } from './pages/ResultsPage'
 import { StaffUsersPage } from './pages/StaffUsersPage'
 import { Link } from './Link'
@@ -76,6 +77,10 @@ function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void 
   // Login slips print on their own, without the portal around them.
   if (route.page === 'slips') {
     return <LoginSlipsPage examId={route.examId} />
+  }
+
+  if (route.page === 'room-plan') {
+    return <RoomPlanPage examId={route.examId} />
   }
 
   return (
@@ -157,6 +162,7 @@ function Page({ route, access }: { route: Route; access: Access }) {
     case 'centre':
       return access.worksIn('Centre') ? <CentrePage /> : <NotAllowed />
     case 'slips':
+    case 'room-plan':
     case 'not-found':
       return <NotAllowed />
   }

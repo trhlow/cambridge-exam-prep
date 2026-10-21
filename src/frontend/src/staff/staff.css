@@ -808,6 +808,118 @@ ul.st-error {
   color: var(--st-muted);
 }
 
+/* VE-67: mixed-paper versions and the room plan */
+.st-field--narrow {
+  max-width: 360px;
+}
+
+.room-version {
+  display: inline-block;
+  min-width: 2.2em;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-family: var(--st-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.room-version--1 {
+  background: var(--st-blue-bg);
+  color: var(--st-blue);
+}
+
+.room-version--2 {
+  background: var(--st-green-bg);
+  color: var(--st-green);
+}
+
+.room-version--3 {
+  background: var(--st-yellow-bg);
+  color: var(--st-yellow);
+}
+
+.room-version--4 {
+  background: #f6e8f3;
+  color: #8a2f74;
+}
+
+.room-plan .slips-bar {
+  max-width: 1100px;
+}
+
+.room-plan-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  max-width: 1100px;
+  margin: 0 auto 16px;
+}
+
+.room-plan-head h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.room-plan .st-note,
+.room-plan-legend,
+.room-plan-foot {
+  max-width: 1100px;
+  margin: 0 auto 12px;
+}
+
+.room-plan-legend ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.room-plan-legend li {
+  margin: 2px 0;
+}
+
+.room-plan-legend .room-version {
+  margin: 0 8px 0 0;
+}
+
+.room-grid {
+  display: grid;
+  gap: 10px;
+  max-width: 1100px;
+  margin: 16px auto;
+  overflow-x: auto;
+}
+
+.room-seat {
+  min-height: 84px;
+  padding: 10px 12px;
+  border: 1px solid var(--st-hairline);
+  border-radius: var(--st-radius);
+  background: #fff;
+  break-inside: avoid;
+}
+
+.room-seat.is-empty {
+  border-style: dashed;
+  background: transparent;
+}
+
+.room-seat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.room-seat-no {
+  font-family: var(--st-mono);
+  font-weight: 600;
+  color: var(--st-muted);
+}
+
 @media print {
   .slips {
     padding: 0;

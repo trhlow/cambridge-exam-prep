@@ -105,7 +105,8 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
         title={view.sectionTitle}
         meta={
           <>
-            <Link to={`/staff/exams/${examId}`}>{view.examName}</Link> · {view.durationMinutes} minutes · {isLive ? 'live' : `refreshed ${formatTime(view.serverNow)}`}
+            <Link to={`/staff/exams/${examId}`}>{view.examName}</Link> · {view.durationMinutes} minutes
+            {view.paperMixTitle && ` · mixed papers: ${view.paperMixTitle}`} · {isLive ? 'live' : `refreshed ${formatTime(view.serverNow)}`}
           </>
         }
         actions={
@@ -155,6 +156,7 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
               <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all candidates" />
             </th>
             <th>Candidate</th>
+            {view.paperMixTitle && <th>Paper</th>}
             <th>Status</th>
             <th>Connection</th>
             <th className="st-num">Time left</th>
@@ -172,6 +174,7 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
               key={row.candidateId}
               row={row}
               hasAudio={view.hasAudio}
+              showsVersion={Boolean(view.paperMixTitle)}
               isSelected={selected.has(row.candidateId)}
               onToggle={() => toggle(row.candidateId)}
               onWarnings={() => setWarningsFor({ candidateId: row.candidateId, title: `Warnings — ${row.fullName}` })}
@@ -221,8 +224,8 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
   )
 }
 
-function Row(props: { row: MonitorRow; hasAudio: boolean; isSelected: boolean; onToggle: () => void; onWarnings: () => void }) {
-  const { row, hasAudio, isSelected, onToggle, onWarnings } = props
+function Row(props: { row: MonitorRow; hasAudio: boolean; showsVersion: boolean; isSelected: boolean; onToggle: () => void; onWarnings: () => void }) {
+  const { row, hasAudio, showsVersion, isSelected, onToggle, onWarnings } = props
   const isRunning = row.status === 'InProgress' || row.status === 'Paused'
   return (
     <tr className={isSelected ? 'is-selected' : undefined}>
@@ -235,6 +238,7 @@ function Row(props: { row: MonitorRow; hasAudio: boolean; isSelected: boolean; o
           {row.candidateNumber} · {row.username}
         </div>
       </td>
+      {showsVersion && <td>{row.paperVersion ? <span className={`room-version room-version--${row.paperVersion}`}>V{row.paperVersion}</span> : '–'}</td>}
       <td>
         <Badge value={row.status} />
         {row.submitReason === 'InvigilatorEndNow' && <div className="st-faint">Ended by invigilator</div>}

@@ -65,6 +65,11 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
                 Print login slips
               </a>
             )}
+            {access.printsSlips && exam.sections.some((s) => s.paperMixId) && (
+              <a className="st-btn" href={`/staff/exams/${exam.id}/room-plan`} target="_blank" rel="noopener noreferrer">
+                Room plan
+              </a>
+            )}
             {access.seesResults && (
               <Link to={`/staff/exams/${exam.id}/results`} className="st-btn">
                 Results
@@ -110,7 +115,13 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
               <span className="st-faint">Section {section.orderNo}</span>
               <strong>{section.title}</strong>
               <span>{section.durationMinutes} minutes</span>
-              <span className="st-faint">{section.paperTitle}</span>
+              {section.paperMixId ? (
+                <span className="st-faint">
+                  {section.paperMixTitle} · mixed, 4 versions by seat
+                </span>
+              ) : (
+                <span className="st-faint">{section.paperTitle}</span>
+              )}
             </>
           )
           return access.monitors ? (

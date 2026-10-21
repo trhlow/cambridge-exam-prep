@@ -14,3 +14,8 @@ export function formatTime(iso: string | null): string {
 export function formatDateTime(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–'
 }
+
+/** "ABBAABA" → "Part 1 A · Part 2 B · …": which source paper each part of a mixed paper comes from (VE-65). */
+export function patternText(pattern: string) {
+  return [...pattern].map((source, index) => `Part ${index + 1} ${source}`).join(' · ')
+}
