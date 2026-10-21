@@ -98,6 +98,7 @@ internal static class A2ExamBuilder
         {
             CandidateId = candidate.Id,
             ExamSectionId = section.Id,
+            TestPaperId = paper.Id,
             Status = AttemptStatus.InProgress,
             StartedAt = now,
             EndsAt = now.AddMinutes(60),

@@ -17,6 +17,7 @@ internal sealed class ExamSectionConfiguration : IEntityTypeConfiguration<ExamSe
         builder.HasOne(s => s.Exam).WithMany(e => e.Sections).HasForeignKey(s => s.ExamId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(s => s.SectionTemplate).WithMany().HasForeignKey(s => s.SectionTemplateId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(s => s.TestPaper).WithMany().HasForeignKey(s => s.TestPaperId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(s => s.PaperMix).WithMany().HasForeignKey(s => s.PaperMixId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(s => new { s.ExamId, s.OrderNo }).IsUnique();
     }
 }

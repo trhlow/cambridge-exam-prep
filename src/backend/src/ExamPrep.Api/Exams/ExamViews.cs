@@ -4,7 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExamPrep.Api.Exams;
 
-public sealed record ExamSectionView(int Id, int SectionTemplateId, int OrderNo, string Title, int DurationMinutes, int TestPaperId, string PaperTitle);
+/// <param name="PaperMixId">Set when the section gives the four papers of a mix by seat (VE-66); TestPaperId is then version 1.</param>
+public sealed record ExamSectionView(int Id, int SectionTemplateId, int OrderNo, string Title, int DurationMinutes, int TestPaperId, string PaperTitle, int? PaperMixId = null, string? PaperMixTitle = null);
 
 /// <summary>An invigilator or examiner assigned to a session.</summary>
 public sealed record AssignedStaffView(int Id, string Username, string FullName);
@@ -31,7 +32,8 @@ public sealed record ExamDetail(
     IReadOnlyList<ExamSectionView> Sections,
     IReadOnlyList<AssignedStaffView> Invigilators,
     IReadOnlyList<AssignedStaffView> Examiners,
-    string? SebConfigKey);
+    string? SebConfigKey,
+    int? SeatsPerRow = null);
 
 /// <param name="Password">Null when it can no longer be read back (data-protection keys replaced); reset it then.</param>
 public sealed record LoginSlip(int CandidateId, string CandidateNumber, string FullName, string Username, string? Password, string ExamName, DateOnly ScheduledDate, string? Room);
@@ -70,6 +72,7 @@ public static class ExamViews
                 e.SessionPin,
                 e.InvigilatorPassword,
                 e.SebConfigKeyHash,
+                e.SeatsPerRow,
                 Candidates = e.Candidates.Count,
             })
             .SingleOrDefaultAsync(cancellationToken);
@@ -92,7 +95,7 @@ public static class ExamViews
         var hasStarted = await HasStartedAsync(db, examId, cancellationToken);
         return new ExamDetail(
             exam.Id, exam.Name, exam.ExamTypeId, exam.ExamType, exam.ScheduledDate, exam.Room, exam.Status.ToString(), exam.SessionPin,
-            exam.InvigilatorPassword, exam.Candidates, hasStarted, sections.GetValueOrDefault(examId, []), invigilators, examiners, exam.SebConfigKeyHash);
+            exam.InvigilatorPassword, exam.Candidates, hasStarted, sections.GetValueOrDefault(examId, []), invigilators, examiners, exam.SebConfigKeyHash, exam.SeatsPerRow);
     }
 
     /// <summary>True once any candidate has an attempt at any section of the session.</summary>
@@ -104,8 +107,16 @@ public static class ExamViews
         var sections = await db.ExamSections.AsNoTracking()
             .Where(s => examIds.Contains(s.ExamId))
             .OrderBy(s => s.OrderNo)
-            .Select(s => new { s.ExamId, View = new ExamSectionView(s.Id, s.SectionTemplateId, s.OrderNo, s.SectionTemplate!.Title, s.DurationMinutes, s.TestPaperId, s.TestPaper!.Title) })
+            .Select(s => new { s.ExamId, View = new ExamSectionView(s.Id, s.SectionTemplateId, s.OrderNo, s.SectionTemplate!.Title, s.DurationMinutes, s.TestPaperId, s.TestPaper!.Title, s.PaperMixId, null) })
             .ToListAsync(cancellationToken);
+        // Mix titles in a second flat query: the provider does not translate an optional navigation inside this projection.
+        var mixIds = sections.Where(s => s.View.PaperMixId != null).Select(s => s.View.PaperMixId!.Value).Distinct().ToList();
+        if (mixIds.Count > 0)
+        {
+            var titles = await db.PaperMixes.AsNoTracking().Where(m => mixIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.Title, cancellationToken);
+            sections = sections.Select(s => s.View.PaperMixId is { } id ? new { s.ExamId, View = s.View with { PaperMixTitle = titles[id] } } : s).ToList();
+        }
+
         return sections.GroupBy(s => s.ExamId).ToDictionary(g => g.Key, g => (IReadOnlyList<ExamSectionView>)g.Select(s => s.View).ToList());
     }
 }

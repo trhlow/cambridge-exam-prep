@@ -18,6 +18,14 @@ public class Attempt
 
     public ExamSection? ExamSection { get; set; }
 
+    /// <summary>
+    /// The paper this candidate sits: the section's paper, or the version of its mix given to their seat when they
+    /// started. It never changes afterwards, so moving to another computer keeps the paper.
+    /// </summary>
+    public int TestPaperId { get; set; }
+
+    public TestPaper? TestPaper { get; set; }
+
     public AttemptStatus Status { get; set; } = AttemptStatus.NotStarted;
 
     public DateTime? StartedAt { get; set; }

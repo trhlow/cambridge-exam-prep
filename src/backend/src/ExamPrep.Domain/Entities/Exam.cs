@@ -28,6 +28,12 @@ public class Exam
     /// <summary>Hex SHA-256 of the Safe Exam Browser config key the server accepts.</summary>
     public string? SebConfigKeyHash { get; set; }
 
+    /// <summary>
+    /// Computers per row in the room (seat numbers run row by row). Decides which computers are neighbours when a section
+    /// delivers a mix of papers; null means one row.
+    /// </summary>
+    public int? SeatsPerRow { get; set; }
+
     public int CreatedByUserId { get; set; }
 
     public DateTime CreatedAt { get; set; }

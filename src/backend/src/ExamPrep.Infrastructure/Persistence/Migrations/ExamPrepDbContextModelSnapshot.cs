@@ -338,9 +338,15 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("submitted_at");
 
+                    b.Property<int>("TestPaperId")
+                        .HasColumnType("int")
+                        .HasColumnName("test_paper_id");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExamSectionId");
+
+                    b.HasIndex("TestPaperId");
 
                     b.HasIndex("CandidateId", "ExamSectionId")
                         .IsUnique();
@@ -529,6 +535,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("date")
                         .HasColumnName("scheduled_date");
 
+                    b.Property<int?>("SeatsPerRow")
+                        .HasColumnType("int")
+                        .HasColumnName("seats_per_row");
+
                     b.Property<string>("SebConfigKeyHash")
                         .HasMaxLength(64)
                         .HasColumnType("char(64)")
@@ -555,7 +565,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ScheduledDate");
 
-                    b.ToTable("exams");
+                    b.ToTable("exams", t =>
+                        {
+                            t.HasCheckConstraint("CK_exams_seats_per_row", "seats_per_row IS NULL OR seats_per_row BETWEEN 1 AND 50");
+                        });
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.ExamExaminer", b =>
@@ -619,6 +632,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("order_no");
 
+                    b.Property<int?>("PaperMixId")
+                        .HasColumnType("int")
+                        .HasColumnName("paper_mix_id");
+
                     b.Property<int>("SectionTemplateId")
                         .HasColumnType("int")
                         .HasColumnName("section_template_id");
@@ -632,6 +649,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnName("test_paper_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PaperMixId");
 
                     b.HasIndex("SectionTemplateId");
 
@@ -1455,9 +1474,17 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("ExamPrep.Domain.Entities.TestPaper", "TestPaper")
+                        .WithMany()
+                        .HasForeignKey("TestPaperId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Candidate");
 
                     b.Navigation("ExamSection");
+
+                    b.Navigation("TestPaper");
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.Candidate", b =>
@@ -1558,6 +1585,11 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("ExamPrep.Domain.Entities.PaperMix", "PaperMix")
+                        .WithMany()
+                        .HasForeignKey("PaperMixId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ExamPrep.Domain.Entities.SectionTemplate", "SectionTemplate")
                         .WithMany()
                         .HasForeignKey("SectionTemplateId")
@@ -1571,6 +1603,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Exam");
+
+                    b.Navigation("PaperMix");
 
                     b.Navigation("SectionTemplate");
 

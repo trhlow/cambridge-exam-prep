@@ -112,6 +112,7 @@ public sealed class ApiFixture : IAsyncLifetime
         {
             CandidateId = candidateId,
             ExamSectionId = sectionId,
+            TestPaperId = db.ExamSections.Where(s => s.Id == sectionId).Select(s => s.TestPaperId).Single(),
             Status = AttemptStatus.InProgress,
             StartedAt = now,
             EndsAt = now.AddMinutes(durationMinutes),
@@ -293,12 +294,23 @@ public sealed class ApiFixture : IAsyncLifetime
         {
             CandidateId = candidateId,
             ExamSectionId = sectionId,
+            TestPaperId = db.ExamSections.Where(s => s.Id == sectionId).Select(s => s.TestPaperId).Single(),
             Status = AttemptStatus.Submitted,
             StartedAt = now.AddMinutes(-60),
             EndsAt = now,
             SubmittedAt = now,
             SubmitReason = SubmitReason.TimeExpired,
         });
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>The computer a candidate sits at, as staff type it on the candidate list.</summary>
+    public async Task SetSeatAsync(int candidateId, string? seatNo)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var candidate = await db.Candidates.FindAsync(candidateId) ?? throw new InvalidOperationException($"Candidate {candidateId} not found.");
+        candidate.SeatNo = seatNo;
         await db.SaveChangesAsync();
     }
 

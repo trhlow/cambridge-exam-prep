@@ -17,6 +17,14 @@ public class ExamSection
 
     public TestPaper? TestPaper { get; set; }
 
+    /// <summary>
+    /// Set when the section delivers the four papers of a mix by seat (Victory 20/10); <see cref="TestPaperId"/> is then
+    /// version 1. Each attempt records the paper its candidate was given.
+    /// </summary>
+    public int? PaperMixId { get; set; }
+
+    public PaperMix? PaperMix { get; set; }
+
     public int OrderNo { get; set; }
 
     /// <summary>Copied from the template so later template edits do not change a scheduled exam.</summary>

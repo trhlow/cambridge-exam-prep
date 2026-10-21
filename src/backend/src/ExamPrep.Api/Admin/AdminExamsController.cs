@@ -18,10 +18,12 @@ public sealed record SectionTemplateView(int Id, int OrderNo, string Title, int 
 
 public sealed record ExamTypeView(int Id, string Code, string Name, IReadOnlyList<SectionTemplateView> Sections);
 
-public sealed record SectionPaper(int SectionTemplateId, int TestPaperId);
+/// <param name="PaperMixId">Optional (VE-66): give the four papers of this mix by seat instead of one paper to everyone; TestPaperId is then ignored.</param>
+public sealed record SectionPaper(int SectionTemplateId, int TestPaperId, int? PaperMixId = null);
 
 /// <param name="SessionPin">Left empty: a random 4-digit PIN.</param>
 /// <param name="InvigilatorPassword">Left empty: a random password.</param>
+/// <param name="SeatsPerRow">Computers per row (1–50) for giving mixed papers by seat; 0 means one row; omitted keeps the current value.</param>
 public sealed record SaveExamRequest(
     [Required, StringLength(200, MinimumLength = 1)] string Name,
     int ExamTypeId,
@@ -30,7 +32,8 @@ public sealed record SaveExamRequest(
     [Required] List<SectionPaper> Papers,
     string? SessionPin = null,
     string? InvigilatorPassword = null,
-    string? SebConfigKey = null);
+    string? SebConfigKey = null,
+    int? SeatsPerRow = null);
 
 public sealed record SetExamStatusRequest([Required] string Status);
 
@@ -55,6 +58,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
     private const int MinInvigilatorPasswordLength = 6;
     private const int MaxInvigilatorPasswordLength = 64;
     private const string InvigilatorPasswordAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    private const int MaxSeatsPerRow = 50;
 
     [HttpGet("exam-types")]
     public async Task<IReadOnlyList<ExamTypeView>> ExamTypes(CancellationToken cancellationToken)
@@ -106,6 +110,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             SessionPin = Blank(request.SessionPin) ?? RandomNumberGenerator.GetInt32(0, 10_000).ToString("D4"),
             InvigilatorPassword = Blank(request.InvigilatorPassword) ?? RandomNumberGenerator.GetString(InvigilatorPasswordAlphabet, 10),
             SebConfigKeyHash = Blank(request.SebConfigKey)?.ToLowerInvariant(),
+            SeatsPerRow = request.SeatsPerRow is > 0 ? request.SeatsPerRow : null,
             CreatedByUserId = User.GetStaffId(),
             CreatedAt = DateTime.UtcNow,
             Sections = sections,
@@ -135,7 +140,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
         }
 
         var papersChanged = exam.ExamTypeId != request.ExamTypeId
-            || !exam.Sections.Select(s => (s.SectionTemplateId, s.TestPaperId)).OrderBy(p => p).SequenceEqual(sections.Select(s => (s.SectionTemplateId, s.TestPaperId)).OrderBy(p => p));
+            || !exam.Sections.Select(s => (s.SectionTemplateId, s.TestPaperId, s.PaperMixId)).OrderBy(p => p).SequenceEqual(sections.Select(s => (s.SectionTemplateId, s.TestPaperId, s.PaperMixId)).OrderBy(p => p));
         if (papersChanged && await ExamViews.HasStartedAsync(db, examId, cancellationToken))
         {
             return Problems.Conflict($"{StartedTitle} Its papers can no longer be changed.");
@@ -151,6 +156,12 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             // Empty switches Safe Exam Browser off; omitted (older clients) keeps it as it is.
             exam.SebConfigKeyHash = Blank(request.SebConfigKey)?.ToLowerInvariant();
             Security.SebActionFilter.Forget(cache, examId);
+        }
+
+        if (request.SeatsPerRow is { } seatsPerRow)
+        {
+            // Attempts already started keep their papers; later sections follow the new layout.
+            exam.SeatsPerRow = seatsPerRow > 0 ? seatsPerRow : null;
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -278,6 +289,11 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             errors.Add("The Safe Exam Browser config key must be 64 hexadecimal characters (SEB Config Tool → Config Key).");
         }
 
+        if (request.SeatsPerRow is < 0 or > MaxSeatsPerRow)
+        {
+            errors.Add($"Computers per row must be between 1 and {MaxSeatsPerRow} (0 for one row).");
+        }
+
         var templates = await db.SectionTemplates.AsNoTracking()
             .Where(t => t.ExamTypeId == request.ExamTypeId)
             .OrderBy(t => t.OrderNo)
@@ -290,10 +306,33 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
 
         var paperIds = request.Papers.Select(p => p.TestPaperId).ToList();
         var papers = await db.TestPapers.AsNoTracking().Where(p => paperIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, cancellationToken);
+        var mixIds = request.Papers.Where(p => p.PaperMixId != null).Select(p => p.PaperMixId!.Value).ToList();
+        var mixes = await db.PaperMixes.AsNoTracking().Where(m => mixIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, cancellationToken);
+        var firstVersions = await db.TestPapers.AsNoTracking()
+            .Where(p => p.PaperMixId != null && mixIds.Contains(p.PaperMixId.Value) && p.MixVersion == 1)
+            .ToDictionaryAsync(p => p.PaperMixId!.Value, p => p.Id, cancellationToken);
         var sections = new List<ExamSection>();
         foreach (var template in templates)
         {
             var choice = request.Papers.FirstOrDefault(p => p.SectionTemplateId == template.Id);
+            if (choice?.PaperMixId is { } mixId)
+            {
+                if (!mixes.TryGetValue(mixId, out var mix) || !firstVersions.TryGetValue(mixId, out var firstVersion))
+                {
+                    errors.Add($"Choose a mix of papers that exists for {template.Title}.");
+                }
+                else if (mix.SectionTemplateId != template.Id)
+                {
+                    errors.Add($"“{mix.Title}” is not a mix of {template.Title} papers for this exam type.");
+                }
+                else
+                {
+                    sections.Add(new ExamSection { SectionTemplateId = template.Id, TestPaperId = firstVersion, PaperMixId = mixId, OrderNo = template.OrderNo, DurationMinutes = template.DurationMinutes });
+                }
+
+                continue;
+            }
+
             if (choice is null || !papers.TryGetValue(choice.TestPaperId, out var paper))
             {
                 errors.Add($"Choose a paper for {template.Title}.");
