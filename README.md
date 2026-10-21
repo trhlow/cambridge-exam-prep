@@ -140,6 +140,9 @@ Mở http://localhost:8080 (thí sinh) và http://localhost:8080/staff (nhân s�
 | Giám khảo | `/staff` | `giamkhao` | `19072005` |
 | Giám thị | `/staff` | `giamthi` | `victory-invig` |
 | Thí sinh (Trần Hoàng Long) | `/` | `hoanglong` | `19072005`, mã PIN `4821` |
+| Thí sinh kỳ thi B1 | `/` | `hoanglongb1` | `19072005`, mã PIN `4821` |
+
+Có hai kỳ thi demo: A2 Key for Schools và B1 Preliminary for Schools (Reading → Writing → Listening). Mỗi phần thi trộn từ hai đề gốc theo vị trí máy khi có đề thật trong `setup/exam-package/sources/`, nếu không thì dùng đề mẫu tự soạn.
 
 Thí sinh thật vẫn nhận tên đăng nhập kiểu Cambridge và mật khẩu ngẫu nhiên in trên phiếu. Dừng bằng `docker compose -f docker/docker-compose.yml down` (dữ liệu vẫn giữ).
 
@@ -194,6 +197,7 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Bộ chuyển đề PDF → gói đề cho B1 Preliminary (Reading, Writing, Listening; đáp án có từ tuỳ chọn), tách file nghe B1 theo part, "Import from PDF" nhận đề B1 — 69 test Python
 - [x] B1 Listening 4 part: Part 2 mỗi câu một trang (cờ `questionPerPage` trên part), đề mẫu tự soạn có audio đọc máy
 - [x] B1 Writing: Part 2 chọn 1 trong 2 câu ("Answering this question? Yes/No/Undecided"), giám khảo chỉ chấm câu được chọn, đề mẫu tự soạn
+- [x] Kỳ thi B1 ba phần thi chạy đầu-cuối và trộn đề B1 (máy kề nhau khác đề), kiểm thử Playwright; kỳ thi demo B1
 - [ ] Triển khai HTTPS cho phòng thi thật
 - [x] Test đầu-cuối Playwright (`npm run e2e`, stack Docker riêng cổng 8090): thí sinh đăng nhập + PIN + làm bài + tải lại trang; giám thị tạm dừng/cho làm tiếp và máy thí sinh nhận ngay; quản trị viên tạo đề trắng, gửi yêu cầu xoá, admin khác duyệt; giám thị End now → chấm tự động → giám khảo chấm Writing → điểm Final (chạy lại thì `down -v` stack trước)
 - [ ] Kiểm thử tải, buổi thi thử

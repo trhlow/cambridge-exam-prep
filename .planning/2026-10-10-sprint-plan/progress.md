@@ -245,3 +245,11 @@
 - IELTS tách khỏi đồ án chuyên ngành (để dành cho đồ án tốt nghiệp / báo cáo thực tập): VE-48, VE-49 bỏ khỏi Sprint 9 (danh sách LATER), Sprint 9 thành tuần dự phòng; E13 đổi tên
 - Trang duyệt đề hiện "one question per page" và "candidates answer 1 of 2"
 - CSDL demo: xoá 9 đề nháp thử chuyển đề (100–102, 115–118, 131–132) qua duyệt chéo hai admin
+
+### Sprint 6 (21/10): VE-68, VE-38, VE-39
+- VE-68: hai bộ B1 thật cùng khuôn ở cả 3 phần thi; DemoSeeder mở thêm kỳ thi "Victory demo – B1 Preliminary for Schools" (Demo:B1, thí sinh `hoanglongb1`), mỗi phần thi trộn hai đề gốc theo vị trí máy; Playwright `06-b1-seats`: 8 máy 2 hàng × 4, máy kề nhau (ngang, dọc, chéo) luôn khác mã đề
+- VE-38: Playwright `05-b1-exam`: Reading → Writing (chọn câu 2, câu 3 không chọn được Yes) → Listening (Part 2 mỗi câu một trang), giám thị End now từng phần, chấm tự động, giám khảo chấm câu 1 và câu được chọn → 24/40, Final; stack e2e trộn đề mẫu B1 tự soạn với chính nó
+- VE-39: `DemoOptions.WithFoldersUnder` (thư mục Second* và B1 không được đổi sang đường dẫn tuyệt đối khi chạy `dotnet run`); bộ đếm từ canh trái để nút ← → không che
+- e2e 6/6 đạt; lần chạy đầu trên stack vừa build, test A2 04 hết giờ một lần, hai lần sau đều đạt
+- VE-40: `progress-report/BaoCaoTienDo_Tuan06_TranHoangLong.docx` (16–22/11, ký 22/11); Google Sheet chưa điền. Sprint 6 xong; backend 381/381, frontend 98/98, bộ chuyển 69/69, e2e 6/6
+- Tiếp theo Sprint 7: VE-41 kiểm thử tải, VE-42 buổi thi thử (cần người thật), VE-43 sửa lỗi sau thi thử, VE-44 báo cáo tuần 7
