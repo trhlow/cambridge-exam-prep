@@ -10,7 +10,7 @@ namespace ExamPrep.Api.Content;
 /// <param name="MixPattern">A mixed paper (VE-65): which source each part came from, e.g. "ABBAABA".</param>
 public sealed record PaperDetail(int Id, string Title, string ExamType, string Section, string Status, IReadOnlyList<PaperDetailPart> Parts, int? PaperMixId = null, string? MixTitle = null, int? MixVersion = null, string? MixPattern = null);
 
-public sealed record PaperDetailPart(int PartNo, string? Title, string Layout, string? StimulusHtml, string? AudioUrl, IReadOnlyList<PaperDetailGroup> Groups);
+public sealed record PaperDetailPart(int PartNo, string? Title, string Layout, string? StimulusHtml, string? AudioUrl, IReadOnlyList<PaperDetailGroup> Groups, bool QuestionPerPage = false);
 
 public sealed record PaperDetailGroup(int OrderNo, string InteractionType, string Instructions, string? BodyHtml, IReadOnlyList<CandidateOption>? OptionPool, IReadOnlyList<PaperDetailQuestion> Questions, string? ItemsHeading = null, string? PoolHeading = null);
 
@@ -45,7 +45,8 @@ internal static class PaperDetailMapper
                     q.Points,
                     q.MinWords)).ToList(),
                 group.ItemsHeading,
-                group.PoolHeading)).ToList()))
+                group.PoolHeading)).ToList(),
+            part.QuestionPerPage))
             .ToList(),
         paper.PaperMixId,
         paper.PaperMix?.Title,

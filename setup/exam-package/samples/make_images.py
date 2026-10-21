@@ -179,8 +179,27 @@ def b1_reading():
         portrait(images / f"b1-r-p2-{name}.png", colour)
 
 
+
+def b1_listening():
+    images = HERE / "b1-pfs-listening" / "images"
+    images.mkdir(exist_ok=True)
+    pictures = {
+        "q1": [("7.00", clock(7, 0)), ("7.30", clock(7, 30)), ("8.00", clock(8, 0))],
+        "q2": [("A camera", None), ("An umbrella", None), ("A map", None)],
+        "q3": [("Swimming", None), ("Tennis", None), ("Football", None)],
+        "q4": [("Sunny", sun), ("Rainy", rain), ("Windy", wind)],
+        "q5": [("In his bag", None), ("On the desk", None), ("In the kitchen", None)],
+        "q6": [("£15", None), ("£25", None), ("£40", None)],
+        "q7": [("Visit a museum", None), ("Watch a play", None), ("Plant trees", None)],
+    }
+    for question, options in pictures.items():
+        for key, (caption, painter) in zip("abc", options):
+            card(images / f"b1-l-p1-{question}-{key}.png", caption, painter)
+
+
 if __name__ == "__main__":
     reading_writing()
     listening()
     b1_reading()
+    b1_listening()
     print("Pictures written under", HERE)

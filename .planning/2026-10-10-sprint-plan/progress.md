@@ -220,3 +220,9 @@
 - `split_listening.py` tách được file nghe B1 (mỗi khoảng lặng 10 s là hết part, trừ khoảng trước thời gian chép đáp án) — cả hai bộ B1 đã có `audio-parts/` 4 file
 - Web: file đáp án không bắt buộc (`PaperConversionInput.AnswerKeyPdf` null), hộp thoại ghi "A2 Key 5, B1 Preliminary 4"; thử qua Docker: B1 Writing (2 part, 3 câu), Listening (4 part, 25 câu) import thành Draft, Reading thiếu đáp án báo lỗi rõ
 - Bộ chuyển 69/69 test (thêm test B1 Listening Part 2/3 và đáp án tuỳ chọn), backend conversion 12/12
+
+### Sprint 5 — VE-37 B1 Listening (21/10)
+- `paper_parts.question_per_page` (migration `QuestionPerPage`, gói `questionPerPage`, importer, trộn đề, API thí sinh và trang duyệt đề); `buildPages` chia trang theo cờ, kể cả bố cục Split (dùng lại cho B1 Writing Part 2)
+- Bộ chuyển B1 đặt cờ cho Listening Part 2 và Writing Part 2
+- Đề mẫu tự soạn `samples/b1-pfs-listening` (4 part, 25 câu; 21 hình vẽ; `make_audio.ps1` đọc bằng giọng Windows, mỗi đoạn hai lần)
+- Test: `B1ListeningTests` (import, trộn giữ cờ, thí sinh nhận Part 2 từng trang), validator nhận đề mẫu, frontend `buildPages`

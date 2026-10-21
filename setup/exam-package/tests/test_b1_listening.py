@@ -50,6 +50,7 @@ def test_part2_shows_the_context_and_the_question_together():
     questions = part["groups"][0]["questions"]
 
     assert part["groups"][0]["interactionType"] == "SingleChoice"
+    assert part["questionPerPage"] is True
     assert questions[0]["promptHtml"] == "You will hear two friends talking about a new café.<br>What does the boy like about it?"
     assert [option["text"] for option in questions[1]["options"]] == ["bored", "tired", "excited"]
     assert questions[1]["answers"] == ["C"]

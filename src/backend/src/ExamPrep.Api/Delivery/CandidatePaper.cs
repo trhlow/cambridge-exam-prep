@@ -10,7 +10,7 @@ namespace ExamPrep.Api.Delivery;
 /// </summary>
 public sealed record CandidatePaper(int SectionId, string Title, int DurationMinutes, IReadOnlyList<CandidatePart> Parts);
 
-public sealed record CandidatePart(int PartNo, string? Title, string Layout, string? StimulusHtml, string? AudioUrl, IReadOnlyList<CandidateGroup> Groups);
+public sealed record CandidatePart(int PartNo, string? Title, string Layout, string? StimulusHtml, string? AudioUrl, IReadOnlyList<CandidateGroup> Groups, bool QuestionPerPage = false);
 
 public sealed record CandidateGroup(
     string InteractionType,
@@ -54,7 +54,8 @@ internal static class CandidatePaperMapper
                 group.Questions.OrderBy(q => q.OrderNo).Select(q => new CandidateQuestion(
                     q.Id, q.Number, q.PromptHtml, q.StimulusHtml, Options(q.OptionsJson), q.MinWords)).ToList(),
                 group.ItemsHeading,
-                group.PoolHeading)).ToList()))
+                group.PoolHeading)).ToList(),
+            part.QuestionPerPage))
             .ToList());
 
     public static string AssetUrl(int assetId) => $"{PaperPackageImporter.AssetUrlPrefix}{assetId}";

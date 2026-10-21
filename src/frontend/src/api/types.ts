@@ -67,6 +67,8 @@ export interface Part {
   stimulusHtml: string | null
   audioUrl: string | null
   groups: QuestionGroup[]
+  /** VE-37: Inspera pages this part question by question (B1 Listening Part 2, B1 Writing Part 2). */
+  questionPerPage?: boolean
 }
 
 export interface Paper {

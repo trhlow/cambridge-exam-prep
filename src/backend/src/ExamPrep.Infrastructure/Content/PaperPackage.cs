@@ -23,7 +23,8 @@ public sealed record PackagePart(
     PartLayout Layout = PartLayout.Single,
     string? Title = null,
     string? StimulusHtml = null,
-    string? Audio = null);
+    string? Audio = null,
+    bool QuestionPerPage = false);
 
 public sealed record PackageGroup(
     InteractionType InteractionType,

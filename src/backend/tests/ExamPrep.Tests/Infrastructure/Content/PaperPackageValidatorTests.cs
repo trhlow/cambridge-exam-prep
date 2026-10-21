@@ -29,6 +29,7 @@ public sealed class PaperPackageValidatorTests
     [InlineData(SamplePackages.ReadingWriting)]
     [InlineData(SamplePackages.Listening)]
     [InlineData(SamplePackages.B1Reading)]
+    [InlineData(SamplePackages.B1Listening)]
     public void Validate_AcceptsSamplePackages(string name)
     {
         var errors = Validate(SamplePackages.Load(name));

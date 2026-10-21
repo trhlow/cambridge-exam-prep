@@ -42,7 +42,8 @@ def _part2_context_choice(source: PartSource, key: dict[int, list[str]], _shapes
         questions.append(question)
         warnings += problems
     group = make_group("SingleChoice", source, questions)
-    return PartResult({"partNo": 2, "layout": "Single", "groups": [group]}, [], warnings)
+    # Inspera gives every Part 2 question its own page although none has a picture.
+    return PartResult({"partNo": 2, "layout": "Single", "questionPerPage": True, "groups": [group]}, [], warnings)
 
 
 def _part3_sentences(source: PartSource, key: dict[int, list[str]], _shapes: tuple[Shape, ...]) -> PartResult:

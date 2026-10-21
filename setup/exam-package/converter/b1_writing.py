@@ -116,7 +116,7 @@ def convert_parts(document: Document) -> Conversion:
         if part_no == 2 and len(questions) > 1:
             checks.append("Part 2: candidates answer only one of the questions; each question has its own page.")
         group = {"interactionType": "Essay", "instructions": instructions, "questions": questions}
-        parts[part_no] = {"partNo": part_no, "layout": "Split", "groups": [group]}
+        parts[part_no] = {"partNo": part_no, "layout": "Split", **({"questionPerPage": True} if part_no == 2 else {}), "groups": [group]}
 
     checks.append("B1 asks for about 100 words: minWords is that number, shown as the target on the word counter.")
     return Conversion(parts, crops, warnings, checks)
