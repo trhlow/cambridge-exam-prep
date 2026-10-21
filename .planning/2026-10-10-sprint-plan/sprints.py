@@ -21,7 +21,7 @@ EPICS = {
     "E10": "B1 Preliminary for Schools",
     "E11": "Kiểm thử & buổi thi thử",
     "E12": "Báo cáo đồ án & tài liệu",
-    "E13": "IELTS (nếu kịp)",
+    "E13": "IELTS (để dành cho đồ án tốt nghiệp / báo cáo thực tập)",
     "E14": "Phân quyền nhiều tác nhân và duyệt chéo hai admin",
     "E15": "Trộn đề: 2 đề gốc thành 4 đề, hai máy kế nhau khác đề",
 }
@@ -32,6 +32,8 @@ EPICS = {
 # 20/10: Victory asked for paper shuffling (E15, VE-64…68): two source papers per section mixed part by part
 # into four papers, neighbouring computers never get the same one; A2 in Sprints 3–4, B1 with E10 in Sprint 6.
 # 21/10: the user asked for a B1 PDF converter (VE-69, Sprint 5) next to the A2 one.
+# 21/10: IELTS (E13, VE-48, VE-49) leaves this capstone: its format is loose, so it waits until A2 and B1 (or this
+# report) are finished and becomes the graduation project or internship report. Sprint 9 is a reserve week.
 # On Jira, Sprint 0 and Sprint 1 run as one sprint, "SCRUM Sprint 1" (10/10 – 18/10).
 SPRINTS = [
     ("Sprint 0", "2026-10-10", "2026-10-11", "Khởi động: CSDL và khảo sát giao diện", [
@@ -113,9 +115,7 @@ SPRINTS = [
     ("Sprint 8", "2026-11-30", "2026-12-06", "Viết quyển báo cáo Mở đầu, Chương 1–3 — tuần gặp GV 3", [
         ("VE-47", "E12", 5, "Viết quyển báo cáo: Mở đầu, Chương 1–3", "Bản nháp theo mẫu của Khoa"),
     ]),
-    ("Sprint 9", "2026-12-07", "2026-12-13", "IELTS (nếu kịp) hoặc dự phòng", [
-        ("VE-48", "E13", 5, "IELTS Listening / Reading: kiểu câu nhiều đáp án, ghi nhãn bản đồ", "Làm được một đề IELTS mẫu tự soạn"),
-        ("VE-49", "E13", 3, "IELTS Writing Task 1/2 (Academic, General Training)", "Đếm từ, ảnh đề bài cho Task 1"),
+    ("Sprint 9", "2026-12-07", "2026-12-13", "Dự phòng (IELTS tách khỏi đồ án chuyên ngành)", [
         ("VE-50", "E12", 1, "Báo cáo tiến độ tuần 9", "File báo cáo có trong progress-report/"),
     ]),
     ("Sprint 10", "2026-12-14", "2026-12-20", "Viết báo cáo: kết quả và kết luận", [
@@ -127,6 +127,12 @@ SPRINTS = [
         ("VE-54", "E12", 2, "Slide trình bày và video demo (thesis/abs)", "Slide và video sẵn sàng"),
         ("VE-55", "E12", 1, "Cập nhật README cuối cùng, nộp link GitHub, nộp quyển 31/12", "README đủ thông tin; đã nộp"),
     ]),
+]
+
+# Outside this capstone (21/10): kept for the graduation project / internship report, not scheduled.
+LATER = [
+    ("VE-48", "E13", 5, "IELTS Listening / Reading: kiểu câu nhiều đáp án, ghi nhãn bản đồ", "Làm được một đề IELTS mẫu tự soạn"),
+    ("VE-49", "E13", 3, "IELTS Writing Task 1/2 (Academic, General Training)", "Đếm từ, ảnh đề bài cho Task 1"),
 ]
 
 DONE = {"VE-1", "VE-2", "VE-3", "VE-4", "VE-5", "VE-6", "VE-7", "VE-8", "VE-9", "VE-10", "VE-11", "VE-12", "VE-14", "VE-15", "VE-16", "VE-17", "VE-18", "VE-19", "VE-21", "VE-22", "VE-23", "VE-26", "VE-30", "VE-56", "VE-57",
@@ -146,6 +152,10 @@ def render_markdown() -> str:
             lines.append(f"- [{mark}] {key} [{epic}] ({pts}đ) {summary}")
         lines.append(f"- **Status:** {'complete' if done else 'pending'}")
         lines.append("")
+    lines.append("### Ngoài đồ án chuyên ngành — để dành cho đồ án tốt nghiệp / báo cáo thực tập")
+    for key, epic, pts, summary, _ in LATER:
+        lines.append(f"- [ ] {key} [{epic}] ({pts}đ) {summary}")
+    lines.append("")
     return "\n".join(lines)
 
 

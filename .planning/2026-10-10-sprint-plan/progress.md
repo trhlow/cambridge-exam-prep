@@ -238,3 +238,10 @@
 - VE-36: `progress-report/BaoCaoTienDo_Tuan05_TranHoangLong.docx` (09–15/11, ký 15/11); Google Sheet chưa điền (chờ đúng ngày)
 - Toàn bộ: backend 379/379, frontend 98/98, bộ chuyển 69/69; Docker build lại, ERD vẽ lại
 - Tiếp theo Sprint 6: VE-38 kỳ thi B1 đầu-cuối (Playwright), VE-68 trộn đề B1, VE-39 sửa lỗi tồn đọng, VE-40 báo cáo tuần 6
+
+### Rà soát Sprint 0–5 (21/10)
+- Mọi story Sprint 0–5 Done trên Jira và sprints.py; tiêu chí chấp nhận đối chiếu với code (VE-22 nhập thí sinh bằng dán từ Excel)
+- Jira: đóng 10 epic đã xong (E1–E9, E14); E10, E11, E12, E15 còn mở
+- IELTS tách khỏi đồ án chuyên ngành (để dành cho đồ án tốt nghiệp / báo cáo thực tập): VE-48, VE-49 bỏ khỏi Sprint 9 (danh sách LATER), Sprint 9 thành tuần dự phòng; E13 đổi tên
+- Trang duyệt đề hiện "one question per page" và "candidates answer 1 of 2"
+- CSDL demo: xoá 9 đề nháp thử chuyển đề (100–102, 115–118, 131–132) qua duyệt chéo hai admin

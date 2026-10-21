@@ -238,6 +238,8 @@ export interface PaperGroupDetail {
   questions: PaperQuestionDetail[]
   itemsHeading?: string | null
   poolHeading?: string | null
+  /** VE-35: the candidate answers only this many of the questions (B1 Writing Part 2). */
+  chooseCount?: number | null
 }
 
 export interface PaperPartDetail {
@@ -247,6 +249,8 @@ export interface PaperPartDetail {
   stimulusHtml: string | null
   audioUrl: string | null
   groups: PaperGroupDetail[]
+  /** VE-37: shown one question per page (B1 Listening Part 2, B1 Writing Part 2). */
+  questionPerPage?: boolean
 }
 
 export interface PaperDetail {

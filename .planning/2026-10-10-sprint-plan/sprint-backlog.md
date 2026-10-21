@@ -95,10 +95,8 @@ Tổng: 1 story, 5 điểm.
 - [ ] VE-47 [E12] (5đ) Viết quyển báo cáo: Mở đầu, Chương 1–3
 - **Status:** pending
 
-### Phase 9: Sprint 9 (07/12 – 13/12) — IELTS (nếu kịp) hoặc dự phòng
-Tổng: 3 story, 9 điểm.
-- [ ] VE-48 [E13] (5đ) IELTS Listening / Reading: kiểu câu nhiều đáp án, ghi nhãn bản đồ
-- [ ] VE-49 [E13] (3đ) IELTS Writing Task 1/2 (Academic, General Training)
+### Phase 9: Sprint 9 (07/12 – 13/12) — Dự phòng (IELTS tách khỏi đồ án chuyên ngành)
+Tổng: 1 story, 1 điểm.
 - [ ] VE-50 [E12] (1đ) Báo cáo tiến độ tuần 9
 - **Status:** pending
 
@@ -114,3 +112,7 @@ Tổng: 3 story, 6 điểm.
 - [ ] VE-54 [E12] (2đ) Slide trình bày và video demo (thesis/abs)
 - [ ] VE-55 [E12] (1đ) Cập nhật README cuối cùng, nộp link GitHub, nộp quyển 31/12
 - **Status:** pending
+
+### Ngoài đồ án chuyên ngành — để dành cho đồ án tốt nghiệp / báo cáo thực tập
+- [ ] VE-48 [E13] (5đ) IELTS Listening / Reading: kiểu câu nhiều đáp án, ghi nhãn bản đồ
+- [ ] VE-49 [E13] (3đ) IELTS Writing Task 1/2 (Academic, General Training)
