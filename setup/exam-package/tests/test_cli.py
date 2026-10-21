@@ -30,7 +30,7 @@ def test_writes_the_errors_to_the_report_when_the_pdf_is_not_a_cambridge_paper(t
 
     assert result.returncode == 1
     data = json.loads(report.read_text(encoding="utf-8"))
-    assert data["component"] == "reading-writing"
+    assert data["component"] == "a2-reading-writing"
     assert "Part 1 was not found in the PDF." in data["warnings"]
 
 
@@ -47,5 +47,5 @@ def test_a_listening_paper_is_recognised_from_its_cover(tmp_path):
         capture_output=True, text=True, encoding="utf-8")
 
     data = json.loads(report.read_text(encoding="utf-8"))
-    assert data["component"] == "listening"
+    assert data["component"] == "a2-listening"
     assert "Part 1 was not found in the PDF." in data["warnings"]

@@ -103,16 +103,19 @@ curl -k -c cookies.txt -H "Content-Type: application/json" \
 curl -k -b cookies.txt -F "package=@a2-key-fs-reading-writing.zip" https://localhost:7015/api/admin/papers/import
 ```
 
-## Chuyển đề PDF thành gói đề (VE-56)
+## Chuyển đề PDF thành gói đề (VE-56, B1: VE-69)
 
-**Trên web (cách dùng thường ngày):** admin vào `/staff` → **Papers** → **Import from PDF**, chọn PDF đề, PDF đáp án và (Listening) 5 file nghe, mỗi part một ô. Server chạy chính `pdf2package.py` bên dưới (`POST /api/admin/papers/convert`) rồi import như một gói `.zip`. Có lỗi thì không tạo gì và hiện từng lỗi; không lỗi thì đề vào trạng thái Draft, kèm danh sách mục cần xem lại. Bấm tên đề để mở trang duyệt (từng câu, hình, đáp án, nghe thử từng part), rồi **Publish**.
+**Trên web (cách dùng thường ngày):** admin vào `/staff` → **Papers** → **Import from PDF**, chọn PDF đề, PDF đáp án (B1 Writing không có) và (Listening) mỗi part một file nghe: A2 năm file, B1 bốn. Server chạy chính `pdf2package.py` bên dưới (`POST /api/admin/papers/convert`) rồi import như một gói `.zip`. Có lỗi thì không tạo gì và hiện từng lỗi; không lỗi thì đề vào trạng thái Draft, kèm danh sách mục cần xem lại. Bấm tên đề để mở trang duyệt (từng câu, hình, đáp án, nghe thử từng part), rồi **Publish**.
 
-Victory gửi đề dạng PDF theo bố cục của Cambridge. `pdf2package.py` chuyển **đề A2 Reading & Writing hoặc Listening** cùng file đáp án thành một thư mục gói đề nháp. Loại đề được nhận ra từ trang bìa.
+Victory gửi đề dạng PDF theo bố cục của Cambridge. `pdf2package.py` chuyển **đề A2 Key (Reading & Writing, Listening) hoặc B1 Preliminary (Reading, Writing, Listening)** cùng file đáp án thành một thư mục gói đề nháp. Cấp độ và loại đề được nhận ra từ trang bìa; thiếu đáp án (trừ B1 Writing) hay thiếu thư mục nghe thì lệnh báo lỗi trong `--report`.
 
 ```bash
 python -I setup/exam-package/pdf2package.py "<đề>.pdf" "<đáp án>.pdf" --title "A2 Key for Schools – Test 1 – Reading & Writing" [-o <thư mục>]
 python -I setup/exam-package/pdf2package.py "<đề Listening>.pdf" "<đáp án>.pdf" --audio-dir "<thư mục audio>" --title "A2 Key for Schools – Test 1 – Listening"
+python -I setup/exam-package/pdf2package.py "<đề B1 Writing>.pdf" --title "B1 Preliminary – Test 1 – Writing"
 ```
+
+Thư mục ra mặc định cạnh file PDF: `package-reading-writing/`, `package-listening/` (A2), `package-reading/`, `package-writing/`, `package-listening/` (B1).
 
 Listening cần **mỗi part một file âm thanh** trong `--audio-dir`, tên bắt đầu bằng số part: `P1_….mp3`, `part2.mp3`, `Part 3 - ….m4a`. Bộ chuyển chép chúng vào `audio/part1.mp3` … `audio/part5.mp3`. Bố cục Listening A2:
 
@@ -120,6 +123,13 @@ Listening cần **mỗi part một file âm thanh** trong `--audio-dir`, tên b�
 - Part 2: tiêu đề, câu giới thiệu và bảng "Nhãn: giá trị". `(6) Mrs` thành `Mrs {{q:6}}`, `(8)` + `a.m.` thành `{{q:8}} a.m.`. Đáp án là giờ (`7.30`) thì tự nhận thêm `7:30`, và ghi vào mục cần xem lại.
 - Part 3–4: câu chọn A/B/C. Câu giới thiệu ("You will hear …") của Part 3 vào phần hướng dẫn; Part 4 ghép tình huống và câu hỏi.
 - Part 5: tên người bên trái, thẻ A–H bên phải (kéo thả). Dòng ví dụ `0` được ghi vào hướng dẫn.
+
+Bố cục B1 Preliminary (VE-69; mỗi phần một section riêng, như template `B1_PRELIM_FS`):
+
+- Reading Part 1: năm thông báo, mỗi thông báo cắt thành hình (chữ in trong khung giữ làm chữ thay thế) với A/B/C bên phải. Part 2: năm người (ảnh + mô tả) kéo vào tám đoạn giới thiệu có tiêu đề in đậm (`DragDropMatch` dạng người, `itemsHeading` từ "The … below", `poolHeading` là tiêu đề cột). Part 3: bài đọc có tiêu đề + câu A–D (cả kiểu 2×2). Part 4: bài đọc có ô trống `{{q:16}}`, kéo câu A–H vào (`DragDropMatch` dạng ô trống). Part 5: chọn từ A–D cho ô trống. Part 6: gõ một từ vào ô trống.
+- Writing: Part 1 email (Essay, `minWords` từ "about 100 words", hình email cắt cả khung); Part 2 câu 2 và câu 3, mỗi câu một trang, thí sinh chọn một (VE-35). Không có đáp án, điểm do giám khảo chấm.
+- Listening (4 part, 25 câu): Part 1 như A2 Part 1 (ba tranh); Part 2 mỗi câu có dòng ngữ cảnh "You will hear …" ngay trên câu hỏi; Part 3 tiêu đề + các câu có ô `(14)` → `{{q:14}}`, "Write one or two words" → `maxWordsPerAnswer` 2; Part 4 phỏng vấn A/B/C.
+- Đáp án B1 có từ tuỳ chọn trong ngoặc: `(a/an/the) (fantastic) waterfall(s)` nhận mọi tổ hợp (`waterfall`, `the waterfalls`, …, tối đa 64 dạng); một từ tuỳ chọn đứng trước từ khác còn được viết liền (`(news) paper` → `newspaper`), trừ mạo từ, đại từ sở hữu và giới từ ngắn. Cột "ACCEPTABLE MIS-SPELLINGS" của Listening Part 3 cũng thành đáp án được chấp nhận.
 
 Bộ chuyển làm các việc sau:
 

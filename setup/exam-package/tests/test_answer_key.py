@@ -1,6 +1,6 @@
 import pytest
 
-from converter.answer_key import parse_answer_key
+from converter.answer_key import expand_optional, parse_answer_key
 
 # Same shape as a Cambridge mark scheme after text extraction: a header, then "PART n / KEY" and number/answer pairs.
 KEY_TEXT = """EXAM
@@ -63,3 +63,29 @@ def test_a_page_header_after_a_key_ends_that_key():
     text = "PART 1\nKEY\n1\nB\n2\nC\nEXAM\nPAPER\nREAD/WRITE\nPART 2\nKEY\n3\nA\n"
 
     assert parse_answer_key(text) == {1: ["B"], 2: ["C"], 3: ["A"]}
+
+
+def test_bracketed_words_may_be_left_out_or_swapped_for_an_alternative():
+    variants = expand_optional("(a/the) (big) lake(s)")
+
+    assert variants[0] == "lake"
+    assert {"lakes", "a lake", "the big lakes", "big lake"} <= set(variants)
+    assert "a/the lake" not in variants
+
+
+def test_a_single_optional_word_before_another_may_also_be_joined_to_it():
+    assert expand_optional("(sun) glasses") == ["glasses", "sunglasses", "sun glasses"]
+
+
+def test_an_answer_without_brackets_is_kept_as_it_is():
+    assert expand_optional("7.30") == ["7.30"]
+
+
+def test_listening_misspellings_after_an_answer_also_score():
+    text = "Part 3\n14\n(the) river\nACCEPTABLE MIS-SPELLINGS\nriverr\n15\nboat\nPart 4\n20\nB\n"
+
+    key = parse_answer_key(text)
+
+    assert key[14] == ["river", "the river", "riverr"]
+    assert key[15] == ["boat"]
+    assert key[20] == ["B"]

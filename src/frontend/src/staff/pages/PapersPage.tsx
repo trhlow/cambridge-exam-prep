@@ -360,7 +360,7 @@ function ConvertDialog({ onClose, onConverted }: { onClose: () => void; onConver
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (!questions || !answerKey) {
+    if (!questions) {
       return
     }
 
@@ -388,12 +388,12 @@ function ConvertDialog({ onClose, onConverted }: { onClose: () => void; onConver
             <input type="file" accept=".pdf,application/pdf" required onChange={(e) => setQuestions(e.target.files?.[0] ?? null)} />
           </label>
           <label className="st-field">
-            Answer key (PDF)
-            <input type="file" accept=".pdf,application/pdf" required onChange={(e) => setAnswerKey(e.target.files?.[0] ?? null)} />
+            Answer key (PDF, none for B1 Writing)
+            <input type="file" accept=".pdf,application/pdf" onChange={(e) => setAnswerKey(e.target.files?.[0] ?? null)} />
           </label>
         </div>
         <fieldset className="st-fieldset">
-          <legend>Listening only: one recording per part</legend>
+          <legend>Listening only: one recording per part (A2 Key 5, B1 Preliminary 4)</legend>
           <div className="st-grid-2">
             {PARTS.map((part, index) => (
               <label key={part} className="st-field">
@@ -411,7 +411,7 @@ function ConvertDialog({ onClose, onConverted }: { onClose: () => void; onConver
           </div>
         </fieldset>
         <p className="st-faint">
-          Reading &amp; Writing or Listening is read from the cover page. The paper is imported as a draft for you to check; nothing is saved if the PDF cannot be read.
+          The level (A2 Key or B1 Preliminary) and the paper (Reading, Writing, Listening) are read from the cover page. The paper is imported as a draft for you to check; nothing is saved if the PDF cannot be read.
         </p>
         <ErrorBox error={error} />
         <div className="st-form-actions">

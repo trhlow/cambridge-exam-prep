@@ -6,8 +6,11 @@ using Microsoft.Extensions.Options;
 
 namespace ExamPrep.Api.Content;
 
-/// <summary>Files saved from the upload, and where the converter writes the draft package folder.</summary>
-public sealed record PaperConversionInput(string QuestionsPdf, string AnswerKeyPdf, string AudioFolder, string Title, string OutputFolder);
+/// <summary>
+/// Files saved from the upload, and where the converter writes the draft package folder. <c>AnswerKeyPdf</c> is null
+/// when none was uploaded (B1 Writing has no key; the converter reports it missing for every other paper).
+/// </summary>
+public sealed record PaperConversionInput(string QuestionsPdf, string? AnswerKeyPdf, string AudioFolder, string Title, string OutputFolder);
 
 /// <summary>
 /// What the converter found: <c>Errors</c> must be fixed before the paper can be imported; <c>Checks</c> are points
@@ -67,11 +70,11 @@ public sealed class PythonPaperConverter(IOptions<ConverterOptions> options, IHo
             StandardErrorEncoding = Encoding.UTF8,
         };
         // An argument list, never a command line: the title and paths reach Python as they are.
-        foreach (var argument in new[]
-                 {
-                     "-I", script, input.QuestionsPdf, input.AnswerKeyPdf, "--title", input.Title,
-                     "--audio-dir", input.AudioFolder, "-o", input.OutputFolder, "--report", reportPath,
-                 })
+        string[] key = input.AnswerKeyPdf is null ? [] : [input.AnswerKeyPdf];
+        foreach (var argument in new[] { "-I", script, input.QuestionsPdf }.Concat(key).Concat(
+                 [
+                     "--title", input.Title, "--audio-dir", input.AudioFolder, "-o", input.OutputFolder, "--report", reportPath,
+                 ]))
         {
             start.ArgumentList.Add(argument);
         }
