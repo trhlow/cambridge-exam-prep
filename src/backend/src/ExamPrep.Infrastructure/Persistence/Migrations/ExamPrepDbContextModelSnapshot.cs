@@ -800,6 +800,59 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ExamPrep.Domain.Entities.PaperMix", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<int>("SectionTemplateId")
+                        .HasColumnType("int")
+                        .HasColumnName("section_template_id");
+
+                    b.Property<int>("Seed")
+                        .HasColumnType("int")
+                        .HasColumnName("seed");
+
+                    b.Property<int>("SourceAPaperId")
+                        .HasColumnType("int")
+                        .HasColumnName("source_a_paper_id");
+
+                    b.Property<int>("SourceBPaperId")
+                        .HasColumnType("int")
+                        .HasColumnName("source_b_paper_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("SectionTemplateId");
+
+                    b.HasIndex("SourceAPaperId");
+
+                    b.HasIndex("SourceBPaperId");
+
+                    b.ToTable("paper_mixes", t =>
+                        {
+                            t.HasCheckConstraint("CK_paper_mixes_sources", "source_a_paper_id <> source_b_paper_id");
+                        });
+                });
+
             modelBuilder.Entity("ExamPrep.Domain.Entities.PaperPart", b =>
                 {
                     b.Property<int>("Id")
@@ -1203,6 +1256,19 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("created_by_user_id");
 
+                    b.Property<string>("MixPattern")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("mix_pattern");
+
+                    b.Property<int?>("MixVersion")
+                        .HasColumnType("int")
+                        .HasColumnName("mix_version");
+
+                    b.Property<int?>("PaperMixId")
+                        .HasColumnType("int")
+                        .HasColumnName("paper_mix_id");
+
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("published_at");
@@ -1233,7 +1299,13 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SectionTemplateId");
 
-                    b.ToTable("test_papers");
+                    b.HasIndex("PaperMixId", "MixVersion")
+                        .IsUnique();
+
+                    b.ToTable("test_papers", t =>
+                        {
+                            t.HasCheckConstraint("CK_test_papers_mix_version", "(paper_mix_id IS NULL AND mix_version IS NULL AND mix_pattern IS NULL) OR (paper_mix_id IS NOT NULL AND mix_version BETWEEN 1 AND 4 AND mix_pattern IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.User", b =>
@@ -1550,6 +1622,39 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.Navigation("Response");
                 });
 
+            modelBuilder.Entity("ExamPrep.Domain.Entities.PaperMix", b =>
+                {
+                    b.HasOne("ExamPrep.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExamPrep.Domain.Entities.SectionTemplate", "SectionTemplate")
+                        .WithMany()
+                        .HasForeignKey("SectionTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExamPrep.Domain.Entities.TestPaper", "SourceAPaper")
+                        .WithMany()
+                        .HasForeignKey("SourceAPaperId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExamPrep.Domain.Entities.TestPaper", "SourceBPaper")
+                        .WithMany()
+                        .HasForeignKey("SourceBPaperId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SectionTemplate");
+
+                    b.Navigation("SourceAPaper");
+
+                    b.Navigation("SourceBPaper");
+                });
+
             modelBuilder.Entity("ExamPrep.Domain.Entities.PaperPart", b =>
                 {
                     b.HasOne("ExamPrep.Domain.Entities.Asset", "AudioAsset")
@@ -1659,11 +1764,18 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ExamPrep.Domain.Entities.PaperMix", "PaperMix")
+                        .WithMany("Versions")
+                        .HasForeignKey("PaperMixId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ExamPrep.Domain.Entities.SectionTemplate", "SectionTemplate")
                         .WithMany()
                         .HasForeignKey("SectionTemplateId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("PaperMix");
 
                     b.Navigation("SectionTemplate");
                 });
@@ -1710,6 +1822,11 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("ExamPrep.Domain.Entities.ExamType", b =>
                 {
                     b.Navigation("Sections");
+                });
+
+            modelBuilder.Entity("ExamPrep.Domain.Entities.PaperMix", b =>
+                {
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.PaperPart", b =>
