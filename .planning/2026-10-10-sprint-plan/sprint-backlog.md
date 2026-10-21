@@ -71,8 +71,8 @@ Tổng: 4 story, 15 điểm.
 - [x] VE-69 [E10] (8đ) Bộ chuyển đề PDF → gói đề cho B1 Preliminary (Reading, Writing, Listening) và nhập đề B1 trên cổng nhân viên
 - [x] VE-35 [E10] (3đ) B1 Writing: Part 1 email, Part 2 chọn 1 trong 2 đề
 - [x] VE-37 [E10] (3đ) B1 Listening 4 part
-- [ ] VE-36 [E12] (1đ) Báo cáo tiến độ tuần 5
-- **Status:** pending
+- [x] VE-36 [E12] (1đ) Báo cáo tiến độ tuần 5
+- **Status:** complete
 
 ### Phase 6: Sprint 6 (16/11 – 22/11) — Kỳ thi B1 chạy đầu-cuối, sửa lỗi tồn đọng A2/B1
 Tổng: 4 story, 10 điểm.
