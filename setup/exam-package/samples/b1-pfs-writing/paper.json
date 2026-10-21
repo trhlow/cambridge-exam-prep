@@ -1,0 +1,52 @@
+{
+  "formatVersion": 1,
+  "examType": "B1_PRELIM_FS",
+  "section": 2,
+  "title": "B1 Preliminary for Schools – Victory sample test 1 – Writing",
+  "parts": [
+    {
+      "partNo": 1,
+      "layout": "Split",
+      "groups": [
+        {
+          "interactionType": "Essay",
+          "instructions": "You must answer this question. Write your answer in about 100 words.",
+          "questions": [
+            {
+              "number": 1,
+              "stimulusHtml": "<p>Read this email from your English-speaking friend Alex and the notes you have made.</p><div class=\"email\"><p><strong>From:</strong> Alex<br><strong>Subject:</strong> Saturday</p><p>Hi!</p><p>I'm so pleased you can come to the town festival with me on Saturday. <em>[Note: Me too!]</em></p><p>Shall we go in the morning or the afternoon? <em>[Note: Say which and why]</em></p><p>There's a cooking show, a music stage and a football match. Which would you like to see? <em>[Note: Tell Alex]</em></p><p>What should I bring? <em>[Note: Suggest…]</em></p><p>See you soon,<br>Alex</p></div><p>Write your <strong>email</strong> to Alex using <strong>all the notes</strong>.</p>",
+              "points": 20,
+              "minWords": 100
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 2,
+      "layout": "Split",
+      "questionPerPage": true,
+      "groups": [
+        {
+          "interactionType": "Essay",
+          "instructions": "Choose one of these questions. Write your answer in about 100 words.",
+          "chooseCount": 1,
+          "questions": [
+            {
+              "number": 2,
+              "stimulusHtml": "<p>You see this notice on an English-language website for teenagers.</p><div class=\"notice\"><p><strong>Articles wanted!</strong></p><p><strong>MY FAVOURITE PLACE</strong></p><p>Where is your favourite place? What do you do there?<br>Why do you like it so much?</p><p>The best articles will appear on our website next month!</p></div><p>Write your <strong>article</strong>.</p>",
+              "points": 20,
+              "minWords": 100
+            },
+            {
+              "number": 3,
+              "stimulusHtml": "<p>Your English teacher has asked you to write a story.</p><p>Your story must begin with this sentence:</p><p><strong><em>When Sam opened the old box, he couldn't believe his eyes.</em></strong></p><p>Write your <strong>story</strong>.</p>",
+              "points": 20,
+              "minWords": 100
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

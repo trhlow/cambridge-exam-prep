@@ -113,12 +113,14 @@ def convert_parts(document: Document) -> Conversion:
             questions.append(question)
             crops += question_crops
 
-        if part_no == 2 and len(questions) > 1:
-            checks.append("Part 2: candidates answer only one of the questions; each question has its own page.")
         group = {"interactionType": "Essay", "instructions": instructions, "questions": questions}
+        if part_no == 2 and len(questions) > 1:
+            # "Choose one of these questions": the candidate says which on screen and only that one is marked.
+            group = {"interactionType": "Essay", "instructions": instructions, "chooseCount": 1, "questions": questions}
+            checks.append("Part 2: candidates choose one of the questions (chooseCount 1); each question has its own page.")
         parts[part_no] = {"partNo": part_no, "layout": "Split", **({"questionPerPage": True} if part_no == 2 else {}), "groups": [group]}
 
-    checks.append("B1 asks for about 100 words: minWords is that number, shown as the target on the word counter.")
+    checks.append("B1 asks for about 100 words: minWords is that number; the screen only counts words, as Inspera does.")
     return Conversion(parts, crops, warnings, checks)
 
 

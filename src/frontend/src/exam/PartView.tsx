@@ -1,4 +1,4 @@
-import type { Answers, Part, QuestionGroup } from '../api/types'
+import type { Answers, Part, QuestionGroup, Selection, Selections } from '../api/types'
 import { HtmlContent } from '../ui/HtmlContent'
 import { DragDropMatch } from './listening/DragDropMatch'
 import { questionRange } from './paperLogic'
@@ -14,25 +14,43 @@ type Props = {
   questionNumbers: number[]
   answers: Answers
   onAnswer: (number: number, value: string) => void
+  /** VE-35: "Answering this question?" choices, where the candidate answers only some questions. */
+  selections?: Selections
+  onSelect?: (number: number, selection: Selection) => Promise<string | null>
   flagged: ReadonlySet<number>
   onToggleFlag: (number: number) => void
 }
 
 /** One page of a part: the instruction box, then the part laid out in one column or split in two. */
-export function PartView({ part, questionNumbers, answers, onAnswer, flagged, onToggleFlag }: Props) {
+export function PartView({ part, questionNumbers, answers, onAnswer, selections = {}, onSelect, flagged, onToggleFlag }: Props) {
   const groups = part.groups
     .map((group) => ({ group, questions: group.questions.filter((q) => questionNumbers.includes(q.number)) }))
     .filter((g) => g.questions.length > 0)
+  // B1 Writing: each question brings its own task (email, notice, story opening), shown with the part's text.
+  const tasks = groups.filter(({ group }) => group.interactionType === 'Essay').flatMap(({ questions }) => questions.filter((q) => q.stimulusHtml))
 
   const passage = (
     <>
       {part.title && <h2 className="part-title">{part.title}</h2>}
       <HtmlContent html={part.stimulusHtml} className="passage" />
+      {tasks.map((q) => (
+        <HtmlContent key={q.number} html={q.stimulusHtml} className="passage" />
+      ))}
     </>
   )
 
   const questions = groups.map(({ group }) => (
-    <GroupBody key={group.questions[0].number} group={group} visible={questionNumbers} answers={answers} onAnswer={onAnswer} flagged={flagged} onToggleFlag={onToggleFlag} />
+    <GroupBody
+      key={group.questions[0].number}
+      group={group}
+      visible={questionNumbers}
+      answers={answers}
+      onAnswer={onAnswer}
+      selections={selections}
+      onSelect={onSelect}
+      flagged={flagged}
+      onToggleFlag={onToggleFlag}
+    />
   ))
 
   return (
@@ -63,7 +81,7 @@ function InstructionBox({ group }: { group: QuestionGroup }) {
 
 type GroupBodyProps = Omit<Props, 'part' | 'questionNumbers'> & { group: QuestionGroup; visible: number[] }
 
-function GroupBody({ group, visible, answers, onAnswer, flagged, onToggleFlag }: GroupBodyProps) {
+function GroupBody({ group, visible, answers, onAnswer, selections = {}, onSelect, flagged, onToggleFlag }: GroupBodyProps) {
   switch (group.interactionType) {
     case 'SingleChoice':
     case 'ImageChoice':
@@ -92,17 +110,31 @@ function GroupBody({ group, visible, answers, onAnswer, flagged, onToggleFlag }:
           <BookmarkButton number={group.questions[0].number} flagged={flagged.has(group.questions[0].number)} onToggle={onToggleFlag} />
         </div>
       )
-    case 'Essay':
+    case 'Essay': {
+      const chooseCount = group.chooseCount
+      const selected = group.questions.filter((q) => selections[q.number] === 'Yes').length
       return (
         <>
-          {group.questions.map((q) => (
-            <div key={q.number} className="with-bookmark">
-              <EssayQuestion question={q} answer={answers[q.number] ?? ''} onAnswer={onAnswer} />
-              <BookmarkButton number={q.number} flagged={flagged.has(q.number)} onToggle={onToggleFlag} />
-            </div>
-          ))}
+          {group.questions
+            .filter((q) => visible.includes(q.number))
+            .map((q) => (
+              <div key={q.number} className="with-bookmark">
+                <EssayQuestion
+                  question={q}
+                  answer={answers[q.number] ?? ''}
+                  onAnswer={onAnswer}
+                  choice={
+                    chooseCount && onSelect
+                      ? { selection: selections[q.number] ?? 'Undecided', selected, chooseCount, onSelect: (selection) => onSelect(q.number, selection) }
+                      : undefined
+                  }
+                />
+                <BookmarkButton number={q.number} flagged={flagged.has(q.number)} onToggle={onToggleFlag} />
+              </div>
+            ))}
         </>
       )
+    }
     case 'DragDropMatch':
       return (
         <div className="with-bookmark">

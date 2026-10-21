@@ -422,6 +422,10 @@ export interface QuestionMark {
   score: number | null
   points: number
   comment: string | null
+  /** VE-35: where the candidate chose which questions to answer (B1 Writing Part 2): Yes, No or Undecided. */
+  selection?: string | null
+  /** False for a question the candidate did not choose: it is not marked. */
+  counts?: boolean
 }
 
 export interface AttemptMarking {

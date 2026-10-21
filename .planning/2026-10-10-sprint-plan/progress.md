@@ -226,3 +226,10 @@
 - Bộ chuyển B1 đặt cờ cho Listening Part 2 và Writing Part 2
 - Đề mẫu tự soạn `samples/b1-pfs-listening` (4 part, 25 câu; 21 hình vẽ; `make_audio.ps1` đọc bằng giọng Windows, mỗi đoạn hai lần)
 - Test: `B1ListeningTests` (import, trộn giữ cờ, thí sinh nhận Part 2 từng trang), validator nhận đề mẫu, frontend `buildPages`
+
+### Sprint 5 — VE-35 B1 Writing (21/10)
+- `question_groups.choose_count` + `responses.selection` (migration `ChooseOneQuestion`, mặc định Undecided cho câu trả lời cũ); gói đề `chooseCount` (chỉ Essay, nhỏ hơn số câu), trộn đề giữ nguyên và `PaperShape` báo khác biệt
+- Thí sinh: `PUT .../selections` (409 khi chọn quá số câu), ô "Answering this question?" Yes/No/Undecided + "n of 1 question selected"; Part 2 mỗi câu một trang, đề của từng câu ở khung trái
+- Chấm: `ChosenQuestions` (câu Yes; không chọn thì câu viết đầu tiên; No không bao giờ chấm); điểm tối đa nhóm = câu cao điểm nhất (B1 Writing 40); giám khảo chấm câu không được chọn → 400; Final khi đủ câu được tính
+- Bộ chuyển B1 đặt `chooseCount: 1` cho Writing Part 2; đề mẫu tự soạn `samples/b1-pfs-writing`
+- Test: `B1WritingTests`, `ChosenQuestionsTests`, validator, frontend `chooseQuestion.test.tsx`

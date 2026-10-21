@@ -55,11 +55,12 @@ public sealed class AttemptMarker(ExamPrepDbContext db)
             .Where(r => r.AttemptId == attempt.Id)
             .ToDictionaryAsync(r => r.QuestionId, cancellationToken);
 
-        decimal raw = 0, max = 0;
+        decimal raw = 0;
+        var max = questions.GroupBy(q => q.QuestionGroupId)
+            .Sum(g => ChosenQuestions.MaxPoints(g.First().QuestionGroup!.ChooseCount, g.Select(q => q.Points)));
         var needsTeacher = false;
         foreach (var question in questions)
         {
-            max += question.Points;
             var type = question.QuestionGroup!.InteractionType;
             if (!AnswerMatcher.CanAutoMark(type))
             {

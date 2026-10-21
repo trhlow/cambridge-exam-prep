@@ -163,6 +163,7 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
         MaxWordsPerAnswer = group.MaxWordsPerAnswer,
         ItemsHeading = Blank(group.ItemsHeading),
         PoolHeading = Blank(group.PoolHeading),
+        ChooseCount = group.ChooseCount,
         Questions = group.Questions.Select((question, i) => new Question
         {
             Number = question.Number,

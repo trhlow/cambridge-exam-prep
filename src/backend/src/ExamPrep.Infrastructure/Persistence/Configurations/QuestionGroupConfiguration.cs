@@ -15,6 +15,7 @@ internal sealed class QuestionGroupConfiguration : IEntityTypeConfiguration<Ques
         {
             t.HasCheckConstraint("CK_question_groups_order", "order_no > 0");
             t.HasCheckConstraint("CK_question_groups_max_words", "max_words_per_answer IS NULL OR max_words_per_answer > 0");
+            t.HasCheckConstraint("CK_question_groups_choose_count", "choose_count IS NULL OR choose_count > 0");
         });
         builder.Property(g => g.Instructions).HasMaxLength(1000);
         builder.Property(g => g.BodyHtml).HasColumnType("mediumtext");

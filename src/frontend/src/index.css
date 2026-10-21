@@ -507,6 +507,36 @@ button {
   margin-top: 4px;
 }
 
+/* VE-35: "Answering this question?" above the editor (B1 Writing Part 2) */
+.essay-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #555;
+  background: var(--surface);
+}
+
+.essay-choice-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.essay-choice-label select {
+  font: inherit;
+  font-weight: 400;
+  padding: 2px 4px;
+}
+
+.essay-choice-error {
+  flex-basis: 100%;
+  color: #b00020;
+}
+
 .not-yet {
   color: var(--text-muted);
   font-style: italic;

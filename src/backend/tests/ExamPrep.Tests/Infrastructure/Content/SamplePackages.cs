@@ -15,6 +15,7 @@ internal static partial class SamplePackages
     public const string Listening = "a2-key-fs-listening";
     public const string B1Reading = "b1-pfs-reading";
     public const string B1Listening = "b1-pfs-listening";
+    public const string B1Writing = "b1-pfs-writing";
 
     public static JsonObject Load(string name) =>
         JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Samples", name, "paper.json")))!.AsObject();

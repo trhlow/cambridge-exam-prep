@@ -1,3 +1,5 @@
+using ExamPrep.Domain.Enums;
+
 namespace ExamPrep.Domain.Entities;
 
 /// <summary>The candidate's current answer to one question (saved on every change).</summary>
@@ -17,6 +19,9 @@ public class Response
     public string? Value { get; set; }
 
     public bool IsFlagged { get; set; }
+
+    /// <summary>"Answering this question?" where the group has a <c>ChooseCount</c>; Undecided elsewhere.</summary>
+    public QuestionSelection Selection { get; set; }
 
     public DateTime UpdatedAt { get; set; }
 

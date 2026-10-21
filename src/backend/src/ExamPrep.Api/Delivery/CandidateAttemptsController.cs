@@ -14,6 +14,7 @@ namespace ExamPrep.Api.Delivery;
 
 /// <summary>Where the candidate stands in a section: the server's clock, every saved answer and the invigilator's messages.</summary>
 /// <param name="AudioPositionMs">Listening only: where the recording is now; null until the candidate presses Play.</param>
+/// <param name="Selections">"Answering this question?" answers other than Undecided (B1 Writing Part 2), by question number.</param>
 public sealed record AttemptState(
     int SectionId,
     string Status,
@@ -22,11 +23,15 @@ public sealed record AttemptState(
     DateTime ServerNow,
     IReadOnlyDictionary<int, string> Answers,
     int? AudioPositionMs,
-    IReadOnlyList<CandidateMessageView> Messages);
+    IReadOnlyList<CandidateMessageView> Messages,
+    IReadOnlyDictionary<int, string>? Selections = null);
 
 public sealed record ResponseItem([Range(1, 1000)] int QuestionNumber, [StringLength(20_000)] string Value);
 
 public sealed record SaveResponsesRequest([Required, MinLength(1), MaxLength(100)] List<ResponseItem> Responses);
+
+/// <param name="Selection">Yes, No or Undecided.</param>
+public sealed record SelectionRequest([Range(1, 1000)] int QuestionNumber, [Required] string Selection);
 
 /// <summary>
 /// Starting a section, reading the clock and saving answers. The clock runs on the server (<c>AttemptClock</c>),
@@ -201,23 +206,10 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
     [HttpPut("responses")]
     public async Task<IActionResult> Save(int sectionId, SaveResponsesRequest request, CancellationToken cancellationToken)
     {
-        var attempt = await FindAttemptAsync(sectionId, cancellationToken);
+        var (attempt, refusal, now) = await RunningAttemptAsync(sectionId, cancellationToken);
         if (attempt is null)
         {
-            return Problem(title: "This part of the test has not started.", statusCode: StatusCodes.Status409Conflict);
-        }
-
-        var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);
-        var now = Now();
-        if (AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now - AutosaveGrace))
-        {
-            await db.SaveChangesAsync(cancellationToken);
-        }
-
-        if (attempt.Status != AttemptStatus.InProgress)
-        {
-            var title = attempt.Status == AttemptStatus.Paused ? "Your test is paused." : "This part of the test has finished.";
-            return Problem(title: title, statusCode: StatusCodes.Status409Conflict);
+            return refusal!;
         }
 
         var questionIds = await db.Questions
@@ -233,6 +225,77 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         await db.SaveChangesAsync(cancellationToken);
         notifier.SectionChanged(sectionId);
         return NoContent();
+    }
+
+    /// <summary>
+    /// "Answering this question?" (B1 Writing Part 2): Yes, No or Undecided for a question of a group where the
+    /// candidate answers only some questions. Refused (409) when Yes would choose more questions than the group allows.
+    /// </summary>
+    [HttpPut("selections")]
+    public async Task<IActionResult> Select(int sectionId, SelectionRequest request, CancellationToken cancellationToken)
+    {
+        if (!Enum.TryParse<QuestionSelection>(request.Selection, out var selection) || !Enum.IsDefined(selection))
+        {
+            return Problem(title: "Choose Yes, No or Undecided.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var (attempt, refusal, now) = await RunningAttemptAsync(sectionId, cancellationToken);
+        if (attempt is null)
+        {
+            return refusal!;
+        }
+
+        var question = await db.Questions.Include(q => q.QuestionGroup!).ThenInclude(g => g.Questions)
+            .SingleOrDefaultAsync(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.TestPaperId && q.Number == request.QuestionNumber, cancellationToken);
+        if (question?.QuestionGroup!.ChooseCount is not { } chooseCount)
+        {
+            return Problem(title: $"Question {request.QuestionNumber} is not one to choose.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var groupIds = question.QuestionGroup.Questions.Select(q => q.Id).ToList();
+        var responses = await db.Responses.Where(r => r.AttemptId == attempt.Id && groupIds.Contains(r.QuestionId)).ToListAsync(cancellationToken);
+        if (selection == QuestionSelection.Yes && responses.Count(r => r.QuestionId != question.Id && r.Selection == QuestionSelection.Yes) >= chooseCount)
+        {
+            return Problem(title: $"You can answer only {chooseCount} of these questions. Change your other choice first.", statusCode: StatusCodes.Status409Conflict);
+        }
+
+        var response = responses.SingleOrDefault(r => r.QuestionId == question.Id);
+        if (response is null)
+        {
+            response = new Response { AttemptId = attempt.Id, QuestionId = question.Id, UpdatedAt = now };
+            db.Responses.Add(response);
+        }
+
+        response.Selection = selection;
+        response.UpdatedAt = now;
+        await db.SaveChangesAsync(cancellationToken);
+        notifier.SectionChanged(sectionId);
+        return NoContent();
+    }
+
+    /// <summary>The candidate's attempt when answers may be saved now; otherwise why not (409).</summary>
+    private async Task<(Attempt? Attempt, IActionResult? Refusal, DateTime Now)> RunningAttemptAsync(int sectionId, CancellationToken cancellationToken)
+    {
+        var now = Now();
+        var attempt = await FindAttemptAsync(sectionId, cancellationToken);
+        if (attempt is null)
+        {
+            return (null, Problem(title: "This part of the test has not started.", statusCode: StatusCodes.Status409Conflict), now);
+        }
+
+        var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);
+        if (AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now - AutosaveGrace))
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        if (attempt.Status != AttemptStatus.InProgress)
+        {
+            var title = attempt.Status == AttemptStatus.Paused ? "Your test is paused." : "This part of the test has finished.";
+            return (null, Problem(title: title, statusCode: StatusCodes.Status409Conflict), now);
+        }
+
+        return (attempt, null, now);
     }
 
     private async Task UpsertAsync(Attempt attempt, List<ResponseItem> items, Dictionary<int, int> questionIds, DateTime now, CancellationToken cancellationToken)
@@ -281,17 +344,19 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
 
     private async Task<AttemptState> StateAsync(Attempt attempt, ExamSection section, Candidate candidate, DateTime now, CancellationToken cancellationToken)
     {
-        var answers = await db.Responses
+        var saved = await db.Responses
             .AsNoTracking()
-            .Where(r => r.AttemptId == attempt.Id && r.Value != null)
-            .Select(r => new { r.Question!.Number, r.Value })
-            .ToDictionaryAsync(r => r.Number, r => r.Value!, cancellationToken);
+            .Where(r => r.AttemptId == attempt.Id && (r.Value != null || r.Selection != QuestionSelection.Undecided))
+            .Select(r => new { r.Question!.Number, r.Value, r.Selection })
+            .ToListAsync(cancellationToken);
+        var answers = saved.Where(r => r.Value is not null).ToDictionary(r => r.Number, r => r.Value!);
+        var selections = saved.Where(r => r.Selection != QuestionSelection.Undecided).ToDictionary(r => r.Number, r => r.Selection.ToString());
         var attemptClock = AttemptExpiry.ClockFor(attempt, section, candidate);
         var remaining = attemptClock.Remaining(now);
         int? audioPosition = attempt.AudioStartedAt is null ? null : (int)attemptClock.AudioPosition(now).TotalMilliseconds;
 
         var messages = await CandidateMessages.ForCandidateAsync(db, section.ExamId, candidate.Id, cancellationToken);
-        return new AttemptState(section.Id, attempt.Status.ToString(), attempt.EndsAt, (int)Math.Ceiling(remaining.TotalSeconds), now, answers, audioPosition, messages);
+        return new AttemptState(section.Id, attempt.Status.ToString(), attempt.EndsAt, (int)Math.Ceiling(remaining.TotalSeconds), now, answers, audioPosition, messages, selections);
     }
 
     private async Task<CandidateSectionSummary?> FindSectionAsync(int sectionId, CancellationToken cancellationToken) =>

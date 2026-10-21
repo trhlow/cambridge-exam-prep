@@ -30,6 +30,7 @@ public sealed class PaperPackageValidatorTests
     [InlineData(SamplePackages.Listening)]
     [InlineData(SamplePackages.B1Reading)]
     [InlineData(SamplePackages.B1Listening)]
+    [InlineData(SamplePackages.B1Writing)]
     public void Validate_AcceptsSamplePackages(string name)
     {
         var errors = Validate(SamplePackages.Load(name));
@@ -246,6 +247,30 @@ public sealed class PaperPackageValidatorTests
         var errors = Validate(paper);
 
         Assert.Contains(errors, e => e.Contains("question 7") && e.Contains("need a label"));
+    }
+
+    [Theory]
+    [InlineData(2, "chooseCount must be at least 1 and less than the group's 2 questions")]
+    [InlineData(0, "chooseCount must be at least 1")]
+    public void Validate_ChooseCount_LeavesSomethingToChoose(int chooseCount, string expected)
+    {
+        var paper = SamplePackages.Load(SamplePackages.B1Writing);
+        paper["parts"]![1]!["groups"]![0]!["chooseCount"] = chooseCount;
+
+        var errors = Validate(paper);
+
+        Assert.Contains(errors, e => e.Contains(expected));
+    }
+
+    [Fact]
+    public void Validate_ChooseCount_IsOnlyForWriting()
+    {
+        var paper = SamplePackages.Load(SamplePackages.B1Reading);
+        paper["parts"]![2]!["groups"]![0]!["chooseCount"] = 1;
+
+        var errors = Validate(paper);
+
+        Assert.Contains(errors, e => e.Contains("chooseCount is only for Writing (Essay) groups"));
     }
 
     [Fact]

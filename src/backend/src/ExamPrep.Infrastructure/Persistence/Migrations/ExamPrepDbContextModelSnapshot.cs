@@ -993,6 +993,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("mediumtext")
                         .HasColumnName("body_html");
 
+                    b.Property<int?>("ChooseCount")
+                        .HasColumnType("int")
+                        .HasColumnName("choose_count");
+
                     b.Property<string>("Instructions")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -1038,6 +1042,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.ToTable("question_groups", t =>
                         {
+                            t.HasCheckConstraint("CK_question_groups_choose_count", "choose_count IS NULL OR choose_count > 0");
+
                             t.HasCheckConstraint("CK_question_groups_max_words", "max_words_per_answer IS NULL OR max_words_per_answer > 0");
 
                             t.HasCheckConstraint("CK_question_groups_order", "order_no > 0");
@@ -1071,6 +1077,12 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.Property<int>("QuestionId")
                         .HasColumnType("int")
                         .HasColumnName("question_id");
+
+                    b.Property<string>("Selection")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasColumnName("selection");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")

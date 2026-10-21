@@ -1,4 +1,4 @@
-import type { AttemptState, CandidateProfile, CandidateSection, Contrast, Paper, TextSize } from './types'
+import type { AttemptState, CandidateProfile, CandidateSection, Contrast, Paper, Selection, TextSize } from './types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -56,4 +56,7 @@ export const candidateApi = {
   playAudio: (sectionId: number) => post<AttemptState>(`/api/candidate/sections/${sectionId}/audio`),
   saveResponses: (sectionId: number, responses: { questionNumber: number; value: string }[]) =>
     request<void>(`/api/candidate/sections/${sectionId}/responses`, { method: 'PUT', body: JSON.stringify({ responses }) }),
+  /** VE-35: "Answering this question?" Yes / No / Undecided; 409 when Yes would choose too many questions. */
+  saveSelection: (sectionId: number, questionNumber: number, selection: Selection) =>
+    request<void>(`/api/candidate/sections/${sectionId}/selections`, { method: 'PUT', body: JSON.stringify({ questionNumber, selection }) }),
 }

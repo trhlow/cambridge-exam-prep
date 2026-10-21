@@ -21,7 +21,8 @@ public sealed record CandidateGroup(
     int? MaxWordsPerAnswer,
     IReadOnlyList<CandidateQuestion> Questions,
     string? ItemsHeading = null,
-    string? PoolHeading = null);
+    string? PoolHeading = null,
+    int? ChooseCount = null);
 
 public sealed record CandidateQuestion(int Id, int Number, string? PromptHtml, string? StimulusHtml, IReadOnlyList<CandidateOption>? Options, int? MinWords);
 
@@ -54,7 +55,8 @@ internal static class CandidatePaperMapper
                 group.Questions.OrderBy(q => q.OrderNo).Select(q => new CandidateQuestion(
                     q.Id, q.Number, q.PromptHtml, q.StimulusHtml, Options(q.OptionsJson), q.MinWords)).ToList(),
                 group.ItemsHeading,
-                group.PoolHeading)).ToList(),
+                group.PoolHeading,
+                group.ChooseCount)).ToList(),
             part.QuestionPerPage))
             .ToList());
 

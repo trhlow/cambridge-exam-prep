@@ -44,6 +44,7 @@ Ví dụ đầy đủ, nội dung tự soạn (không phải đề Cambridge): `
 | `itemsHeading`, `poolHeading` | `DragDropMatch`: tiêu đề cột câu hỏi và cột thẻ, tối đa 128 ký tự (B1: "Young People" / tên loại thẻ). Bỏ trống: cột câu hỏi ghi "People" (A2), cột thẻ không có tiêu đề |
 | `allowOptionReuse` | `DragDropMatch`: một thẻ có được kéo vào nhiều ô không (mặc định `false`) |
 | `maxWordsPerAnswer` | `InlineText`: số từ tối đa mỗi ô ("Write ONE word") |
+| `chooseCount` | `Essay`: thí sinh chỉ làm bấy nhiêu câu trong nhóm (B1 Writing Part 2: `1`, "Choose one of these questions"). Màn hình có ô "Answering this question? Yes / No / Undecided" và dòng "n of 1 questions selected"; chỉ câu được chọn được chấm (chưa chọn câu nào thì chấm câu đã viết đầu tiên), điểm tối đa của nhóm là câu cao điểm nhất. Phải nhỏ hơn số câu của nhóm |
 | `questions` | Các câu hỏi |
 
 ### Câu hỏi
@@ -128,7 +129,7 @@ Listening cần **mỗi part một file âm thanh** trong `--audio-dir`, tên b�
 Bố cục B1 Preliminary (VE-69; mỗi phần một section riêng, như template `B1_PRELIM_FS`):
 
 - Reading Part 1: năm thông báo, mỗi thông báo cắt thành hình (chữ in trong khung giữ làm chữ thay thế) với A/B/C bên phải. Part 2: năm người (ảnh + mô tả) kéo vào tám đoạn giới thiệu có tiêu đề in đậm (`DragDropMatch` dạng người, `itemsHeading` từ "The … below", `poolHeading` là tiêu đề cột). Part 3: bài đọc có tiêu đề + câu A–D (cả kiểu 2×2). Part 4: bài đọc có ô trống `{{q:16}}`, kéo câu A–H vào (`DragDropMatch` dạng ô trống). Part 5: chọn từ A–D cho ô trống. Part 6: gõ một từ vào ô trống.
-- Writing: Part 1 email (Essay, `minWords` từ "about 100 words", hình email cắt cả khung); Part 2 câu 2 và câu 3, mỗi câu một trang, thí sinh chọn một (VE-35). Không có đáp án, điểm do giám khảo chấm.
+- Writing: Part 1 email (Essay, `minWords` từ "about 100 words", hình email cắt cả khung); Part 2 câu 2 và câu 3, mỗi câu một trang, nhóm có `chooseCount: 1` (thí sinh chọn một, VE-35). Không có đáp án, điểm do giám khảo chấm.
 - Listening (4 part, 25 câu): Part 1 như A2 Part 1 (ba tranh); Part 2 mỗi câu có dòng ngữ cảnh "You will hear …" ngay trên câu hỏi; Part 3 tiêu đề + các câu có ô `(14)` → `{{q:14}}`, "Write one or two words" → `maxWordsPerAnswer` 2; Part 4 phỏng vấn A/B/C.
 - Đáp án B1 có từ tuỳ chọn trong ngoặc: `(a/an/the) (fantastic) waterfall(s)` nhận mọi tổ hợp (`waterfall`, `the waterfalls`, …, tối đa 64 dạng); một từ tuỳ chọn đứng trước từ khác còn được viết liền (`(news) paper` → `newspaper`), trừ mạo từ, đại từ sở hữu và giới từ ngắn. Cột "ACCEPTABLE MIS-SPELLINGS" của Listening Part 3 cũng thành đáp án được chấp nhận.
 
@@ -169,4 +170,4 @@ Kỳ thi demo (Development) dùng gói đề đã chuyển nếu `Demo:ReadingWr
 
 ## Đề mẫu tự soạn
 
-`samples/a2-key-fs-reading-writing`, `samples/a2-key-fs-listening` (A2), `samples/b1-pfs-reading` (B1 Preliminary for Schools Reading, 6 part, 32 câu, có hai dạng kéo thả của B1) và `samples/b1-pfs-listening` (B1 Listening, 4 part, 25 câu, Part 2 `questionPerPage`) do nhóm tự viết, dùng làm dữ liệu test; hình vẽ bằng `samples/make_images.py`, audio đọc bằng giọng Windows qua `make_audio.ps1` trong thư mục từng đề.
+`samples/a2-key-fs-reading-writing`, `samples/a2-key-fs-listening` (A2), `samples/b1-pfs-reading` (B1 Preliminary for Schools Reading, 6 part, 32 câu, có hai dạng kéo thả của B1), `samples/b1-pfs-writing` (B1 Writing, Part 2 `chooseCount: 1`) và `samples/b1-pfs-listening` (B1 Listening, 4 part, 25 câu, Part 2 `questionPerPage`) do nhóm tự viết, dùng làm dữ liệu test; hình vẽ bằng `samples/make_images.py`, audio đọc bằng giọng Windows qua `make_audio.ps1` trong thư mục từng đề.

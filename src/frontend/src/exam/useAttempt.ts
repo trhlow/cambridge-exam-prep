@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { candidateApi } from '../api/client'
 import { useLive } from '../api/live'
-import type { Answers, AttemptState, CandidateMessage } from '../api/types'
+import type { Answers, AttemptState, CandidateMessage, Selection, Selections } from '../api/types'
 import { AutosaveQueue, type SaveStatus } from './autosave'
 import { remainingSecondsNow } from './timing'
 
@@ -21,6 +21,10 @@ export interface AttemptView {
   answers: Answers
   saveStatus: SaveStatus
   setAnswer: (number: number, value: string) => void
+  /** VE-35: "Answering this question?" choices other than Undecided. */
+  selections: Selections
+  /** Saves a choice at once; resolves to the server's refusal (shown to the candidate) or null. */
+  setSelection: (number: number, selection: Selection) => Promise<string | null>
   /** Listening: where the recording should be now (server figure plus time elapsed here); null before Play. */
   audioPositionNow: () => number | null
   /** Listening: tells the server the candidate pressed Play; resolves to the recording position. */
@@ -41,6 +45,8 @@ export function useAttempt(sectionId: number): AttemptView {
   const [clock, setClock] = useState<Clock | null>(null)
   const [messages, setMessages] = useState<CandidateMessage[]>([])
   const [answers, setAnswers] = useState<Answers>({})
+  const [selections, setSelections] = useState<Selections>({})
+  const selectionsRef = useRef<Selections>({})
   const [error, setError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [now, setNow] = useState(() => Date.now())
@@ -71,6 +77,8 @@ export function useAttempt(sectionId: number): AttemptView {
       (state) => {
         apply(state)
         setAnswers(state.answers)
+        selectionsRef.current = state.selections ?? {}
+        setSelections(selectionsRef.current)
       },
       (e: Error) => setError(e.message),
     )
@@ -101,6 +109,26 @@ export function useAttempt(sectionId: number): AttemptView {
     queueRef.current?.push(number, value)
   }, [])
 
+  const setSelection = useCallback(
+    async (number: number, selection: Selection) => {
+      const before = selectionsRef.current
+      const show = (next: Selections) => {
+        selectionsRef.current = next
+        setSelections(next)
+      }
+
+      show({ ...before, [number]: selection })
+      try {
+        await candidateApi.saveSelection(sectionId, number, selection)
+        return null
+      } catch (e) {
+        show(before)
+        return e instanceof Error ? e.message : 'Your choice was not saved.'
+      }
+    },
+    [sectionId],
+  )
+
   const audioPositionNow = useCallback(() => {
     if (!clock || clock.audioPositionMs === null) {
       return null
@@ -123,6 +151,8 @@ export function useAttempt(sectionId: number): AttemptView {
     answers,
     saveStatus,
     setAnswer,
+    selections,
+    setSelection,
     audioPositionNow,
     playAudio,
     messages,

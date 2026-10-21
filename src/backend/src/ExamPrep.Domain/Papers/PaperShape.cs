@@ -52,6 +52,10 @@ public static class PaperShape
                 {
                     problems.Add($"Part {partA.PartNo} has questions {Range(numbersA)} in \"{a.Title}\" but {Range(numbersB)} in \"{b.Title}\".");
                 }
+                else if (groupA.ChooseCount != groupB.ChooseCount)
+                {
+                    problems.Add($"Part {partA.PartNo}, questions {Range(numbersA)}: candidates answer {Choice(groupA)} in \"{a.Title}\" but {Choice(groupB)} in \"{b.Title}\".");
+                }
             }
 
             if ((partA.AudioAssetId is null) != (partB.AudioAssetId is null))
@@ -63,6 +67,8 @@ public static class PaperShape
 
         return problems;
     }
+
+    private static string Choice(QuestionGroup group) => group.ChooseCount is { } n ? $"{n} of them" : "all of them";
 
     private static List<int> Numbers(QuestionGroup group) => group.Questions.Select(q => q.Number).Order().ToList();
 

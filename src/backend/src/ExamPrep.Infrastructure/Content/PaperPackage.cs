@@ -35,7 +35,8 @@ public sealed record PackageGroup(
     bool AllowOptionReuse = false,
     int? MaxWordsPerAnswer = null,
     string? ItemsHeading = null,
-    string? PoolHeading = null);
+    string? PoolHeading = null,
+    int? ChooseCount = null);
 
 public sealed record PackageQuestion(
     int Number,

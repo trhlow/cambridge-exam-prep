@@ -41,5 +41,11 @@ public class QuestionGroup
     /// <summary>InlineText only: maximum words per answer ("Write one word").</summary>
     public int? MaxWordsPerAnswer { get; set; }
 
+    /// <summary>
+    /// Essay only: the candidate answers this many of the group's questions ("Choose one of these questions", B1 Writing
+    /// Part 2) and says which on screen (<see cref="Response.Selection"/>); null means every question.
+    /// </summary>
+    public int? ChooseCount { get; set; }
+
     public ICollection<Question> Questions { get; set; } = [];
 }

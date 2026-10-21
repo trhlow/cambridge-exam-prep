@@ -124,6 +124,18 @@ public static partial class PaperPackageValidator
             }
         }
 
+        if (group.ChooseCount is { } choose)
+        {
+            if (group.InteractionType != InteractionType.Essay)
+            {
+                errors.Add($"{groupLabel}: chooseCount is only for Writing (Essay) groups.");
+            }
+            else if (choose < 1 || choose >= group.Questions.Count)
+            {
+                errors.Add($"{groupLabel}: chooseCount must be at least 1 and less than the group's {group.Questions.Count} questions.");
+            }
+        }
+
         foreach (var question in group.Questions)
         {
             ValidateQuestion(question, group, $"{partLabel}, question {question.Number}", files, errors);
