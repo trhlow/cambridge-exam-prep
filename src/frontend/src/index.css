@@ -502,8 +502,9 @@ button {
   background: var(--surface);
 }
 
+/* Under the editor on the left: on the right the ← → buttons, which float over the page, would cover it. */
 .essay-count {
-  align-self: flex-end;
+  align-self: flex-start;
   margin-top: 4px;
 }
 
