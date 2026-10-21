@@ -34,6 +34,9 @@ public sealed record DemoOptions
     /// <summary>Optional second Listening source paper, used like <see cref="SecondReadingWritingFolder"/>.</summary>
     public string? SecondListeningFolder { get; init; }
 
+    /// <summary>Computers per row in the demo room; with a second source paper the section gives its mix by seat.</summary>
+    public int? SeatsPerRow { get; init; }
+
     public string ExamName { get; init; } = string.Empty;
     public string CandidateUsername { get; init; } = string.Empty;
     public string CandidatePassword { get; init; } = string.Empty;
@@ -124,6 +127,12 @@ public static class DemoSeeder
             .Where(t => t.ExamType!.Code == A2ExamTypeCode)
             .ToDictionaryAsync(t => t.Id, cancellationToken);
 
+        // With a second source paper, the section gives four mixed papers by seat (Victory 20/10).
+        await db.SaveChangesAsync(cancellationToken);
+        var mixer = provider.GetRequiredService<PaperMixer>();
+        var readingWritingSection = await SectionAsync(mixer, templates[readingWriting.SectionTemplateId], readingWriting, secondReadingWriting, adminId.Value, cancellationToken);
+        var listeningSection = await SectionAsync(mixer, templates[listening.SectionTemplateId], listening, secondListening, adminId.Value, cancellationToken);
+
         var candidate = CreateCandidate(provider, options);
         var invigilatorId = await EnsureStaffAsync(provider, db, options.InvigilatorUsername, options.InvigilatorPassword, "Demo Invigilator", UserRole.Invigilator, cancellationToken);
         var examinerId = await EnsureStaffAsync(provider, db, options.ExaminerUsername, options.ExaminerPassword, "Demo Examiner", UserRole.Examiner, cancellationToken);
@@ -136,9 +145,10 @@ public static class DemoSeeder
             Status = ExamStatus.Active,
             SessionPin = options.SessionPin,
             InvigilatorPassword = Guid.NewGuid().ToString("N")[..10],
+            SeatsPerRow = options.SeatsPerRow,
             CreatedByUserId = adminId.Value,
             CreatedAt = DateTime.UtcNow,
-            Sections = [Section(templates[readingWriting.SectionTemplateId], readingWriting), Section(templates[listening.SectionTemplateId], listening)],
+            Sections = [readingWritingSection, listeningSection],
             Candidates = [candidate],
             Invigilators = invigilatorId is { } id ? [new ExamInvigilator { UserId = id, AssignedAt = DateTime.UtcNow }] : [],
             Examiners = examinerId is { } examiner ? [new ExamExaminer { UserId = examiner, AssignedAt = DateTime.UtcNow }] : [],
@@ -159,9 +169,28 @@ public static class DemoSeeder
         }
 
         var paperIds = exam.Sections.Select(s => s.TestPaperId).ToList();
+        var mixIds = exam.Sections.Where(s => s.PaperMixId != null).Select(s => s.PaperMixId!.Value).ToList();
         db.Exams.Remove(exam);
         await db.SaveChangesAsync(cancellationToken);
 
+        // Mixes no other session uses go with their four papers; their sources are then removed below if unused.
+        foreach (var mixId in mixIds)
+        {
+            if (await db.ExamSections.AnyAsync(s => s.PaperMixId == mixId, cancellationToken))
+            {
+                continue;
+            }
+
+            var mix = await db.PaperMixes.Include(m => m.Versions).SingleAsync(m => m.Id == mixId, cancellationToken);
+            paperIds.AddRange([mix.SourceAPaperId, mix.SourceBPaperId]);
+            db.TestPapers.RemoveRange(mix.Versions);
+            await db.SaveChangesAsync(cancellationToken);
+            db.PaperMixes.Remove(mix);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        var stillMixed = await db.PaperMixes.Select(m => m.SourceAPaperId).Concat(db.PaperMixes.Select(m => m.SourceBPaperId)).ToListAsync(cancellationToken);
+        paperIds = paperIds.Except(stillMixed).Distinct().ToList();
         var unusedPapers = await db.TestPapers
             .Where(p => paperIds.Contains(p.Id) && !db.ExamSections.Any(s => s.TestPaperId == p.Id))
             .ToListAsync(cancellationToken);
@@ -203,6 +232,22 @@ public static class DemoSeeder
 
         logger.LogInformation("Second demo {Section} source paper comes from {Folder}.", section, folder);
         return await ImportAsync(importer, folder, adminId, cancellationToken);
+    }
+
+    /// <summary>The section with one paper, or with the mix of both papers when there is a second one.</summary>
+    private static async Task<ExamSection> SectionAsync(
+        PaperMixer mixer, SectionTemplate template, TestPaper paper, TestPaper? second, int adminId, CancellationToken cancellationToken)
+    {
+        if (second is null)
+        {
+            return Section(template, paper);
+        }
+
+        var result = await mixer.CreateAsync(paper.Id, second.Id, $"Demo mix – {template.Title}", seed: 2026, adminId, cancellationToken);
+        var mix = result.Mix ?? throw new InvalidOperationException($"Demo papers cannot be mixed:{Environment.NewLine}{string.Join(Environment.NewLine, result.Errors)}");
+        var section = Section(template, mix.Versions.Single(v => v.MixVersion == 1));
+        section.PaperMixId = mix.Id;
+        return section;
     }
 
     private static ExamSection Section(SectionTemplate template, TestPaper paper) => new()

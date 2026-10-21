@@ -17,6 +17,7 @@ builder.Services.AddStaffAuthentication(builder.Environment);
 builder.Services.AddCandidateAuthentication(builder.Environment);
 builder.Services.AddAssetAccess();
 builder.Services.AddScoped<CandidateSectionQuery>();
+builder.Services.AddScoped<PaperAssignment>();
 builder.Services.AddScoped<CandidateCredentials>();
 builder.Services.AddSingleton<LoginThrottle>();
 builder.Services.AddScoped<ExamPrep.Api.Approvals.ApprovalService>();

@@ -29,7 +29,15 @@ public sealed partial class ExamAssetIndex(ExamPrepDbContext db, IMemoryCache ca
 
     private async Task<HashSet<int>> LoadAsync(int examId, CancellationToken cancellationToken)
     {
-        var paperIds = await db.ExamSections.Where(s => s.ExamId == examId).Select(s => s.TestPaperId).ToListAsync(cancellationToken);
+        var sections = await db.ExamSections.Where(s => s.ExamId == examId).Select(s => new { s.TestPaperId, s.PaperMixId }).ToListAsync(cancellationToken);
+        var paperIds = sections.Select(s => s.TestPaperId).ToList();
+        // A section with a mix delivers all four of its papers.
+        var mixIds = sections.Where(s => s.PaperMixId != null).Select(s => s.PaperMixId!.Value).ToList();
+        if (mixIds.Count > 0)
+        {
+            paperIds.AddRange(await db.TestPapers.Where(p => p.PaperMixId != null && mixIds.Contains(p.PaperMixId.Value)).Select(p => p.Id).ToListAsync(cancellationToken));
+        }
+
         var parts = await db.PaperParts.AsNoTracking()
             .Where(p => paperIds.Contains(p.TestPaperId))
             .Select(p => new { p.AudioAssetId, p.StimulusHtml })

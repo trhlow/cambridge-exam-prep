@@ -119,7 +119,7 @@ public static class WritingMarks
         var questions = await db.Questions.AsNoTracking()
             .Include(q => q.AnswerKeys)
             .Include(q => q.QuestionGroup!).ThenInclude(g => g.PaperPart)
-            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.ExamSection!.TestPaperId)
+            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.TestPaperId)
             .OrderBy(q => q.Number)
             .ToListAsync(cancellationToken);
         var responses = await db.Responses.AsNoTracking()
@@ -158,7 +158,7 @@ public static class WritingMarks
         }
 
         var essays = await db.Questions
-            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.ExamSection!.TestPaperId && q.QuestionGroup.InteractionType == InteractionType.Essay)
+            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.TestPaperId && q.QuestionGroup.InteractionType == InteractionType.Essay)
             .ToDictionaryAsync(q => q.Number, cancellationToken);
         if (!essays.TryGetValue(request.QuestionNumber, out var question))
         {

@@ -88,6 +88,39 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task Seed_WithSecondSourcePapers_GivesEachSectionAMixBySeat_AndResetRemovesIt()
+    {
+        api.SkipIfUnavailable();
+        var samples = Path.Combine(AppContext.BaseDirectory, "Samples");
+        var options = Options() with
+        {
+            SecondReadingWritingFolder = Path.Combine(samples, "a2-key-fs-reading-writing"),
+            SecondListeningFolder = Path.Combine(samples, "a2-key-fs-listening"),
+            SeatsPerRow = 4,
+        };
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+
+        List<int> mixIds;
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var exam = await db.Exams.Include(e => e.Sections).SingleAsync(e => e.Name == options.ExamName, ct);
+            Assert.Equal(4, exam.SeatsPerRow);
+            Assert.All(exam.Sections, s => Assert.NotNull(s.PaperMixId));
+            mixIds = exam.Sections.Select(s => s.PaperMixId!.Value).ToList();
+            Assert.Equal(8, await db.TestPapers.CountAsync(p => p.PaperMixId != null && mixIds.Contains(p.PaperMixId.Value), ct));
+        }
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options with { ResetOnStart = true }, ct);
+
+        using var check = api.Factory.Services.CreateScope();
+        var checkDb = check.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        Assert.False(await checkDb.PaperMixes.AnyAsync(m => mixIds.Contains(m.Id), ct));
+        Assert.Equal(2, await checkDb.ExamSections.CountAsync(s => s.Exam!.Name == options.ExamName && s.PaperMixId != null, ct));
+    }
+
+    [Fact]
     public async Task Seed_UsesTheReadingWritingFolderWhenItExists()
     {
         api.SkipIfUnavailable();

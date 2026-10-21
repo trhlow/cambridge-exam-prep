@@ -35,7 +35,7 @@ public sealed record SaveResponsesRequest([Required, MinLength(1), MaxLength(100
 [ApiController]
 [Route("api/candidate/sections/{sectionId:int}")]
 [Authorize(Policy = CandidateAuthDefaults.ExamPolicy)]
-public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateSectionQuery sectionQuery, TimeProvider clock, RoomNotifier notifier, SecurityEventRecorder events) : ControllerBase
+public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateSectionQuery sectionQuery, PaperAssignment papers, TimeProvider clock, RoomNotifier notifier, SecurityEventRecorder events) : ControllerBase
 {
     /// <summary>Answers that arrive this soon after the end (network delay) are still kept.</summary>
     private static readonly TimeSpan AutosaveGrace = TimeSpan.FromSeconds(5);
@@ -82,7 +82,9 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
     /// <summary>Starts the clock; null when a concurrent request has already started this section.</summary>
     private async Task<Attempt?> TryCreateAttemptAsync(ExamSection section, Candidate candidate, DateTime now, CancellationToken cancellationToken)
     {
-        var attempt = new Attempt { CandidateId = candidate.Id, ExamSectionId = section.Id };
+        // The paper is chosen once, here: a later change of seat or computer keeps it.
+        var paperId = await papers.PaperIdForAsync(section, candidate, cancellationToken);
+        var attempt = new Attempt { CandidateId = candidate.Id, ExamSectionId = section.Id, TestPaperId = paperId };
         AttemptExpiry.ClockFor(attempt, section, candidate).Start(candidate.PlannedExtraPercent, now);
         db.Attempts.Add(attempt);
         try
@@ -172,7 +174,7 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         }
 
         var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);
-        var hasAudio = await db.PaperParts.AnyAsync(p => p.TestPaperId == section.TestPaperId && p.AudioAssetId != null, cancellationToken);
+        var hasAudio = await db.PaperParts.AnyAsync(p => p.TestPaperId == attempt.TestPaperId && p.AudioAssetId != null, cancellationToken);
         if (!hasAudio)
         {
             return Problem(title: "This part of the test has no recording.", statusCode: StatusCodes.Status400BadRequest);
@@ -219,7 +221,7 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         }
 
         var questionIds = await db.Questions
-            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == section.TestPaperId)
+            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.TestPaperId)
             .ToDictionaryAsync(q => q.Number, q => q.Id, cancellationToken);
         var unknown = request.Responses.Select(r => r.QuestionNumber).Where(n => !questionIds.ContainsKey(n)).Distinct().ToList();
         if (unknown.Count > 0)

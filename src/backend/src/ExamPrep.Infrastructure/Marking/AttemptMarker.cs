@@ -49,7 +49,7 @@ public sealed class AttemptMarker(ExamPrepDbContext db)
             .AsNoTracking()
             .Include(q => q.AnswerKeys)
             .Include(q => q.QuestionGroup)
-            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.ExamSection!.TestPaperId)
+            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.TestPaperId)
             .ToListAsync(cancellationToken);
         var responses = await db.Responses
             .Where(r => r.AttemptId == attempt.Id)

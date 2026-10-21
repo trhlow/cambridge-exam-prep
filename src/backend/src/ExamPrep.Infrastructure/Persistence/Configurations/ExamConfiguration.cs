@@ -17,5 +17,6 @@ internal sealed class ExamConfiguration : IEntityTypeConfiguration<Exam>
         builder.HasOne(e => e.ExamType).WithMany().HasForeignKey(e => e.ExamTypeId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(e => e.ScheduledDate);
+        builder.ToTable(t => t.HasCheckConstraint("CK_exams_seats_per_row", "seats_per_row IS NULL OR seats_per_row BETWEEN 1 AND 50"));
     }
 }
