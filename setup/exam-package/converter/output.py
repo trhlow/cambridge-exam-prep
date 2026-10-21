@@ -9,7 +9,7 @@ ZOOM = 3.0  # 216 dpi: notices and photos stay sharp on a 1080p screen
 TAG = re.compile(r"<[^>]+>")
 
 
-def write_package(out_dir: Path, paper: dict, report, questions_pdf: Path, key_pdf: Path) -> None:
+def write_package(out_dir: Path, paper: dict, report, questions_pdf: Path, key_pdf: Path | None) -> None:
     import pymupdf
 
     (out_dir / "images").mkdir(parents=True, exist_ok=True)
@@ -36,7 +36,7 @@ def _cell(text: str) -> str:
     return " ".join(TAG.sub(" ", text).split()).replace("|", "\\|")
 
 
-def review(paper: dict, report, questions_pdf: Path, key_pdf: Path, out_dir: Path) -> str:
+def review(paper: dict, report, questions_pdf: Path, key_pdf: Path | None, out_dir: Path) -> str:
     rows = []
     for part in paper["parts"]:
         for group in part["groups"]:
@@ -55,7 +55,7 @@ def review(paper: dict, report, questions_pdf: Path, key_pdf: Path, out_dir: Pat
     return f"""# Bản nháp cần duyệt: {paper['title']}
 
 - Đề: `{questions_pdf.name}`
-- Đáp án: `{key_pdf.name}`
+- Đáp án: {f'`{key_pdf.name}`' if key_pdf else 'không có (Writing: giám khảo chấm)'}
 - Tạo lúc {datetime.now():%d/%m/%Y %H:%M}: {len(rows)} câu, {len(paper['parts'])} part, {len(report.crops)} hình trong `images/`{audio_lines}
 
 ## Lỗi phải sửa trước khi import

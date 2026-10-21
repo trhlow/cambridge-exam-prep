@@ -19,7 +19,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from converter import a2_listening, a2_reading_writing  # noqa: E402
+from converter import a2_listening, a2_reading_writing, b1_reading, b1_writing  # noqa: E402
+
+
+def cover(questions_pdf: Path) -> list[str]:
+    import pymupdf
+    with pymupdf.open(questions_pdf) as pdf:
+        return [line.strip() for line in pdf[0].get_text().splitlines()]
+
+
+def is_b1(questions_pdf: Path) -> bool:
+    return any("PRELIMINARY" in line.upper() for line in cover(questions_pdf))
 
 
 def is_listening(questions_pdf: Path) -> bool:
@@ -39,6 +49,17 @@ def main() -> int:
     parser.add_argument("--report", type=Path, help="also write the errors and checks as JSON (used by the staff portal's PDF import)")
     args = parser.parse_args()
 
+    if is_b1(args.questions) and "Writing" in cover(args.questions):
+        # B1 Writing has no answer key: the key argument may be the same PDF.
+        out_dir = args.output or args.questions.parent / "package-writing"
+        report = b1_writing.convert_files(args.questions, out_dir, args.title)
+        print(f"Draft written to {out_dir}. Read {out_dir / 'REVIEW.md'} before packing.")
+        return 1 if report.warnings else 0
+    if is_b1(args.questions) and "Reading" in cover(args.questions):
+        out_dir = args.output or args.questions.parent / "package-reading"
+        report = b1_reading.convert_files(args.questions, args.key, out_dir, args.title)
+        print(f"Draft written to {out_dir}. Read {out_dir / 'REVIEW.md'} before packing.")
+        return 1 if report.warnings else 0
     listening = is_listening(args.questions)
     if listening and (args.audio_dir is None or not args.audio_dir.is_dir()):
         parser.error("this is a Listening paper: give --audio-dir with one audio track per part")
