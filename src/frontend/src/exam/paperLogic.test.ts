@@ -56,6 +56,18 @@ describe('buildPages', () => {
     ])
   })
 
+  it('gives each question its own page when the part asks for it, pictures or not (B1 Listening Part 2)', () => {
+    const contexts = part(2, [group('SingleChoice', [question(8), question(9)])], { questionPerPage: true })
+    const essays = part(2, [group('Essay', [question(2), question(3)])], { layout: 'Split', questionPerPage: true })
+
+    expect(buildPages(paper([contexts, essays]))).toEqual([
+      { partIndex: 0, questionNumbers: [8] },
+      { partIndex: 0, questionNumbers: [9] },
+      { partIndex: 1, questionNumbers: [2] },
+      { partIndex: 1, questionNumbers: [3] },
+    ])
+  })
+
   it('shows a whole part on one page otherwise', () => {
     const split = part(2, [group('SingleChoice', [question(7), question(8)])], { layout: 'Split', stimulusHtml: '<p>Text</p>' })
     const gaps = part(4, [group('InlineChoice', [question(19), question(20)], { bodyHtml: '{{q:19}} {{q:20}}' })])

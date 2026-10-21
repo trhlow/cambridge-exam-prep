@@ -1,6 +1,6 @@
 import type { Answers, Paper, Part, Question } from '../api/types'
 
-/** One screen of the test: Inspera shows A2 Reading Part 1 one notice at a time, every other part whole. */
+/** One screen of the test: Inspera shows some parts one question at a time (A2 Reading Part 1), most parts whole. */
 export interface Page {
   partIndex: number
   questionNumbers: number[]
@@ -13,12 +13,18 @@ export function questionsOf(part: Part): Question[] {
 }
 
 /**
- * Inspera pages question by question when every question brings its own pictures: notices in A2 Reading
- * Part 1, picture options in A2 Listening Part 1.
+ * Inspera pages question by question when the paper says so (B1 Listening Part 2, B1 Writing Part 2) and when
+ * every question brings its own pictures: notices in A2 Reading Part 1, picture options in A2 Listening Part 1.
  */
 function isOnePerPage(part: Part): boolean {
   const questions = questionsOf(part)
-  if (part.layout !== 'Single' || questions.length < 2) {
+  if (questions.length < 2) {
+    return false
+  }
+  if (part.questionPerPage) {
+    return true
+  }
+  if (part.layout !== 'Single') {
     return false
   }
 

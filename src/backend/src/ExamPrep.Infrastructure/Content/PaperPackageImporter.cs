@@ -145,6 +145,7 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
             PartNo = part.PartNo,
             Title = part.Title,
             Layout = part.Layout,
+            QuestionPerPage = part.QuestionPerPage,
             StimulusHtml = Html(part.StimulusHtml, assets),
             AudioAsset = part.Audio is null ? null : assets[part.Audio],
             Groups = part.Groups.Select((group, i) => ToEntity(group, i + 1, assets)).ToList(),

@@ -893,6 +893,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("part_no");
 
+                    b.Property<bool>("QuestionPerPage")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("question_per_page");
+
                     b.Property<string>("StimulusHtml")
                         .HasColumnType("mediumtext")
                         .HasColumnName("stimulus_html");

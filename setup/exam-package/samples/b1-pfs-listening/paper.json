@@ -1,0 +1,524 @@
+{
+  "formatVersion": 1,
+  "examType": "B1_PRELIM_FS",
+  "section": 3,
+  "title": "B1 Preliminary for Schools – Victory sample test 1 – Listening",
+  "parts": [
+    {
+      "partNo": 1,
+      "layout": "Single",
+      "audio": "audio/part1.mp3",
+      "groups": [
+        {
+          "interactionType": "ImageChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "questions": [
+            {
+              "number": 1,
+              "promptHtml": "What time does the film start?",
+              "options": [
+                {
+                  "key": "A",
+                  "image": "images/b1-l-p1-q1-a.png",
+                  "text": "7.00"
+                },
+                {
+                  "key": "B",
+                  "image": "images/b1-l-p1-q1-b.png",
+                  "text": "7.30"
+                },
+                {
+                  "key": "C",
+                  "image": "images/b1-l-p1-q1-c.png",
+                  "text": "8.00"
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 2,
+              "promptHtml": "What will the boy take on the trip?",
+              "options": [
+                {
+                  "key": "A",
+                  "image": "images/b1-l-p1-q2-a.png",
+                  "text": "A camera"
+                },
+                {
+                  "key": "B",
+                  "image": "images/b1-l-p1-q2-b.png",
+                  "text": "An umbrella"
+                },
+                {
+                  "key": "C",
+                  "image": "images/b1-l-p1-q2-c.png",
+                  "text": "A map"
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 3,
+              "promptHtml": "Which sport does the girl do now?",
+              "options": [
+                {
+                  "key": "A",
+                  "image": "images/b1-l-p1-q3-a.png",
+                  "text": "Swimming"
+                },
+                {
+                  "key": "B",
+                  "image": "images/b1-l-p1-q3-b.png",
+                  "text": "Tennis"
+                },
+                {
+                  "key": "C",
+                  "image": "images/b1-l-p1-q3-c.png",
+                  "text": "Football"
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 4,
+              "promptHtml": "What will the weather be like on Sunday?",
+              "options": [
+                {
+                  "key": "A",
+                  "image": "images/b1-l-p1-q4-a.png",
+                  "text": "Sunny"
+                },
+                {
+                  "key": "B",
+                  "image": "images/b1-l-p1-q4-b.png",
+                  "text": "Rainy"
+                },
+                {
+                  "key": "C",
+                  "image": "images/b1-l-p1-q4-c.png",
+                  "text": "Windy"
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            },
+            {
+              "number": 5,
+              "promptHtml": "Where is the boy's phone?",
+              "options": [
+                {
+                  "key": "A",
+                  "image": "images/b1-l-p1-q5-a.png",
+                  "text": "In his bag"
+                },
+                {
+                  "key": "B",
+                  "image": "images/b1-l-p1-q5-b.png",
+                  "text": "On the desk"
+                },
+                {
+                  "key": "C",
+                  "image": "images/b1-l-p1-q5-c.png",
+                  "text": "In the kitchen"
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            },
+            {
+              "number": 6,
+              "promptHtml": "How much did the girl pay for her jacket?",
+              "options": [
+                {
+                  "key": "A",
+                  "image": "images/b1-l-p1-q6-a.png",
+                  "text": "£15"
+                },
+                {
+                  "key": "B",
+                  "image": "images/b1-l-p1-q6-b.png",
+                  "text": "£25"
+                },
+                {
+                  "key": "C",
+                  "image": "images/b1-l-p1-q6-c.png",
+                  "text": "£40"
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 7,
+              "promptHtml": "What will the class do on Friday afternoon?",
+              "options": [
+                {
+                  "key": "A",
+                  "image": "images/b1-l-p1-q7-a.png",
+                  "text": "Visit a museum"
+                },
+                {
+                  "key": "B",
+                  "image": "images/b1-l-p1-q7-b.png",
+                  "text": "Watch a play"
+                },
+                {
+                  "key": "C",
+                  "image": "images/b1-l-p1-q7-c.png",
+                  "text": "Plant trees"
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 2,
+      "layout": "Single",
+      "questionPerPage": true,
+      "audio": "audio/part2.mp3",
+      "groups": [
+        {
+          "interactionType": "SingleChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "questions": [
+            {
+              "number": 8,
+              "promptHtml": "You will hear two friends talking about a new sports centre.<br>What does the boy like about it?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "the price"
+                },
+                {
+                  "key": "B",
+                  "text": "the opening hours"
+                },
+                {
+                  "key": "C",
+                  "text": "the equipment"
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            },
+            {
+              "number": 9,
+              "promptHtml": "You will hear a girl telling her friend about a school concert.<br>How did she feel before it started?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "nervous"
+                },
+                {
+                  "key": "B",
+                  "text": "bored"
+                },
+                {
+                  "key": "C",
+                  "text": "tired"
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            },
+            {
+              "number": 10,
+              "promptHtml": "You will hear two friends talking about a book they have read.<br>What do they agree about?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "It was too long."
+                },
+                {
+                  "key": "B",
+                  "text": "The ending was surprising."
+                },
+                {
+                  "key": "C",
+                  "text": "The characters were funny."
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 11,
+              "promptHtml": "You will hear a boy talking to his mother about a weekend job.<br>Why does he want the job?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "to pay for a holiday"
+                },
+                {
+                  "key": "B",
+                  "text": "to meet new people"
+                },
+                {
+                  "key": "C",
+                  "text": "to learn new skills"
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            },
+            {
+              "number": 12,
+              "promptHtml": "You will hear two friends talking about a cooking lesson.<br>What was the problem with the lesson?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "The teacher arrived late."
+                },
+                {
+                  "key": "B",
+                  "text": "There wasn't enough food."
+                },
+                {
+                  "key": "C",
+                  "text": "The kitchen was too small."
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            },
+            {
+              "number": 13,
+              "promptHtml": "You will hear a girl talking about a trip to the mountains.<br>What did she enjoy most?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "the views"
+                },
+                {
+                  "key": "B",
+                  "text": "the walking"
+                },
+                {
+                  "key": "C",
+                  "text": "the food"
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 3,
+      "layout": "Single",
+      "audio": "audio/part3.mp3",
+      "title": "SUMMER ART COURSE",
+      "groups": [
+        {
+          "interactionType": "InlineText",
+          "instructions": "For each question, write the correct answer in the gap. Write one or two words or a number or a date or a time. You will hear a teacher talking about a summer art course.",
+          "maxWordsPerAnswer": 2,
+          "bodyHtml": "<p>The course takes place in the {{q:14}} of the town museum.</p><p>Students will learn to paint using {{q:15}}.</p><p>The course lasts for {{q:16}} days.</p><p>Each student should bring an old {{q:17}}.</p><p>At the end of the course, the paintings will be shown in a {{q:18}}.</p><p>To book a place, phone Mrs {{q:19}}.</p>",
+          "questions": [
+            {
+              "number": 14,
+              "answers": [
+                "garden",
+                "the garden"
+              ]
+            },
+            {
+              "number": 15,
+              "answers": [
+                "coffee"
+              ]
+            },
+            {
+              "number": 16,
+              "answers": [
+                "12",
+                "twelve"
+              ]
+            },
+            {
+              "number": 17,
+              "answers": [
+                "shirt"
+              ]
+            },
+            {
+              "number": 18,
+              "answers": [
+                "bookshop",
+                "book shop",
+                "bookstore"
+              ]
+            },
+            {
+              "number": 19,
+              "answers": [
+                "Pearce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 4,
+      "layout": "Single",
+      "audio": "audio/part4.mp3",
+      "groups": [
+        {
+          "interactionType": "SingleChoice",
+          "instructions": "For each question, choose the correct answer. You will hear an interview with a young chess player called Tom Reed.",
+          "questions": [
+            {
+              "number": 20,
+              "promptHtml": "How did Tom start playing chess?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "His grandfather taught him."
+                },
+                {
+                  "key": "B",
+                  "text": "He joined a club at school."
+                },
+                {
+                  "key": "C",
+                  "text": "He watched games online."
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            },
+            {
+              "number": 21,
+              "promptHtml": "What does Tom find most difficult in competitions?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "staying calm"
+                },
+                {
+                  "key": "B",
+                  "text": "playing for many hours"
+                },
+                {
+                  "key": "C",
+                  "text": "travelling to new places"
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 22,
+              "promptHtml": "How does Tom prepare for an important game?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "He plays against his computer."
+                },
+                {
+                  "key": "B",
+                  "text": "He goes for a run."
+                },
+                {
+                  "key": "C",
+                  "text": "He studies famous old games."
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            },
+            {
+              "number": 23,
+              "promptHtml": "What does Tom say about his friends?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "They don't understand chess."
+                },
+                {
+                  "key": "B",
+                  "text": "They help him to relax."
+                },
+                {
+                  "key": "C",
+                  "text": "They play chess with him at weekends."
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 24,
+              "promptHtml": "What is Tom's plan for next year?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "to write a book about chess"
+                },
+                {
+                  "key": "B",
+                  "text": "to teach younger children"
+                },
+                {
+                  "key": "C",
+                  "text": "to play in another country"
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            },
+            {
+              "number": 25,
+              "promptHtml": "What advice does Tom give to new players?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "Don't worry about losing."
+                },
+                {
+                  "key": "B",
+                  "text": "Practise every day."
+                },
+                {
+                  "key": "C",
+                  "text": "Read about famous players."
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

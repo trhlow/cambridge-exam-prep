@@ -21,6 +21,12 @@ public class PaperPart
 
     public PartLayout Layout { get; set; } = PartLayout.Single;
 
+    /// <summary>
+    /// Inspera shows this part one question per page (B1 Listening Part 2, B1 Writing Part 2) although the questions
+    /// carry no pictures of their own. Parts whose every question has its pictures are paged anyway.
+    /// </summary>
+    public bool QuestionPerPage { get; set; }
+
     /// <summary>Listening only: this part's track. Tracks play back to back as one continuous recording.</summary>
     public int? AudioAssetId { get; set; }
 

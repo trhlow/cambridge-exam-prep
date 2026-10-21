@@ -120,6 +120,7 @@ public sealed class PaperMixer(ExamPrepDbContext db, TimeProvider clock)
         Title = part.Title,
         StimulusHtml = part.StimulusHtml,
         Layout = part.Layout,
+        QuestionPerPage = part.QuestionPerPage,
         AudioAssetId = part.AudioAssetId,
         Groups = part.Groups.OrderBy(g => g.OrderNo).Select(group => new QuestionGroup
         {

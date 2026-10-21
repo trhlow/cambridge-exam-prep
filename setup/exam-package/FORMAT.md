@@ -27,6 +27,7 @@ Ví dụ đầy đủ, nội dung tự soạn (không phải đề Cambridge): `
 |---|---|
 | `partNo` | 1, 2, 3… |
 | `layout` | `Single` (một cột) hoặc `Split` (chia đôi: bài đọc bên trái, câu hỏi bên phải, như Inspera) |
+| `questionPerPage` | `true`: mỗi câu một trang dù câu không có hình (B1 Listening Part 2, B1 Writing Part 2). Không ghi = `false`; part mà câu nào cũng có tranh/ảnh riêng vẫn tự chia trang |
 | `title` | Tiêu đề phía trên nội dung (không bắt buộc) |
 | `stimulusHtml` | Bài đọc, đề viết hoặc tranh dùng chung cho cả part (HTML) |
 | `audio` | **Chỉ Listening, và bắt buộc ở mọi part.** Đường dẫn trong zip, ví dụ `audio/part1.mp3` |
@@ -168,4 +169,4 @@ Kỳ thi demo (Development) dùng gói đề đã chuyển nếu `Demo:ReadingWr
 
 ## Đề mẫu tự soạn
 
-`samples/a2-key-fs-reading-writing`, `samples/a2-key-fs-listening` (A2) và `samples/b1-pfs-reading` (B1 Preliminary for Schools Reading, 6 part, 32 câu, có hai dạng kéo thả của B1) do nhóm tự viết, dùng làm dữ liệu test; hình vẽ bằng `samples/make_images.py`.
+`samples/a2-key-fs-reading-writing`, `samples/a2-key-fs-listening` (A2), `samples/b1-pfs-reading` (B1 Preliminary for Schools Reading, 6 part, 32 câu, có hai dạng kéo thả của B1) và `samples/b1-pfs-listening` (B1 Listening, 4 part, 25 câu, Part 2 `questionPerPage`) do nhóm tự viết, dùng làm dữ liệu test; hình vẽ bằng `samples/make_images.py`, audio đọc bằng giọng Windows qua `make_audio.ps1` trong thư mục từng đề.
