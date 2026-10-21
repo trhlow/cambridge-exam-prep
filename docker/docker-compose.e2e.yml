@@ -8,3 +8,5 @@ services:
     environment:
       Demo__ReadingWritingFolder: ""
       Demo__ListeningFolder: ""
+      Demo__SecondReadingWritingFolder: ""
+      Demo__SecondListeningFolder: ""
