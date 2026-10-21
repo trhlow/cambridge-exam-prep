@@ -1,19 +1,28 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { adminApi, type ApprovalView, type PaperConversionResult, type PaperImportSummary, type PaperListItem } from '../api'
+import { adminApi, type ApprovalView, type PaperConversionResult, type PaperImportSummary, type PaperListItem, type PaperMixView } from '../api'
 import { navigate } from '../router'
 import { Link } from '../Link'
 import { Badge, ConfirmButton, ErrorBox, Modal, PageHeader, RequestSent } from '../ui'
 import { useLoad } from '../useLoad'
+import { patternText } from '../format'
 
 const PARTS = [1, 2, 3, 4, 5]
 
 /**
  * The paper library. A paper comes in from Victory's PDFs (converted on the server) or as a ready package (.zip);
  * either way it arrives as a draft, is checked on its own page, then published so it can be scheduled. A paper used
- * by an exam cannot be deleted; deleting any other waits for a second administrator (VE-60).
+ * by an exam cannot be deleted; deleting any other waits for a second administrator (VE-60). Two published papers of
+ * the same layout can be mixed into four papers, given by seat so neighbours never share one (Victory 20/10, VE-67).
  */
 export function PapersPage() {
-  const { data: papers, error, reload } = useLoad(adminApi.papers, 'papers')
+  const { data: papers, error, reload: reloadPapers } = useLoad(adminApi.papers, 'papers')
+  const { data: mixes, error: mixesError, reload: reloadMixes } = useLoad(adminApi.paperMixes, 'paper-mixes')
+  const reload = () => {
+    reloadPapers()
+    reloadMixes()
+  }
+  const [isMixing, setIsMixing] = useState(false)
+  const [mixed, setMixed] = useState<PaperMixView | null>(null)
   const [importError, setImportError] = useState<unknown>(null)
   const [imported, setImported] = useState<PaperImportSummary | null>(null)
   const [isImporting, setIsImporting] = useState(false)
@@ -67,6 +76,9 @@ export function PapersPage() {
             <button type="button" className="st-btn" onClick={() => setIsStartingBlank(true)}>
               New blank paper
             </button>
+            <button type="button" className="st-btn" onClick={() => setIsMixing(true)}>
+              Mix two papers
+            </button>
             <label className={isImporting ? 'st-btn is-busy' : 'st-btn'}>
             {isImporting ? 'Importing…' : 'Import package (.zip)'}
               <input ref={fileRef} type="file" accept=".zip,application/zip" className="visually-hidden" onChange={(e) => void upload(e.target.files?.[0])} disabled={isImporting} />
@@ -81,6 +93,28 @@ export function PapersPage() {
         <span>4. Choose it when creating an exam</span>
       </div>
       {isStartingBlank && <BlankPaperDialog onClose={() => setIsStartingBlank(false)} />}
+      {isMixing && papers && (
+        <MixDialog
+          papers={papers}
+          onClose={() => setIsMixing(false)}
+          onMixed={(mix) => {
+            setIsMixing(false)
+            setMixed(mix)
+            reload()
+          }}
+        />
+      )}
+      {mixed && (
+        <div className="st-outcome" role="status">
+          <strong>
+            Mixed “{mixed.sourceA.title}” and “{mixed.sourceB.title}” into four published papers: “{mixed.title}”.
+          </strong>{' '}
+          Choose it for a section when creating an exam.
+          <button type="button" className="st-link" onClick={() => setMixed(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
       {isConverting && (
         <ConvertDialog
           onClose={() => setIsConverting(false)}
@@ -122,11 +156,146 @@ export function PapersPage() {
           </button>
         </div>
       )}
-      <ErrorBox error={importError ?? error} />
+      <ErrorBox error={importError ?? error ?? mixesError} />
       {sent && <RequestSent request={sent} onDismiss={() => setSent(null)} />}
       {papers && papers.length === 0 && <p className="st-empty">No papers yet. Import an exam package to begin.</p>}
-      {papers && papers.length > 0 && <PaperTable papers={papers} onPublish={(p) => void act(() => adminApi.publishPaper(p.id))} onDelete={(p) => void act(async () => setSent(await adminApi.deletePaper(p.id)))} />}
+      {papers && papers.length > 0 && <PaperTable papers={papers.filter((p) => !p.paperMixId)} onPublish={(p) => void act(() => adminApi.publishPaper(p.id))} onDelete={(p) => void act(async () => setSent(await adminApi.deletePaper(p.id)))} />}
+      {mixes && mixes.length > 0 && <MixTable mixes={mixes} />}
     </>
+  )
+}
+
+/** VE-65: each mix with its two sources and its four papers; a pattern reads part by part (A = first source). */
+function MixTable({ mixes }: { mixes: PaperMixView[] }) {
+  return (
+    <>
+      <h2 className="st-h2">Mixed papers</h2>
+      <p className="st-faint">Each version takes every part whole from source A or B. Versions 1 and 2 (and 3 and 4) share no part and sit side by side in the room.</p>
+      <table className="st-table">
+        <thead>
+          <tr>
+            <th>Mix</th>
+            <th>Section</th>
+            <th>Sources</th>
+            <th>Versions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {mixes.map((mix) => (
+            <tr key={mix.id}>
+              <td>
+                <strong>{mix.title}</strong>
+                <div className="st-faint">{mix.examType}</div>
+              </td>
+              <td className="st-nowrap">{mix.section}</td>
+              <td>
+                <div>
+                  A: <Link to={`/staff/papers/${mix.sourceA.id}`}>{mix.sourceA.title}</Link>
+                </div>
+                <div>
+                  B: <Link to={`/staff/papers/${mix.sourceB.id}`}>{mix.sourceB.title}</Link>
+                </div>
+              </td>
+              <td>
+                {mix.versions.map((v) => (
+                  <div key={v.version}>
+                    <Link to={`/staff/papers/${v.paperId}`} aria-label={`Version ${v.version}`}>
+                      <span className={`room-version room-version--${v.version}`}>V{v.version}</span>
+                    </Link>{' '}
+                    <span className="st-faint st-mono" title={patternText(v.pattern)}>
+                      {v.pattern}
+                    </span>
+                  </div>
+                ))}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )
+}
+
+/**
+ * Two published papers of the same section and layout become four published papers. The server checks the layout
+ * part by part and lists every difference when they do not fit.
+ */
+function MixDialog({ papers, onClose, onMixed }: { papers: PaperListItem[]; onClose: () => void; onMixed: (mix: PaperMixView) => void }) {
+  const sources = papers.filter((p) => p.status === 'Published' && !p.paperMixId)
+  const [sourceA, setSourceA] = useState<number | null>(null)
+  const [sourceB, setSourceB] = useState<number | null>(null)
+  const [title, setTitle] = useState('')
+  const [error, setError] = useState<unknown>(null)
+  const [isBusy, setIsBusy] = useState(false)
+  const first = sources.find((p) => p.id === sourceA)
+  const seconds = sources.filter((p) => p.id !== sourceA && (!first || p.sectionTemplateId === first.sectionTemplateId))
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (sourceA === null || sourceB === null) {
+      return
+    }
+
+    setIsBusy(true)
+    setError(null)
+    try {
+      onMixed(await adminApi.mixPapers(sourceA, sourceB, title.trim() || null))
+    } catch (e) {
+      setError(e)
+      setIsBusy(false)
+    }
+  }
+
+  return (
+    <Modal title="Mix two papers" onClose={onClose}>
+      <form className="st-form" onSubmit={submit}>
+        <p className="st-faint">
+          Choose two published papers of the same section with the same parts and questions (for example A2 Key and A2 Key for Schools, Reading &amp; Writing). Four papers are made, each taking every part whole from one of them;
+          an exam section then gives them by seat so neighbouring computers never get the same paper.
+        </p>
+        <label className="st-field">
+          Source paper A
+          <select
+            value={sourceA ?? ''}
+            onChange={(e) => {
+              setSourceA(e.target.value ? Number(e.target.value) : null)
+              setSourceB(null)
+            }}
+            required
+          >
+            <option value="">Choose a published paper…</option>
+            {sources.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title} — {p.section}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="st-field">
+          Source paper B
+          <select value={sourceB ?? ''} onChange={(e) => setSourceB(e.target.value ? Number(e.target.value) : null)} required disabled={sourceA === null}>
+            <option value="">Choose another paper of the same section…</option>
+            {seconds.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="st-field">
+          <span>
+            Title <span className="st-faint">(optional)</span>
+          </span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder="Leave empty for “A × B”" />
+        </label>
+        <ErrorBox error={error} />
+        <div className="st-form-actions">
+          <button type="submit" className="st-btn st-btn--primary" disabled={isBusy || sourceA === null || sourceB === null}>
+            Make four papers
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
@@ -152,7 +321,10 @@ function PaperTable({ papers, onPublish, onDelete }: { papers: PaperListItem[]; 
               <Link to={`/staff/papers/${paper.id}`} className="st-strong-link">
                 {paper.title}
               </Link>
-              <div className="st-faint">{paper.examType}</div>
+              <div className="st-faint">
+                {paper.examType}
+                {paper.mixVersion ? ` · mixed, version ${paper.mixVersion}` : ''}
+              </div>
             </td>
             <td className="st-nowrap">{paper.section}</td>
             <td className="st-nowrap">{new Date(paper.createdAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
@@ -168,7 +340,7 @@ function PaperTable({ papers, onPublish, onDelete }: { papers: PaperListItem[]; 
                   Publish
                 </button>
               )}
-              {paper.usedByExams === 0 && <ConfirmButton className="st-link st-link--danger" label="Request deletion" confirmLabel="Ask an administrator to delete" onConfirm={() => onDelete(paper)} />}
+              {paper.usedByExams === 0 && !paper.paperMixId && <ConfirmButton className="st-link st-link--danger" label="Request deletion" confirmLabel="Ask an administrator to delete" onConfirm={() => onDelete(paper)} />}
             </td>
           </tr>
         ))}

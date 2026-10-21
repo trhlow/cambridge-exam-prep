@@ -13,7 +13,13 @@ const cell = (value: number | null) => (value === null ? '' : String(value))
  */
 export function resultsCsv(results: CandidateResult[]): string {
   const sections = results[0]?.sections ?? []
-  const header = [quote('Candidate number'), quote('Name'), ...sections.flatMap((s) => [quote(s.title), quote(`${s.title} max`)])]
-  const rows = results.map((r) => [quote(r.candidateNumber), quote(r.fullName), ...r.sections.flatMap((s) => [cell(s.rawScore), cell(s.maxScore)])])
+  // Sections with mixed papers (VE-67) also get the version each candidate sat.
+  const mixed = sections.map((_, i) => results.some((r) => r.sections[i]?.paperVersion))
+  const header = [quote('Candidate number'), quote('Name'), ...sections.flatMap((s, i) => [quote(s.title), quote(`${s.title} max`), ...(mixed[i] ? [quote(`${s.title} version`)] : [])])]
+  const rows = results.map((r) => [
+    quote(r.candidateNumber),
+    quote(r.fullName),
+    ...r.sections.flatMap((s, i) => [cell(s.rawScore), cell(s.maxScore), ...(mixed[i] ? [cell(s.paperVersion ?? null)] : [])]),
+  ])
   return String.fromCharCode(0xfeff) + [header, ...rows].map((row) => row.join(',')).join('\r\n')
 }

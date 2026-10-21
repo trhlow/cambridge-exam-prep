@@ -25,7 +25,8 @@ public sealed record UpdateCandidateRequest(
     [Range(0, 100)] int PlannedExtraPercent,
     [StringLength(16)] string? SeatNo);
 
-public sealed record CandidateView(int Id, string CandidateNumber, string FirstName, string LastName, string Username, DateOnly? DateOfBirth, int PlannedExtraPercent, string? SeatNo, bool HasStarted)
+/// <param name="PaperVersion">The mixed-paper version this candidate's seat gets; null when no section of the exam is mixed (VE-67).</param>
+public sealed record CandidateView(int Id, string CandidateNumber, string FirstName, string LastName, string Username, DateOnly? DateOfBirth, int PlannedExtraPercent, string? SeatNo, bool HasStarted, int? PaperVersion = null)
 {
     public static CandidateView From(Candidate c, bool hasStarted) =>
         new(c.Id, c.CandidateNumber, c.FirstName, c.LastName, c.Username, c.DateOfBirth, c.PlannedExtraPercent, c.SeatNo, hasStarted);
@@ -56,7 +57,15 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
 
         var candidates = await db.Candidates.AsNoTracking().Where(c => c.ExamId == examId).OrderBy(c => c.CandidateNumber).ToListAsync(cancellationToken);
         var started = await StartedCandidateIdsAsync(examId, cancellationToken);
-        return candidates.Select(c => CandidateView.From(c, started.Contains(c.Id))).ToList();
+        var views = candidates.Select(c => CandidateView.From(c, started.Contains(c.Id))).ToList();
+        if (await db.ExamSections.AnyAsync(s => s.ExamId == examId && s.PaperMixId != null, cancellationToken))
+        {
+            var seatsPerRow = await db.Exams.Where(e => e.Id == examId).Select(e => e.SeatsPerRow).SingleAsync(cancellationToken);
+            var versions = Delivery.PaperAssignment.VersionsOf(candidates, seatsPerRow);
+            views = views.Select(v => v with { PaperVersion = versions[v.Id] }).ToList();
+        }
+
+        return views;
     }
 
     [HttpPost("exams/{examId:int}/candidates")]

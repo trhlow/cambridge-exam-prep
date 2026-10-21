@@ -11,14 +11,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExamPrep.Api.Results;
 
-public sealed record SectionResult(int SectionId, string Title, string Status, string GradingStatus, decimal? RawScore, decimal? MaxScore, int? AttemptId);
+/// <param name="PaperVersion">The mixed-paper version the candidate sat (VE-67); null for a section with one paper.</param>
+public sealed record SectionResult(int SectionId, string Title, string Status, string GradingStatus, decimal? RawScore, decimal? MaxScore, int? AttemptId, int? PaperVersion = null);
 
 public sealed record CandidateResult(int CandidateId, string CandidateNumber, string FullName, IReadOnlyList<SectionResult> Sections);
 
 /// <param name="Comment">Writing: the teacher's comment with the mark.</param>
 public sealed record QuestionMark(int Number, int PartNo, string InteractionType, string? Response, IReadOnlyList<string> AcceptedAnswers, bool? IsCorrect, decimal? Score, decimal Points, string? Comment);
 
-public sealed record AttemptMarking(int AttemptId, string SectionTitle, string GradingStatus, decimal? RawScore, decimal? MaxScore, IReadOnlyList<QuestionMark> Questions);
+/// <param name="PaperTitle">The paper the candidate sat: with mixed papers, the version of their seat (VE-67).</param>
+public sealed record AttemptMarking(int AttemptId, string SectionTitle, string GradingStatus, decimal? RawScore, decimal? MaxScore, IReadOnlyList<QuestionMark> Questions, string? PaperTitle = null, int? PaperVersion = null);
 
 /// <summary>
 /// Scores for staff. Candidates never see marks in the exam room, as in Cambridge exams; results go through the
@@ -53,16 +55,17 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
             .ToListAsync(cancellationToken);
         var attempts = await db.Attempts.AsNoTracking()
             .Where(a => a.ExamSection!.ExamId == examId)
-            .Select(a => new { a.Id, a.CandidateId, a.ExamSectionId, a.Status, a.GradingStatus, a.RawScore, a.MaxScore })
+            .Select(a => new { a.Id, a.CandidateId, a.ExamSectionId, a.Status, a.GradingStatus, a.RawScore, a.MaxScore, a.TestPaperId })
             .ToListAsync(cancellationToken);
         var byKey = attempts.ToDictionary(a => (a.CandidateId, a.ExamSectionId));
+        var versions = await Delivery.PaperAssignment.MixVersionsAsync(db, attempts.Select(a => a.TestPaperId), cancellationToken);
 
         return candidates.Select(c => new CandidateResult(
             c.Id,
             c.CandidateNumber,
             $"{c.FirstName} {c.LastName}",
             sections.Select(s => byKey.TryGetValue((c.Id, s.Id), out var a)
-                ? new SectionResult(s.Id, s.Title, a.Status.ToString(), a.GradingStatus.ToString(), a.RawScore, a.MaxScore, a.Id)
+                ? new SectionResult(s.Id, s.Title, a.Status.ToString(), a.GradingStatus.ToString(), a.RawScore, a.MaxScore, a.Id, versions.TryGetValue(a.TestPaperId, out var v) ? v : null)
                 : new SectionResult(s.Id, s.Title, AttemptStatus.NotStarted.ToString(), GradingStatus.NotGraded.ToString(), null, null, null)).ToList()))
             .ToList();
     }
@@ -110,6 +113,7 @@ public static class WritingMarks
     {
         var attempt = await db.Attempts.AsNoTracking()
             .Include(a => a.ExamSection!).ThenInclude(s => s.SectionTemplate)
+            .Include(a => a.TestPaper)
             .SingleOrDefaultAsync(a => a.Id == attemptId, cancellationToken);
         if (attempt is null)
         {
@@ -137,7 +141,7 @@ public static class WritingMarks
             return new QuestionMark(q.Number, q.QuestionGroup.PaperPart!.PartNo, type.ToString(), response?.Value, q.AnswerKeys.Select(k => k.Value).ToList(), isCorrect, score, q.Points, manual?.Comment);
         }).ToList();
 
-        return new AttemptMarking(attempt.Id, attempt.ExamSection!.SectionTemplate!.Title, attempt.GradingStatus.ToString(), attempt.RawScore, attempt.MaxScore, marks);
+        return new AttemptMarking(attempt.Id, attempt.ExamSection!.SectionTemplate!.Title, attempt.GradingStatus.ToString(), attempt.RawScore, attempt.MaxScore, marks, attempt.TestPaper!.Title, attempt.TestPaper.MixVersion);
     }
 
     /// <summary>

@@ -41,11 +41,26 @@ public sealed class PaperAssignment(ExamPrepDbContext db)
             return seat;
         }
 
-        var order = await db.Candidates.AsNoTracking()
-            .Where(c => c.ExamId == candidate.ExamId)
-            .OrderBy(c => c.CandidateNumber).ThenBy(c => c.Id)
-            .Select(c => c.Id)
-            .ToListAsync(cancellationToken);
-        return order.IndexOf(candidate.Id) + 1;
+        var all = await db.Candidates.AsNoTracking().Where(c => c.ExamId == candidate.ExamId).ToListAsync(cancellationToken);
+        return SeatsOf(all)[candidate.Id];
+    }
+
+    /// <summary>Each candidate's seat: the number staff typed, or their place in the list by candidate number.</summary>
+    public static Dictionary<int, int> SeatsOf(IEnumerable<Candidate> candidates) =>
+        candidates.OrderBy(c => c.CandidateNumber, StringComparer.OrdinalIgnoreCase).ThenBy(c => c.Id)
+            .Select((c, index) => (c.Id, Seat: SeatPattern.Parse(c.SeatNo) ?? index + 1))
+            .ToDictionary(x => x.Id, x => x.Seat);
+
+    /// <summary>The version (1–4) each candidate's seat gets, for the candidate list, the monitor and the room plan.</summary>
+    public static Dictionary<int, int> VersionsOf(IEnumerable<Candidate> candidates, int? seatsPerRow) =>
+        SeatsOf(candidates).ToDictionary(p => p.Key, p => SeatPattern.VersionFor(p.Value, seatsPerRow));
+
+    /// <summary>The mix version of each of these papers (papers that are not mixed are left out).</summary>
+    public static async Task<Dictionary<int, int>> MixVersionsAsync(ExamPrepDbContext db, IEnumerable<int> paperIds, CancellationToken cancellationToken)
+    {
+        var ids = paperIds.Distinct().ToList();
+        return await db.TestPapers.AsNoTracking()
+            .Where(p => ids.Contains(p.Id) && p.MixVersion != null)
+            .ToDictionaryAsync(p => p.Id, p => p.MixVersion!.Value, cancellationToken);
     }
 }

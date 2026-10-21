@@ -29,6 +29,7 @@ export function MarkingPage({ examId, attemptId }: { examId: number; attemptId: 
           <>
             <Link to={`/staff/exams/${examId}/results`}>Results</Link>
             {candidate && <> · candidate {candidate.candidateNumber}</>}
+            {marking.paperTitle && <> · {marking.paperTitle}</>}
           </>
         }
       />

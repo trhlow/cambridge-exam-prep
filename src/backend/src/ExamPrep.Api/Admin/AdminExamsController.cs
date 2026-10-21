@@ -83,6 +83,11 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
         return papers.OrderBy(p => p.Title).ToList();
     }
 
+    /// <summary>Mixes of papers a section can give by seat (VE-67), for managers of exams as well as of papers.</summary>
+    [HttpGet("exam-paper-mixes")]
+    public async Task<IReadOnlyList<PaperMixView>> PaperMixes(CancellationToken cancellationToken) =>
+        (await AdminPaperMixesController.ViewsAsync(db, null, cancellationToken)).OrderBy(m => m.Title).ToList();
+
     /// <summary>Invigilator and examiner accounts, for the assignment panels of a session.</summary>
     [HttpGet("assignable-staff")]
     public async Task<IReadOnlyList<AssignableStaffView>> AssignableStaff(CancellationToken cancellationToken) =>

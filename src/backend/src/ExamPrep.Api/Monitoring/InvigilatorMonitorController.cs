@@ -34,13 +34,15 @@ public sealed record MonitorRow(
     string? SubmitReason,
     int? AudioPositionSeconds,
     int Answered,
-    int Warnings);
+    int Warnings,
+    int? PaperVersion = null);
 
 /// <summary>VE-29: a warning in the Warnings column, with who resolved it.</summary>
 public sealed record WarningView(long Id, int CandidateId, string FullName, string Type, string? Detail, DateTime DetectedAt, DateTime? ResolvedAt, string? ResolvedBy);
 
 /// <param name="StartAnnouncedAt">When the invigilator told the room to begin (VE-29); null until then.</param>
-public sealed record MonitorView(int ExamId, string ExamName, int SectionId, string SectionTitle, bool HasAudio, int DurationMinutes, DateTime ServerNow, IReadOnlyList<MonitorRow> Candidates, DateTime? StartAnnouncedAt);
+/// <param name="PaperMixTitle">Set when the section gives mixed papers by seat; each row then has its <c>PaperVersion</c> (VE-67).</param>
+public sealed record MonitorView(int ExamId, string ExamName, int SectionId, string SectionTitle, bool HasAudio, int DurationMinutes, DateTime ServerNow, IReadOnlyList<MonitorRow> Candidates, DateTime? StartAnnouncedAt, string? PaperMixTitle = null);
 
 public sealed record InvigilatorActionRequest(
     [Required] string Action,
@@ -101,7 +103,21 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
         var rows = candidates.Select(c => Row(c, attempts.GetValueOrDefault(c.Id), section, answered, now) is var row && row.AttemptId is { } id
             ? row with { Warnings = warnings.GetValueOrDefault(id) }
             : row).ToList();
-        return new MonitorView(examId, section.Exam!.Name, sectionId, section.SectionTemplate!.Title, hasAudio, section.DurationMinutes, now, rows, section.StartAnnouncedAt);
+
+        string? mixTitle = null;
+        if (section.PaperMixId is { } mixId)
+        {
+            // The started attempt's version; before that, the one the candidate's seat will get.
+            mixTitle = await db.PaperMixes.Where(x => x.Id == mixId).Select(x => x.Title).SingleAsync(cancellationToken);
+            var bySeat = PaperAssignment.VersionsOf(candidates, section.Exam!.SeatsPerRow);
+            var started = await PaperAssignment.MixVersionsAsync(db, attempts.Values.Select(a => a.TestPaperId), cancellationToken);
+            rows = rows.Select(r => r with
+            {
+                PaperVersion = attempts.TryGetValue(r.CandidateId, out var a) && started.TryGetValue(a.TestPaperId, out var v) ? v : bySeat[r.CandidateId],
+            }).ToList();
+        }
+
+        return new MonitorView(examId, section.Exam!.Name, sectionId, section.SectionTemplate!.Title, hasAudio, section.DurationMinutes, now, rows, section.StartAnnouncedAt, mixTitle);
     }
 
     [HttpPost("sections/{sectionId:int}/actions")]

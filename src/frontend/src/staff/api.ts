@@ -48,6 +48,9 @@ export interface ExamSectionView {
   durationMinutes: number
   testPaperId: number
   paperTitle: string
+  /** Set when the section gives the four papers of a mix by seat (VE-66); testPaperId is then version 1. */
+  paperMixId?: number | null
+  paperMixTitle?: string | null
 }
 
 /** An invigilator or examiner assigned to a session. */
@@ -84,6 +87,8 @@ export interface ExamDetail extends Omit<ExamListItem, 'candidates'> {
   examiners: AssignedStaffView[]
   /** VE-28: set when the exam only accepts Safe Exam Browser with these settings; never sent to examiners. */
   sebConfigKey: string | null
+  /** Computers per row, for giving mixed papers by seat; null means one row. */
+  seatsPerRow?: number | null
 }
 
 export interface SectionTemplateView {
@@ -105,11 +110,14 @@ export interface SaveExamRequest {
   examTypeId: number
   scheduledDate: string
   room: string | null
-  papers: { sectionTemplateId: number; testPaperId: number }[]
+  /** A section gets one paper for everyone, or (paperMixId) the four papers of a mix by seat. */
+  papers: { sectionTemplateId: number; testPaperId: number; paperMixId?: number | null }[]
   sessionPin?: string | null
   invigilatorPassword?: string | null
   /** Empty switches Safe Exam Browser off. */
   sebConfigKey?: string
+  /** 0 = one row; omitted keeps the current value. */
+  seatsPerRow?: number
 }
 
 export type PaperStatus = 'Draft' | 'Published' | 'Archived'
@@ -125,6 +133,60 @@ export interface PaperListItem {
   questions: number
   createdAt: string
   usedByExams: number
+  /** Set on the four papers of a mix (VE-65). */
+  paperMixId?: number | null
+  mixVersion?: number | null
+}
+
+/** One of the four papers of a mix; the pattern names the source of each part, e.g. "ABBAABA". */
+export interface PaperMixVersion {
+  version: number
+  paperId: number
+  title: string
+  pattern: string
+}
+
+/** VE-65: four papers mixed part by part from two source papers of the same layout. */
+export interface PaperMixView {
+  id: number
+  title: string
+  examType: string
+  sectionTemplateId: number
+  section: string
+  sourceA: { id: number; title: string }
+  sourceB: { id: number; title: string }
+  seed: number
+  createdAt: string
+  versions: PaperMixVersion[]
+}
+
+/** VE-67: the room as a grid of computers, with the paper version each one gets. */
+export interface RoomSeat {
+  seat: number
+  candidateId: number
+  candidateNumber: string
+  fullName: string
+  /** False when no seat number was entered and the place in the list was used. */
+  seatTyped: boolean
+  paperVersion?: number | null
+}
+
+export interface RoomPlanSection {
+  sectionId: number
+  title: string
+  paperTitle: string
+  paperMixTitle?: string | null
+  versions: PaperMixVersion[]
+}
+
+export interface RoomPlanView {
+  examId: number
+  examName: string
+  scheduledDate: string
+  room: string | null
+  seatsPerRow?: number | null
+  seats: RoomSeat[]
+  sections: RoomPlanSection[]
 }
 
 export interface PaperImportSummary {
@@ -191,6 +253,11 @@ export interface PaperDetail {
   section: string
   status: PaperStatus
   parts: PaperPartDetail[]
+  /** A mixed paper (VE-65): its mix, its version and the source of each part ("ABBAABA"). */
+  paperMixId?: number | null
+  mixTitle?: string | null
+  mixVersion?: number | null
+  mixPattern?: string | null
 }
 
 /** A section a blank paper can be started for (VE-25). */
@@ -239,6 +306,8 @@ export interface CandidateView {
   plannedExtraPercent: number
   seatNo: string | null
   hasStarted: boolean
+  /** The mixed-paper version this candidate's seat gets; null when no section of the exam is mixed. */
+  paperVersion?: number | null
 }
 
 export interface LoginSlip {
@@ -273,6 +342,8 @@ export interface MonitorRow {
   answered: number
   /** Unresolved warnings (VE-29). */
   warnings: number
+  /** Mixed papers (VE-67): the version being sat, or the one the seat will get. */
+  paperVersion?: number | null
 }
 
 export type WarningType = 'InvalidSebKey' | 'LockdownBrowserExited' | 'ConnectionLost' | 'ClockSkew' | 'StartedEarly'
@@ -299,6 +370,8 @@ export interface MonitorView {
   candidates: MonitorRow[]
   /** When the invigilator told the room to begin (VE-29); null until then. */
   startAnnouncedAt: string | null
+  /** Set when the section gives mixed papers by seat (VE-67). */
+  paperMixTitle?: string | null
 }
 
 export type MonitorAction = 'Pause' | 'Resume' | 'AddIncidentTime' | 'EndNow' | 'EndAt' | 'EndIn' | 'UseTestEndTime' | 'RewindAudio'
@@ -332,6 +405,8 @@ export interface SectionResult {
   rawScore: number | null
   maxScore: number | null
   attemptId: number | null
+  /** The mixed-paper version the candidate sat (VE-67). */
+  paperVersion?: number | null
 }
 
 export interface QuestionMark {
@@ -353,6 +428,9 @@ export interface AttemptMarking {
   rawScore: number | null
   maxScore: number | null
   questions: QuestionMark[]
+  /** The paper the candidate sat (with mixed papers, their version). */
+  paperTitle?: string | null
+  paperVersion?: number | null
 }
 
 export interface CandidateResult {
@@ -415,6 +493,7 @@ export const staffApi = {
   exams: () => request<ExamListItem[]>('/api/staff/exams'),
   exam: (id: number) => request<ExamDetail>(exam(id)),
   loginSlips: (id: number) => request<LoginSlip[]>(`${exam(id)}/login-slips`),
+  roomPlan: (id: number) => request<RoomPlanView>(`${exam(id)}/room-plan`),
   results: (id: number) => request<CandidateResult[]>(`${exam(id)}/results`),
 
   monitor: (examId: number, sectionId: number) => request<MonitorView>(`${exam(examId)}/sections/${sectionId}/monitor`),
@@ -438,6 +517,7 @@ export const adminApi = {
   setStatus: (id: number, status: ExamStatus) => post<ExamDetail>(`/api/admin/exams/${id}/status`, { status }),
   deleteExam: (id: number) => requestDeletion(`/api/admin/exams/${id}`),
   examPapers: () => request<PaperListItem[]>('/api/admin/exam-papers'),
+  examPaperMixes: () => request<PaperMixView[]>('/api/admin/exam-paper-mixes'),
   assignableStaff: () => request<AssignableStaff[]>('/api/admin/assignable-staff'),
   assignInvigilators: (id: number, userIds: number[]) => put<AssignedStaffView[]>(`/api/admin/exams/${id}/invigilators`, { userIds }),
   assignExaminers: (id: number, userIds: number[]) => put<AssignedStaffView[]>(`/api/admin/exams/${id}/examiners`, { userIds }),
@@ -491,6 +571,8 @@ export const adminApi = {
     return request<PaperDetail>(`/api/admin/papers/${id}/parts/${partNo}/audio`, { method: 'POST', body: form })
   },
   deletePaper: (id: number) => requestDeletion(`/api/admin/papers/${id}`),
+  paperMixes: () => request<PaperMixView[]>('/api/admin/paper-mixes'),
+  mixPapers: (sourceAPaperId: number, sourceBPaperId: number, title: string | null) => post<PaperMixView>('/api/admin/paper-mixes', { sourceAPaperId, sourceBPaperId, title }),
 
   marking: (attemptId: number) => request<AttemptMarking>(`/api/staff/attempts/${attemptId}/marking`),
   markWriting: (attemptId: number, questionNumber: number, score: number, comment: string) =>

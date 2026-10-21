@@ -185,4 +185,88 @@ public sealed class SeatedPapersTests(ApiFixture api) : IClassFixture<ApiFixture
         Assert.Equal(HttpStatusCode.BadRequest, badRow.StatusCode);
         Assert.Contains("Computers per row", await badRow.Content.ReadAsStringAsync(ct));
     }
+
+    [Fact]
+    public async Task TheRoomPlan_ShowsEveryComputerWithItsVersion_ToThePeopleWhoRunTheRoomOnly()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        const string staffPassword = "Room#plan-2026";
+        var invigilator = await api.CreateStaffAsync(ExamPrep.Domain.Enums.UserRole.Invigilator, staffPassword);
+        var examiner = await api.CreateStaffAsync(ExamPrep.Domain.Enums.UserRole.Examiner, staffPassword);
+        using var admin = await api.AdminClientAsync();
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{room.Exam.ExamId}/invigilators", new { userIds = new[] { invigilator.Id } }, ct)).EnsureSuccessStatusCode();
+        await api.AssignExaminerAsync(room.Exam.ExamId, examiner.Id);
+        using var invigilatorClient = await api.StaffClientAsync(invigilator.Username, staffPassword);
+        using var examinerClient = await api.StaffClientAsync(examiner.Username, staffPassword);
+
+        var plan = (await invigilatorClient.GetFromJsonAsync<JsonObject>($"/api/staff/exams/{room.Exam.ExamId}/room-plan", ct))!;
+        var denied = await examinerClient.GetAsync($"/api/staff/exams/{room.Exam.ExamId}/room-plan", ct);
+
+        Assert.Equal(2, (int)plan["seatsPerRow"]!);
+        Assert.Equal([1, 2, 3, 4], plan["seats"]!.AsArray().Select(seat => (int)seat!["seat"]!));
+        Assert.Equal([1, 2, 3, 4], plan["seats"]!.AsArray().Select(seat => (int)seat!["paperVersion"]!));
+        var readingWriting = plan["sections"]!.AsArray().Single(x => (int)x!["sectionId"]! == room.Exam.ReadingWritingSectionId)!;
+        Assert.Equal(4, readingWriting["versions"]!.AsArray().Count);
+        Assert.Empty(plan["sections"]!.AsArray().Single(x => (int)x!["sectionId"]! == room.Exam.ListeningSectionId)!["versions"]!.AsArray());
+        Assert.Equal(HttpStatusCode.NotFound, denied.StatusCode);
+    }
+
+    [Fact]
+    public async Task TheCandidateList_TheMonitor_TheResults_AndTheMarking_ShowEachCandidatesVersion()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var sectionId = room.Exam.ReadingWritingSectionId;
+        var (startedId, startedUsername) = room.Candidates[1];
+        using (var client = await SignInAsync(startedUsername, room.Exam.SessionPin))
+        {
+            (await client.PostAsync($"/api/candidate/sections/{sectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
+        }
+
+        // Moved to computer 4 after starting: the monitor keeps showing the version actually being sat.
+        await api.SetSeatAsync(startedId, "4");
+        using var admin = await api.AdminClientAsync();
+        var candidates = (await admin.GetFromJsonAsync<JsonArray>($"/api/admin/exams/{room.Exam.ExamId}/candidates", ct))!;
+        var monitor = (await admin.GetFromJsonAsync<JsonObject>($"/api/staff/exams/{room.Exam.ExamId}/sections/{sectionId}/monitor", ct))!;
+        var results = (await admin.GetFromJsonAsync<JsonArray>($"/api/staff/exams/{room.Exam.ExamId}/results", ct))!;
+
+        Assert.Equal(4, (int)candidates.Single(c => (int)c!["id"]! == startedId)!["paperVersion"]!);
+        Assert.NotNull((string?)monitor["paperMixTitle"]);
+        var rows = monitor["candidates"]!.AsArray();
+        Assert.Equal(2, (int)rows.Single(r => (int)r!["candidateId"]! == startedId)!["paperVersion"]!);
+        Assert.Equal(1, (int)rows.Single(r => (int)r!["candidateId"]! == room.Candidates[0].Id)!["paperVersion"]!);
+        var section = results.Single(r => (int)r!["candidateId"]! == startedId)!["sections"]!.AsArray().Single(x => (int)x!["sectionId"]! == sectionId)!;
+        Assert.Equal(2, (int)section["paperVersion"]!);
+
+        await api.SubmitStartedAttemptAsync(startedId, sectionId);
+        var examiner = await api.CreateStaffAsync(ExamPrep.Domain.Enums.UserRole.Examiner, Password + "-X1");
+        await api.AssignExaminerAsync(room.Exam.ExamId, examiner.Id);
+        using var examinerClient = await api.StaffClientAsync(examiner.Username, Password + "-X1");
+        var marking = (await examinerClient.GetFromJsonAsync<JsonObject>($"/api/staff/attempts/{(int)section["attemptId"]!}/marking", ct))!;
+        Assert.Equal(2, (int)marking["paperVersion"]!);
+        Assert.EndsWith("Version 2", (string)marking["paperTitle"]!);
+    }
+
+    [Fact]
+    public async Task ManagersOfExams_SeeTheMixesToChooseFrom_AndPapersShowTheirMix()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var manager = await api.CreateManagerAsync(Password + "-M1", ExamPrep.Domain.Enums.ManagerArea.Exams);
+        using var client = await api.StaffClientAsync(manager.Username, Password + "-M1");
+        using var admin = await api.AdminClientAsync();
+
+        var mixes = (await client.GetFromJsonAsync<JsonArray>("/api/admin/exam-paper-mixes", ct))!;
+        var papers = (await admin.GetFromJsonAsync<JsonArray>("/api/admin/papers", ct))!;
+        var version3 = papers.Single(p => (int)p!["id"]! == room.VersionPapers[3])!;
+        var detail = (await admin.GetFromJsonAsync<JsonObject>($"/api/admin/papers/{room.VersionPapers[3]}", ct))!;
+
+        Assert.Contains(mixes, m => (int)m!["id"]! == room.MixId && m["versions"]!.AsArray().Count == 4);
+        Assert.Equal(room.MixId, (int)version3["paperMixId"]!);
+        Assert.Equal(3, (int)version3["mixVersion"]!);
+        Assert.Equal(3, (int)detail["mixVersion"]!);
+        Assert.Equal(7, ((string)detail["mixPattern"]!).Length);
+        Assert.NotNull((string?)detail["mixTitle"]);
+    }
 }

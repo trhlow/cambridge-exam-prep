@@ -69,6 +69,11 @@ export function PaperPage({ paperId }: { paperId: number }) {
           Check every question, picture, answer and recording against the PDF and fix what the converter got wrong with Edit. Publish when it is right; until then the paper cannot be scheduled, and afterwards it can no longer be edited.
         </p>
       )}
+      {paper.mixVersion && paper.mixPattern && (
+        <p className="st-note">
+          Version {paper.mixVersion} of the mix “{paper.mixTitle}”: {[...paper.mixPattern].map((source, i) => `Part ${i + 1} from ${source}`).join(', ')}. A mixed paper is a copy of the source parts and cannot be edited; it is given to candidates by seat.
+        </p>
+      )}
       <ErrorBox error={actionError} />
       {paper.parts.map((part) => (
         <PartPreview key={part.partNo} part={part} onEdit={onEdit} onReplaceAudio={(file) => void replaceAudio(part, file)} />

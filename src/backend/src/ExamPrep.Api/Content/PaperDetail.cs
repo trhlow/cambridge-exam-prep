@@ -7,7 +7,8 @@ namespace ExamPrep.Api.Content;
 /// A paper as the administrator reviews it before publishing: everything the candidate sees, plus the answer key.
 /// Administrators only — invigilators are in the room while a paper is live.
 /// </summary>
-public sealed record PaperDetail(int Id, string Title, string ExamType, string Section, string Status, IReadOnlyList<PaperDetailPart> Parts);
+/// <param name="MixPattern">A mixed paper (VE-65): which source each part came from, e.g. "ABBAABA".</param>
+public sealed record PaperDetail(int Id, string Title, string ExamType, string Section, string Status, IReadOnlyList<PaperDetailPart> Parts, int? PaperMixId = null, string? MixTitle = null, int? MixVersion = null, string? MixPattern = null);
 
 public sealed record PaperDetailPart(int PartNo, string? Title, string Layout, string? StimulusHtml, string? AudioUrl, IReadOnlyList<PaperDetailGroup> Groups);
 
@@ -43,5 +44,9 @@ internal static class PaperDetailMapper
                     q.AnswerKeys.OrderBy(k => k.Id).Select(k => k.Value).ToList(),
                     q.Points,
                     q.MinWords)).ToList())).ToList()))
-            .ToList());
+            .ToList(),
+        paper.PaperMixId,
+        paper.PaperMix?.Title,
+        paper.MixVersion,
+        paper.MixPattern);
 }
