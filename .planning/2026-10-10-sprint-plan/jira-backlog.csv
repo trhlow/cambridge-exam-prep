@@ -11,7 +11,7 @@
 10,,Epic,E10 · B1 Preliminary for Schools,,,,epic
 11,,Epic,E11 · Kiểm thử & buổi thi thử,,,,epic
 12,,Epic,E12 · Báo cáo đồ án & tài liệu,,,,epic
-13,,Epic,E13 · IELTS (nếu kịp),,,,epic
+13,,Epic,E13 · IELTS (để dành cho đồ án tốt nghiệp / báo cáo thực tập),,,,epic
 14,,Epic,E14 · Phân quyền nhiều tác nhân và duyệt chéo hai admin,,,,epic
 15,,Epic,"E15 · Trộn đề: 2 đề gốc thành 4 đề, hai máy kế nhau khác đề",,,,epic
 16,1,Story,"Thiết kế CSDL 21 bảng, migration EF Core trên MySQL","Mã kế hoạch: VE-1
@@ -258,35 +258,27 @@ Tiêu chí chấp nhận:
 
 Tiêu chí chấp nhận:
 - Bản nháp theo mẫu của Khoa",Sprint 8,5,VE-47
-77,13,Story,"IELTS Listening / Reading: kiểu câu nhiều đáp án, ghi nhãn bản đồ","Mã kế hoạch: VE-48
-
-Tiêu chí chấp nhận:
-- Làm được một đề IELTS mẫu tự soạn",Sprint 9,5,VE-48
-78,13,Story,"IELTS Writing Task 1/2 (Academic, General Training)","Mã kế hoạch: VE-49
-
-Tiêu chí chấp nhận:
-- Đếm từ, ảnh đề bài cho Task 1",Sprint 9,3,VE-49
-79,12,Story,Báo cáo tiến độ tuần 9,"Mã kế hoạch: VE-50
+77,12,Story,Báo cáo tiến độ tuần 9,"Mã kế hoạch: VE-50
 
 Tiêu chí chấp nhận:
 - File báo cáo có trong progress-report/",Sprint 9,1,VE-50
-80,12,Story,"Viết Chương 4 (kết quả, ảnh giao diện, số liệu kiểm thử) và Chương 5","Mã kế hoạch: VE-51
+78,12,Story,"Viết Chương 4 (kết quả, ảnh giao diện, số liệu kiểm thử) và Chương 5","Mã kế hoạch: VE-51
 
 Tiêu chí chấp nhận:
 - Bản nháp hoàn chỉnh gửi GV",Sprint 10,5,VE-51
-81,12,Story,Báo cáo tiến độ tuần 10,"Mã kế hoạch: VE-52
+79,12,Story,Báo cáo tiến độ tuần 10,"Mã kế hoạch: VE-52
 
 Tiêu chí chấp nhận:
 - File báo cáo có trong progress-report/",Sprint 10,1,VE-52
-82,12,Story,"Chỉnh sửa quyển báo cáo theo góp ý GV, xuất PDF","Mã kế hoạch: VE-53
+80,12,Story,"Chỉnh sửa quyển báo cáo theo góp ý GV, xuất PDF","Mã kế hoạch: VE-53
 
 Tiêu chí chấp nhận:
 - Bản cuối trong thesis/pdf",Sprint 11,3,VE-53
-83,12,Story,Slide trình bày và video demo (thesis/abs),"Mã kế hoạch: VE-54
+81,12,Story,Slide trình bày và video demo (thesis/abs),"Mã kế hoạch: VE-54
 
 Tiêu chí chấp nhận:
 - Slide và video sẵn sàng",Sprint 11,2,VE-54
-84,12,Story,"Cập nhật README cuối cùng, nộp link GitHub, nộp quyển 31/12","Mã kế hoạch: VE-55
+82,12,Story,"Cập nhật README cuối cùng, nộp link GitHub, nộp quyển 31/12","Mã kế hoạch: VE-55
 
 Tiêu chí chấp nhận:
 - README đủ thông tin; đã nộp",Sprint 11,1,VE-55

@@ -2,7 +2,7 @@
 
 Đồ án chuyên ngành — Khoa Công nghệ Thông tin, Trường Kỹ thuật và Công nghệ.
 
-Hệ thống thi tiếng Anh trên máy tính cho phòng thi của **Trung tâm Anh ngữ Victory**, tái hiện trải nghiệm thi máy Cambridge (nền tảng Inspera): bố cục đề, định dạng câu hỏi, giao diện thí sinh và cổng giám thị. Làm trước **A2 Key for Schools**, sau đó **B1 Preliminary for Schools**, cuối cùng là IELTS.
+Hệ thống thi tiếng Anh trên máy tính cho phòng thi của **Trung tâm Anh ngữ Victory**, tái hiện trải nghiệm thi máy Cambridge (nền tảng Inspera): bố cục đề, định dạng câu hỏi, giao diện thí sinh và cổng giám thị. Đồ án chuyên ngành gồm **A2 Key for Schools** và **B1 Preliminary for Schools**; IELTS (định dạng đề không cố định) để dành cho đồ án tốt nghiệp / báo cáo thực tập.
 
 Quy trình gồm: nhập đề và đáp án, tạo kỳ thi, cấp tài khoản thí sinh, thí sinh làm bài trong trình duyệt khóa tại trung tâm, giám thị theo dõi cả phòng theo thời gian thực và xử lý sự cố, hệ thống tự chấm Reading/Listening theo đáp án, giáo viên chấm Writing.
 
@@ -44,7 +44,7 @@ Thi máy khó ở khâu vận hành: giám thị phải tạm dừng đúng thí
 |---|---|
 | A2 Key for Schools | Reading & Writing (60 phút) → Listening (~30 phút) |
 | B1 Preliminary for Schools | Reading (45 phút) → Writing (45 phút) → Listening (~30 phút) |
-| IELTS Academic / General Training | Listening (~30 phút) → Reading (60 phút) → Writing (60 phút) |
+| IELTS Academic / General Training *(sau đồ án chuyên ngành)* | Listening (~30 phút) → Reading (60 phút) → Writing (60 phút) |
 
 Cả ba bài thi đều triển khai trên cùng hệ thống Inspera, nên **quy trình làm bài và giám sát giống hệt nhau**; chỉ khác danh sách phần thi. Speaking thi trực tiếp, không làm trên hệ thống.
 

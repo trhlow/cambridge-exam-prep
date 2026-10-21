@@ -112,6 +112,12 @@ function PartPreview({ part, onEdit, onReplaceAudio }: { part: PaperPartDetail; 
         <span>
           Part {part.partNo}
           {part.title && <> · {part.title}</>}
+          {part.questionPerPage && (
+            <>
+              {' '}
+              <span className="st-badge st-badge--grey">one question per page</span>
+            </>
+          )}
         </span>
         {onEdit && <EditLink onClick={() => onEdit({ kind: 'part', part })} />}
       </h2>
@@ -155,7 +161,8 @@ function GroupPreview(props: { group: PaperGroupDetail; onEditGroup: (() => void
   return (
     <div className="st-paper-group">
       <p className="st-faint">
-        {group.interactionType} · {group.instructions} {onEditGroup && <EditLink onClick={onEditGroup} label="Edit instructions and text" />}
+        {group.interactionType}
+        {group.chooseCount && <> · candidates answer {group.chooseCount} of {group.questions.length}</>} · {group.instructions} {onEditGroup && <EditLink onClick={onEditGroup} label="Edit instructions and text" />}
       </p>
       {group.bodyHtml && <HtmlContent html={gapsAsLabels(group.bodyHtml)} className="st-paper-html" />}
       {group.optionPool && (
