@@ -203,5 +203,5 @@
 - VE-66 (c97897c): `SeatPattern`, `PaperAssignment`, `exams.seats_per_row`, `exam_sections.paper_mix_id`, `attempts.test_paper_id`; demo trộn cả hai phần thi
 - Gói SignalR client/MVC testing lên 10.0.13 (d439291, cảnh báo GHSA-334f-vvp4-7g6p)
 - Toàn bộ: backend 350/350, bộ chuyển 60/60; Docker build lại, thí sinh demo nhận đề trộn (Part 2 từ A2 for Schools, Part 3 từ A2 Key)
-- VE-27: `progress-report/BaoCaoTienDo_Tuan03_TranHoangLong.docx` (26/10–01/11, ký 01/11) và dòng tuần 3 trên Google Sheet
+- VE-27: `progress-report/BaoCaoTienDo_Tuan03_TranHoangLong.docx` (26/10–01/11, ký 01/11). Dòng tuần 3 trên Google Sheet để trống: người dùng chỉ điền Sheet khi đến đúng ngày báo cáo (đã điền thử rồi xoá lại 21/10)
 - Còn lưu ý: form kỳ thi trên web chưa gửi `paperMixId`/`seatsPerRow` → VE-67; file nghe B1 mẫu không tách tự động được
