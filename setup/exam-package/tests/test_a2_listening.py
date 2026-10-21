@@ -154,6 +154,38 @@ def test_part2_reads_the_form_into_a_table_with_a_slot_per_gap():
     assert result.warnings == []
 
 
+def test_part2_finds_the_answer_column_where_the_gap_numbers_are():
+    # A2 Key (not for Schools) prints the answers at x≈294 and a two-line heading; the column follows the "(6)" marks.
+    lines = heading(
+        1, 2, 6, 7,
+        "For each question, write the correct answer in the gap. Write one word or a number or a date or a",
+        "time.",
+    ) + [
+        text(1, 49.7, 165.5, "You will hear a man talking about a bike race."),
+        text(1, 229.0, 220.8, "Bike Race", size=18.0),
+        text(1, 203.0, 240.0, "in the City", size=18.96),
+        text(1, 110.0, 283.0, "Place:"),
+        text(1, 291.0, 283.0, "City park", size=16.0),
+        text(1, 110.0, 330.0, "Date:"),
+        text(1, 294.0, 330.0, "(6) 15th June –", bold=True, size=16.0),
+        text(1, 110.0, 384.0, "Riders must be:"),
+        text(1, 294.0, 385.0, "(7)", bold=True),
+        text(1, 419.0, 383.0, "years old", size=16.0),
+    ]
+    result = convert(lines, key={6: ["17th"], 7: ["12"]})
+    group = only_group(result.paper_parts[2])
+
+    assert result.paper_parts[2]["title"] == "Bike Race in the City"
+    assert group["bodyHtml"] == (
+        "<p>You will hear a man talking about a bike race.</p><table>"
+        "<tr><td>Place:</td><td>City park</td></tr>"
+        "<tr><td>Date:</td><td>15th June – {{q:6}}</td></tr>"
+        "<tr><td>Riders must be:</td><td>{{q:7}} years old</td></tr>"
+        "</table>"
+    )
+    assert result.warnings == []
+
+
 def test_part2_also_accepts_a_time_written_with_a_colon_and_says_so():
     result = convert(PART2, key=PART2_KEY)
     questions = only_group(result.paper_parts[2])["questions"]

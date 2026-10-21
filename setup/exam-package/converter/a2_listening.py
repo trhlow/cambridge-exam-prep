@@ -25,9 +25,12 @@ CROP_MARGIN = 4.0
 LETTER_GAP = 1.0            # Part 1: the letters sit just under their pictures
 OPTION_TEXT_SIZE = 16.0     # Part 1: printed options (a price) are set large; clock numbers and labels are not
 WIDE_SHAPE = 300.0          # rules across the page are layout, not part of a picture
-VALUE_COLUMN = 300.0        # Part 2: labels left of this x, the answers right of it
+VALUE_COLUMN = 300.0        # Part 2: labels left of this x, the answers right of it, when no gap is numbered
+COLUMN_MARGIN = 10.0        # Part 2: the answer column starts a little left of the "(6)" marks
 CARD_COLUMN = 300.0         # Part 5: people left of this x, the cards right of it
 TITLE_SIZE = 13.0
+TITLE_LINE_SPAN = 30.0      # Part 2: a second title line starts within this distance of the first
+TITLE_SIZE_SPREAD = 1.5     # Part 2: title lines may mix sizes a little (18 and 19 pt italic in A2 Key)
 
 NUMBERED_PROMPT = re.compile(r"^(\d+)\s+(.+)$")
 GAP_MARK = re.compile(r"^\((\d+)\)\s*(.*)$")
@@ -104,14 +107,23 @@ def _clip(box: tuple[float, float, float, float], left: float, right: float) -> 
 # ---------------------------------------------------------------------------------------------- Part 2
 
 def _part2_form(source: PartSource, key: dict[int, list[str]], _shapes: tuple[Shape, ...]) -> PartResult:
-    title_line = max((line for line in source.lines if line.size >= TITLE_SIZE and line.x0 < VALUE_COLUMN
-                      and not GAP_MARK.match(line.text)), key=lambda line: line.size, default=None)
+    # The answers sit in the column of the "(6)" marks; papers place it differently (x 294 in A2 Key, 321 in
+    # A2 Key for Schools), so the column is measured, not fixed.
+    marks = [line.x0 for line in source.lines if GAP_MARK.match(line.text)]
+    column = min(marks) - COLUMN_MARGIN if marks else VALUE_COLUMN
+    candidates = [line for line in source.lines if line.size >= TITLE_SIZE and line.x0 < column and not GAP_MARK.match(line.text)]
+    title_lines: list[Line] = []
+    if candidates:
+        # A title may run over two lines ("Jobs for students / with Sunshine Holidays"): same size, one under the other.
+        first = max(candidates, key=lambda line: line.size)
+        title_lines = sorted((line for line in candidates if abs(line.size - first.size) <= TITLE_SIZE_SPREAD
+                              and line.page == first.page and abs(line.y0 - first.y0) <= TITLE_LINE_SPAN), key=lambda line: line.y0)
     intro: list[Line] = []
     form: list[tuple[str, str]] = []
     numbers: list[int] = []
-    for row in rows(line for line in source.lines if line is not title_line):
-        labels = [line for line in row if line.x0 < VALUE_COLUMN]
-        values = [line for line in row if line.x0 >= VALUE_COLUMN]
+    for row in rows(line for line in source.lines if line not in title_lines):
+        labels = [line for line in row if line.x0 < column]
+        values = [line for line in row if line.x0 >= column]
         if not values:
             intro.extend(row)
             continue
@@ -135,8 +147,8 @@ def _part2_form(source: PartSource, key: dict[int, list[str]], _shapes: tuple[Sh
         warnings.append(f"Part 2: found gaps {numbers}; the heading says questions {source.first}–{source.last}.")
 
     part: dict = {"partNo": 2, "layout": "Single"}
-    if title_line:
-        part["title"] = title_line.text
+    if title_lines:
+        part["title"] = " ".join(line.text for line in title_lines)
     part["groups"] = [make_group("InlineText", source, questions, bodyHtml=html)]
     return PartResult(part, [], warnings, checks)
 

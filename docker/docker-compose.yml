@@ -51,6 +51,8 @@ services:
       Demo__SamplesRoot: /demo/samples
       Demo__ReadingWritingFolder: /demo/sources/a2-key-fs-2022-sample/package-reading-writing
       Demo__ListeningFolder: /demo/sources/a2-key-fs-2022-sample/package-listening
+      Demo__SecondReadingWritingFolder: /demo/sources/a2-key-2020-sample/package-reading-writing
+      Demo__SecondListeningFolder: /demo/sources/a2-key-2020-sample/package-listening
     volumes:
       - ../src/backend/src/ExamPrep.Api/App_Data:/app/App_Data
       - ../setup/exam-package/samples:/demo/samples:ro

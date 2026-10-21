@@ -25,6 +25,15 @@ public sealed record DemoOptions
     /// <summary>Optional Listening package folder (paper.json + images/ + audio/), used like <see cref="ReadingWritingFolder"/>.</summary>
     public string? ListeningFolder { get; init; }
 
+    /// <summary>
+    /// Optional second source papers (Victory 20/10, paper shuffling): another paper of the same layout per section,
+    /// imported and published next to the first when the folder holds a paper.json.
+    /// </summary>
+    public string? SecondReadingWritingFolder { get; init; }
+
+    /// <summary>Optional second Listening source paper, used like <see cref="SecondReadingWritingFolder"/>.</summary>
+    public string? SecondListeningFolder { get; init; }
+
     public string ExamName { get; init; } = string.Empty;
     public string CandidateUsername { get; init; } = string.Empty;
     public string CandidatePassword { get; init; } = string.Empty;
@@ -108,6 +117,8 @@ public static class DemoSeeder
         var listeningFolder = ChooseFolder(options.ListeningFolder, Path.Combine(options.SamplesRoot, ListeningSample), "Listening", logger);
         var readingWriting = await ImportAsync(importer, readingWritingFolder, adminId.Value, cancellationToken);
         var listening = await ImportAsync(importer, listeningFolder, adminId.Value, cancellationToken);
+        var secondReadingWriting = await ImportIfPresentAsync(importer, options.SecondReadingWritingFolder, "Reading & Writing", adminId.Value, logger, cancellationToken);
+        var secondListening = await ImportIfPresentAsync(importer, options.SecondListeningFolder, "Listening", adminId.Value, logger, cancellationToken);
 
         var templates = await db.SectionTemplates.AsNoTracking()
             .Where(t => t.ExamType!.Code == A2ExamTypeCode)
@@ -179,6 +190,19 @@ public static class DemoSeeder
         paper.Status = PaperStatus.Published;
         paper.PublishedAt = DateTime.UtcNow;
         return paper;
+    }
+
+    /// <summary>A second source paper when its folder holds a paper.json; null otherwise.</summary>
+    private static async Task<TestPaper?> ImportIfPresentAsync(
+        PaperPackageImporter importer, string? folder, string section, int adminId, ILogger logger, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || !File.Exists(Path.Combine(folder, "paper.json")))
+        {
+            return null;
+        }
+
+        logger.LogInformation("Second demo {Section} source paper comes from {Folder}.", section, folder);
+        return await ImportAsync(importer, folder, adminId, cancellationToken);
     }
 
     private static ExamSection Section(SectionTemplate template, TestPaper paper) => new()
