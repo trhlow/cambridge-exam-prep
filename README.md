@@ -172,7 +172,7 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Tài liệu tham khảo quy trình thi máy
 - [x] Sơ đồ use case tổng quát, ERD
 - [x] Khảo sát giao diện bài thi mẫu A2 Key for Schools
-- [x] Cơ sở dữ liệu: 24 bảng (EF Core + MySQL), migration, dữ liệu mẫu A2/B1, 16 test tích hợp
+- [x] Cơ sở dữ liệu: 25 bảng (EF Core + MySQL), migration, dữ liệu mẫu A2/B1, 16 test tích hợp
 - [x] Đặc tả yêu cầu, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API; hướng dẫn cài đặt (`setup/INSTALL.md`)
 - [x] Backend: đăng nhập nhân viên (admin, giám thị) và thí sinh (username/password + PIN phòng thi), phân quyền, đồng hồ server — 78 test
 - [x] Nhập đề: định dạng gói đề (`setup/exam-package/FORMAT.md`), import có kiểm tra lỗi, đề mẫu A2 tự soạn — 116 test
