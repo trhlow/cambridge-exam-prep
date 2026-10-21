@@ -53,6 +53,13 @@ services:
       Demo__ListeningFolder: /demo/sources/a2-key-fs-2022-sample/package-listening
       Demo__SecondReadingWritingFolder: /demo/sources/a2-key-2020-sample/package-reading-writing
       Demo__SecondListeningFolder: /demo/sources/a2-key-2020-sample/package-listening
+      # VE-68: the B1 demo exam mixes the two B1 sample sets section by section.
+      Demo__B1__Reading__Folder: /demo/sources/b1-pet-fs-sample/package-reading
+      Demo__B1__Reading__SecondFolder: /demo/sources/b1-pet-2022-sample/package-reading
+      Demo__B1__Writing__Folder: /demo/sources/b1-pet-fs-sample/package-writing
+      Demo__B1__Writing__SecondFolder: /demo/sources/b1-pet-2022-sample/package-writing
+      Demo__B1__Listening__Folder: /demo/sources/b1-pet-fs-sample/package-listening
+      Demo__B1__Listening__SecondFolder: /demo/sources/b1-pet-2022-sample/package-listening
     volumes:
       - ../src/backend/src/ExamPrep.Api/App_Data:/app/App_Data
       - ../setup/exam-package/samples:/demo/samples:ro

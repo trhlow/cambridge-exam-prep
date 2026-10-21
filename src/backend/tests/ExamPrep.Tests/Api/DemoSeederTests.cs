@@ -121,6 +121,58 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task Seed_WithB1_OpensAThreeSectionB1Exam_MixedBySeat_ForItsOwnCandidate()
+    {
+        api.SkipIfUnavailable();
+        var samples = Path.Combine(AppContext.BaseDirectory, "Samples");
+        var options = Options() with
+        {
+            SeatsPerRow = 4,
+            B1 = new DemoB1Options
+            {
+                Enabled = true,
+                ExamName = $"Demo B1 {Guid.NewGuid():N}",
+                CandidateUsername = $"demob1{Guid.NewGuid():N}"[..14],
+                Reading = new() { SecondFolder = Path.Combine(samples, "b1-pfs-reading") },
+                Writing = new() { SecondFolder = Path.Combine(samples, "b1-pfs-writing") },
+                Listening = new() { SecondFolder = Path.Combine(samples, "b1-pfs-listening") },
+            },
+        };
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var exam = await db.Exams.Include(e => e.Sections).SingleAsync(e => e.Name == options.B1.ExamName, ct);
+            Assert.Equal(3, exam.Sections.Count);
+            Assert.All(exam.Sections, s => Assert.NotNull(s.PaperMixId));
+        }
+
+        using var client = api.CreateClient();
+        (await client.PostAsJsonAsync("/api/candidate/auth/login", new LoginRequest(options.B1.CandidateUsername, options.CandidatePassword), ct)).EnsureSuccessStatusCode();
+        (await client.PostAsJsonAsync("/api/candidate/auth/pin", new PinRequest(options.SessionPin), ct)).EnsureSuccessStatusCode();
+        var sections = (await client.GetFromJsonAsync<List<Section>>("/api/candidate/sections", ct))!;
+        Assert.Equal(["Reading", "Writing", "Listening"], sections.Select(s => s.Title));
+    }
+
+    [Fact]
+    public void Options_ResolveEveryFolderAgainstTheContentRoot()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "api");
+        var options = new DemoOptions
+        {
+            SamplesRoot = "samples",
+            SecondListeningFolder = "second",
+            B1 = new DemoB1Options { Writing = new() { Folder = "w", SecondFolder = "w2" } },
+        }.WithFoldersUnder(root);
+
+        Assert.Equal(Path.Combine(root, "second"), options.SecondListeningFolder);
+        Assert.Equal(Path.Combine(root, "w2"), options.B1.Writing.SecondFolder);
+        Assert.Null(options.ReadingWritingFolder);
+    }
+
+    [Fact]
     public async Task Seed_UsesTheReadingWritingFolderWhenItExists()
     {
         api.SkipIfUnavailable();
