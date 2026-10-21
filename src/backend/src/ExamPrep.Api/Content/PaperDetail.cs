@@ -12,7 +12,7 @@ public sealed record PaperDetail(int Id, string Title, string ExamType, string S
 
 public sealed record PaperDetailPart(int PartNo, string? Title, string Layout, string? StimulusHtml, string? AudioUrl, IReadOnlyList<PaperDetailGroup> Groups);
 
-public sealed record PaperDetailGroup(int OrderNo, string InteractionType, string Instructions, string? BodyHtml, IReadOnlyList<CandidateOption>? OptionPool, IReadOnlyList<PaperDetailQuestion> Questions);
+public sealed record PaperDetailGroup(int OrderNo, string InteractionType, string Instructions, string? BodyHtml, IReadOnlyList<CandidateOption>? OptionPool, IReadOnlyList<PaperDetailQuestion> Questions, string? ItemsHeading = null, string? PoolHeading = null);
 
 public sealed record PaperDetailQuestion(int Number, string? PromptHtml, string? StimulusHtml, IReadOnlyList<CandidateOption>? Options, IReadOnlyList<string> Answers, decimal Points, int? MinWords);
 
@@ -43,7 +43,9 @@ internal static class PaperDetailMapper
                     CandidatePaperMapper.Options(q.OptionsJson),
                     q.AnswerKeys.OrderBy(k => k.Id).Select(k => k.Value).ToList(),
                     q.Points,
-                    q.MinWords)).ToList())).ToList()))
+                    q.MinWords)).ToList(),
+                group.ItemsHeading,
+                group.PoolHeading)).ToList()))
             .ToList(),
         paper.PaperMixId,
         paper.PaperMix?.Title,

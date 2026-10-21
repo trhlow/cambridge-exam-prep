@@ -32,7 +32,9 @@ public sealed record PackageGroup(
     string? BodyHtml = null,
     IReadOnlyList<PackageOption>? OptionPool = null,
     bool AllowOptionReuse = false,
-    int? MaxWordsPerAnswer = null);
+    int? MaxWordsPerAnswer = null,
+    string? ItemsHeading = null,
+    string? PoolHeading = null);
 
 public sealed record PackageQuestion(
     int Number,
@@ -43,4 +45,5 @@ public sealed record PackageQuestion(
     decimal Points = 1,
     int? MinWords = null);
 
-public sealed record PackageOption(string Key, string? Text = null, string? Image = null);
+/// <param name="Title">A card's heading, shown in bold before its text (B1 Reading Part 2: the course or place).</param>
+public sealed record PackageOption(string Key, string? Text = null, string? Image = null, string? Title = null);

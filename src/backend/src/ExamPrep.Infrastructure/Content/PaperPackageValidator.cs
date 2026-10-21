@@ -13,6 +13,7 @@ public static partial class PaperPackageValidator
     public const int SupportedFormatVersion = 1;
     private const int MaxTitleLength = 256;
     private const int MaxInstructionsLength = 1000;
+    private const int MaxHeadingLength = 128;
     private const int MaxAnswerLength = 255;
 
     public static IReadOnlyList<string> Validate(PaperPackage package, SectionTemplate template)
@@ -107,6 +108,20 @@ public static partial class PaperPackageValidator
         if (group.InteractionType == InteractionType.DragDropMatch)
         {
             CheckOptions(group.OptionPool, needsPicture: false, groupLabel, files, errors, "drag-and-drop groups need a pool of cards");
+
+            // Cards dragged into gaps of a text (B1 Reading Part 4) need every gap; rows of people need labels instead.
+            if (HasGaps(group.BodyHtml))
+            {
+                CheckGaps(group, groupLabel, errors);
+            }
+
+            foreach (var (text, name) in new[] { (group.ItemsHeading, "itemsHeading"), (group.PoolHeading, "poolHeading") })
+            {
+                if (text?.Length > MaxHeadingLength)
+                {
+                    errors.Add($"{groupLabel}: {name} can be at most {MaxHeadingLength} characters.");
+                }
+            }
         }
 
         foreach (var question in group.Questions)
@@ -133,9 +148,9 @@ public static partial class PaperPackageValidator
                 CheckSingleAnswer(answers, question.Options, "options", label, errors);
                 break;
             case InteractionType.DragDropMatch:
-                if (string.IsNullOrWhiteSpace(question.PromptHtml))
+                if (string.IsNullOrWhiteSpace(question.PromptHtml) && !HasGaps(group.BodyHtml))
                 {
-                    errors.Add($"{label}: drag-and-drop questions need a label (promptHtml).");
+                    errors.Add($"{label}: drag-and-drop questions need a label (promptHtml), or a gap in the group's text.");
                 }
 
                 CheckSingleAnswer(answers, group.OptionPool, "cards", label, errors);
@@ -209,6 +224,8 @@ public static partial class PaperPackageValidator
             errors.Add($"{label}: answer '{answers[0]}' is not one of the {optionsName} ({string.Join(", ", keys)}).");
         }
     }
+
+    private static bool HasGaps(string? html) => html is not null && Gap().IsMatch(html);
 
     private static void CheckGaps(PackageGroup group, string label, List<string> errors)
     {

@@ -1001,6 +1001,11 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("varchar(32)")
                         .HasColumnName("interaction_type");
 
+                    b.Property<string>("ItemsHeading")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("items_heading");
+
                     b.Property<int?>("MaxWordsPerAnswer")
                         .HasColumnType("int")
                         .HasColumnName("max_words_per_answer");
@@ -1016,6 +1021,11 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.Property<int>("PaperPartId")
                         .HasColumnType("int")
                         .HasColumnName("paper_part_id");
+
+                    b.Property<string>("PoolHeading")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("pool_heading");
 
                     b.HasKey("Id");
 

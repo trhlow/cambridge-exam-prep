@@ -155,7 +155,32 @@ def listening():
             card(images / f"l-p1-{question}-{key}.png", caption, painter)
 
 
+def portrait(path: Path, colour, width=150, height=170):
+    """A simple head-and-shoulders drawing standing in for the photo of a person (B1 Reading Part 2)."""
+    image = Image.new("RGB", (width, height), (238, 238, 236))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((width / 2 - 70, height - 70, width / 2 + 70, height + 70), fill=colour, outline=INK, width=2)
+    draw.ellipse((width / 2 - 34, 30, width / 2 + 34, 104), fill=(244, 214, 188), outline=INK, width=2)
+    draw.arc((width / 2 - 14, 70, width / 2 + 14, 88), 20, 160, fill=INK, width=2)
+    draw.ellipse((width / 2 - 16, 56, width / 2 - 10, 62), fill=INK)
+    draw.ellipse((width / 2 + 10, 56, width / 2 + 16, 62), fill=INK)
+    image.save(path)
+
+
+def b1_reading():
+    images = HERE / "b1-pfs-reading" / "images"
+    images.mkdir(exist_ok=True)
+    notice(images / "b1-r-p1-q1.png", "SPORTS HALL", ["Students may only use the gym", "when a teacher is present.", "Opening times are not changing."], height=190)
+    message(images / "b1-r-p1-q2.png", "Ella", ["Hi Sam! The party starts at 7, but could", "you come at 5? I need help putting up", "decorations and making the food."])
+    notice(images / "b1-r-p1-q3.png", "SCIENCE MUSEUM TRIP – ALL YEARS", ["Cost: £12, as in the letter home.", "Give your form to Ms Kay by Friday", "or you will not be able to come."], width=460, height=190)
+    notice(images / "b1-r-p1-q4.png", "WHEELS BIKE SHOP", ["Buy any new bike this month:", "free repairs for a whole year!", "Test rides every Saturday – £5"], height=190)
+    message(images / "b1-r-p1-q5.png", "Jack", ["Max, can I borrow your history notes?", "I missed Monday's lesson and the test", "is on Thursday. Back tomorrow, promise!"])
+    for name, colour in (("dina", (120, 170, 220)), ("omar", (210, 120, 90)), ("lena", (150, 200, 140)), ("tom", (230, 190, 90)), ("maya", (180, 140, 210))):
+        portrait(images / f"b1-r-p2-{name}.png", colour)
+
+
 if __name__ == "__main__":
     reading_writing()
     listening()
+    b1_reading()
     print("Pictures written under", HERE)

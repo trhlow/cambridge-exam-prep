@@ -17,10 +17,16 @@ public sealed record EditPaperRequest([Required, StringLength(256, MinimumLength
 
 public sealed record EditPartRequest([StringLength(256)] string? Title, string? StimulusHtml);
 
-/// <summary>An option keeps its key and picture; only its text changes.</summary>
-public sealed record EditOption([Required] string Key, [StringLength(500)] string? Text);
+/// <summary>An option keeps its key and picture; only its text (and a card's title) changes. A null title keeps the current one.</summary>
+public sealed record EditOption([Required] string Key, [StringLength(500)] string? Text, [StringLength(200)] string? Title = null);
 
-public sealed record EditGroupRequest([Required, StringLength(1000, MinimumLength = 1)] string Instructions, string? BodyHtml, List<EditOption>? OptionPool);
+/// <param name="ItemsHeading">Drag-and-drop column headings; null keeps the current ones, empty removes them.</param>
+public sealed record EditGroupRequest(
+    [Required, StringLength(1000, MinimumLength = 1)] string Instructions,
+    string? BodyHtml,
+    List<EditOption>? OptionPool,
+    [StringLength(128)] string? ItemsHeading = null,
+    [StringLength(128)] string? PoolHeading = null);
 
 /// <summary>Where an uploaded picture can be referenced from the paper's HTML (an &lt;img src&gt;).</summary>
 public sealed record UploadedImage(string Url);
@@ -49,7 +55,7 @@ public sealed class AdminPaperEditorController(ExamPrepDbContext db, IAssetStora
     private const int MaxAnswerLength = 255;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    private sealed record StoredOption(string Key, string? Text, int? ImageAssetId);
+    private sealed record StoredOption(string Key, string? Text, int? ImageAssetId, string? Title = null);
 
     [HttpPut]
     public Task<ActionResult<PaperDetail>> EditTitle(int paperId, EditPaperRequest request, CancellationToken cancellationToken) =>
@@ -86,7 +92,8 @@ public sealed class AdminPaperEditorController(ExamPrepDbContext db, IAssetStora
             var label = $"Part {partNo}";
             var errors = new List<string>();
             var body = PaperHtml.Sanitize(request.BodyHtml);
-            if (group.InteractionType is InteractionType.InlineChoice or InteractionType.InlineText)
+            if (group.InteractionType is InteractionType.InlineChoice or InteractionType.InlineText
+                || (group.InteractionType == InteractionType.DragDropMatch && PaperHtml.HasGaps(group.BodyHtml)))
             {
                 errors.AddRange(PaperHtml.GapProblems(body, group.Questions.Select(q => q.Number).ToList(), label));
             }
@@ -97,6 +104,15 @@ public sealed class AdminPaperEditorController(ExamPrepDbContext db, IAssetStora
                 group.Instructions = request.Instructions.Trim();
                 group.BodyHtml = body;
                 group.OptionPoolJson = pool;
+                if (request.ItemsHeading is not null)
+                {
+                    group.ItemsHeading = string.IsNullOrWhiteSpace(request.ItemsHeading) ? null : request.ItemsHeading.Trim();
+                }
+
+                if (request.PoolHeading is not null)
+                {
+                    group.PoolHeading = string.IsNullOrWhiteSpace(request.PoolHeading) ? null : request.PoolHeading.Trim();
+                }
             }
 
             return errors;
@@ -289,7 +305,11 @@ public sealed class AdminPaperEditorController(ExamPrepDbContext db, IAssetStora
             errors.Add($"{label}: an option without a picture needs a text.");
         }
 
-        var updated = stored.Zip(edits, (o, e) => o with { Text = string.IsNullOrWhiteSpace(e.Text) ? null : e.Text.Trim() }).ToList();
+        var updated = stored.Zip(edits, (o, e) => o with
+        {
+            Text = string.IsNullOrWhiteSpace(e.Text) ? null : e.Text.Trim(),
+            Title = e.Title is null ? o.Title : string.IsNullOrWhiteSpace(e.Title) ? null : e.Title.Trim(),
+        }).ToList();
         return JsonSerializer.Serialize(updated, Json);
     }
 
@@ -311,7 +331,7 @@ public sealed class AdminPaperEditorController(ExamPrepDbContext db, IAssetStora
 
                 break;
             case InteractionType.DragDropMatch:
-                if (string.IsNullOrWhiteSpace(prompt))
+                if (string.IsNullOrWhiteSpace(prompt) && !PaperHtml.HasGaps(group.BodyHtml))
                 {
                     yield return $"{label}: drag-and-drop questions need a label.";
                 }

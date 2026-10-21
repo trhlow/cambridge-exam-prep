@@ -38,8 +38,9 @@ Ví dụ đầy đủ, nội dung tự soạn (không phải đề Cambridge): `
 |---|---|
 | `interactionType` | Kiểu trả lời, xem bảng dưới |
 | `instructions` | Dòng hướng dẫn, ví dụ "For each question, choose the correct answer." |
-| `bodyHtml` | Đoạn văn chứa ô trống `{{q:19}}`. Bắt buộc với `InlineChoice` và `InlineText` |
-| `optionPool` | `DragDropMatch`: các thẻ từ dùng chung `[{ "key": "A", "text": "cake" }]` |
+| `bodyHtml` | Đoạn văn chứa ô trống `{{q:19}}`. Bắt buộc với `InlineChoice` và `InlineText`; với `DragDropMatch` thì thẻ được kéo vào các ô trống này (B1 Reading Part 4) |
+| `optionPool` | `DragDropMatch`: các thẻ dùng chung `[{ "key": "A", "text": "cake" }]`; thẻ dài có thể có `"title"` in đậm trước chữ (B1 Reading Part 2) |
+| `itemsHeading`, `poolHeading` | `DragDropMatch`: tiêu đề cột câu hỏi và cột thẻ, tối đa 128 ký tự (B1: "Young People" / tên loại thẻ). Bỏ trống: cột câu hỏi ghi "People" (A2), cột thẻ không có tiêu đề |
 | `allowOptionReuse` | `DragDropMatch`: một thẻ có được kéo vào nhiều ô không (mặc định `false`) |
 | `maxWordsPerAnswer` | `InlineText`: số từ tối đa mỗi ô ("Write ONE word") |
 | `questions` | Các câu hỏi |
@@ -49,7 +50,7 @@ Ví dụ đầy đủ, nội dung tự soạn (không phải đề Cambridge): `
 | Trường | Ghi chú |
 |---|---|
 | `number` | Số câu chạy liên tục **cả bài**: 1, 2, 3… theo thứ tự xuất hiện |
-| `promptHtml` | Câu hỏi. Với `DragDropMatch` đây là nhãn của dòng (tên người) |
+| `promptHtml` | Câu hỏi. Với `DragDropMatch` đây là nhãn của dòng (tên người), hoặc đoạn mô tả người khi câu có `stimulusHtml` (ảnh) |
 | `stimulusHtml` | Tài liệu riêng của câu, ví dụ ảnh thông báo ở A2 R&W Part 1 |
 | `options` | Phương án `[{ "key": "A", "text": "…", "image": "images/…png" }]` |
 | `answers` | Đáp án. Câu chọn: đúng **một** key. Câu gõ chữ: **một hoặc nhiều** đáp án được chấp nhận, ví dụ `["will", "'ll"]` |
@@ -64,7 +65,7 @@ Ví dụ đầy đủ, nội dung tự soạn (không phải đề Cambridge): `
 | `ImageChoice` | Chọn 1 trong các tranh | Listening Part 1 | Như trên, và **mọi** option có `image` |
 | `InlineChoice` | Bấm ô trống trong đoạn văn rồi chọn từ | R&W Part 4 | `bodyHtml` có đủ `{{q:n}}` cho từng câu; mỗi câu có `options` và 1 đáp án |
 | `InlineText` | Gõ chữ vào ô trống | R&W Part 5; Listening Part 2 | `bodyHtml` có đủ `{{q:n}}`; mỗi câu ≥ 1 đáp án |
-| `DragDropMatch` | Kéo thẻ từ vào ô | Listening Part 5 | `optionPool` ≥ 2 thẻ; mỗi câu có `promptHtml` (nhãn) và 1 đáp án nằm trong pool |
+| `DragDropMatch` | Kéo thẻ vào ô | A2 Listening Part 5; B1 Reading Part 2 (người ↔ thẻ dài), Part 4 (câu vào ô trống của bài) | `optionPool` ≥ 2 thẻ; 1 đáp án nằm trong pool; mỗi câu có `promptHtml` (nhãn) — trừ khi `bodyHtml` có đủ `{{q:n}}` cho từng câu |
 | `Essay` | Viết bài, có bộ đếm từ | R&W Part 6, 7 | `minWords`; **không** có `answers` (giáo viên chấm tay) |
 
 ## Hình và audio
@@ -154,3 +155,7 @@ cd setup/exam-package && python -I -m pytest tests
 Các test dùng dòng chữ tự soạn theo đúng toạ độ của bố cục Cambridge. Test chạy trên đề mẫu thật chỉ chạy khi có PDF trong `sources/`.
 
 Kỳ thi demo (Development) dùng gói đề đã chuyển nếu `Demo:ReadingWritingFolder` trỏ tới thư mục có `paper.json`. Nếu không, nó dùng đề mẫu tự soạn.
+
+## Đề mẫu tự soạn
+
+`samples/a2-key-fs-reading-writing`, `samples/a2-key-fs-listening` (A2) và `samples/b1-pfs-reading` (B1 Preliminary for Schools Reading, 6 part, 32 câu, có hai dạng kéo thả của B1) do nhóm tự viết, dùng làm dữ liệu test; hình vẽ bằng `samples/make_images.py`.

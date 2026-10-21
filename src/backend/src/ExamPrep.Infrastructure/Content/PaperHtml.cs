@@ -16,6 +16,9 @@ public static partial class PaperHtml
         html is null ? [] : Gap().Matches(html).Select(m => int.Parse(m.Groups[1].Value)).ToList();
 
     /// <summary>Every gap of an inline group must appear exactly once and belong to the group.</summary>
+    /// <summary>True when the text has at least one {{q:n}} gap (B1 Reading Part 4 drags sentences into them).</summary>
+    public static bool HasGaps(string? html) => Gaps(html).Count > 0;
+
     public static IEnumerable<string> GapProblems(string? html, IReadOnlyCollection<int> numbers, string label)
     {
         var gaps = Gaps(html);

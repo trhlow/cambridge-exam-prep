@@ -953,6 +953,60 @@ button {
   cursor: default;
 }
 
+/* VE-34, B1 Reading Parts 2 and 4: long cards (title in bold, then the text) dropped under a person or into a text. */
+.match--long .match-pool--headed,
+.match-pool--headed {
+  margin-top: 0;
+}
+
+.match-person {
+  margin-bottom: 26px;
+}
+
+.match-person-picture img {
+  max-width: 110px;
+  height: auto;
+}
+
+.match-person-text {
+  margin: 8px 0;
+}
+
+.match-slot--wide {
+  display: flex;
+  width: 100%;
+  max-width: 560px;
+  min-height: 28px;
+}
+
+.match-text .match-slot--wide {
+  display: inline-flex;
+  width: 300px;
+  vertical-align: middle;
+}
+
+.match-slot--wide .match-slot-button {
+  text-align: left;
+}
+
+.match-slot--wide .match-slot-number {
+  display: block;
+  text-align: center;
+}
+
+.match-card--long {
+  display: block;
+  max-width: 540px;
+  padding: 3px 6px;
+  font-weight: 400;
+  text-align: left;
+  line-height: 1.35;
+}
+
+.match-card--long strong {
+  font-weight: 700;
+}
+
 /* VE-17: invigilator messages under the bell, and a pop-up for a new one. */
 .messages {
   position: relative;

@@ -26,6 +26,15 @@ public class QuestionGroup
     /// <summary>DragDropMatch only: JSON array of word cards shared by the group's questions.</summary>
     public string? OptionPoolJson { get; set; }
 
+    /// <summary>
+    /// DragDropMatch only: heading over the questions' column (A2 Listening 5 "People", B1 Reading 2 "Young People");
+    /// null shows "People" when the questions are rows, nothing when they are gaps in a text.
+    /// </summary>
+    public string? ItemsHeading { get; set; }
+
+    /// <summary>DragDropMatch only: heading over the cards (B1 Reading 2 "Cycling Courses"); null shows none.</summary>
+    public string? PoolHeading { get; set; }
+
     /// <summary>DragDropMatch only: whether one card may be dropped on several slots.</summary>
     public bool AllowOptionReuse { get; set; }
 

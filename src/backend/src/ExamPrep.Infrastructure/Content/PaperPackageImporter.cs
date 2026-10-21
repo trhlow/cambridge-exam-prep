@@ -22,7 +22,7 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
     private static readonly HtmlSanitizer Sanitizer = new();
     private static readonly JsonSerializerOptions OptionJson = new(JsonSerializerDefaults.Web);
 
-    private sealed record StoredOption(string Key, string? Text, int? ImageAssetId);
+    private sealed record StoredOption(string Key, string? Text, int? ImageAssetId, string? Title = null);
 
     public async Task<PaperImportResult> ImportAsync(Stream zip, int userId, CancellationToken cancellationToken)
     {
@@ -160,6 +160,8 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
         OptionPoolJson = Options(group.OptionPool, assets),
         AllowOptionReuse = group.AllowOptionReuse,
         MaxWordsPerAnswer = group.MaxWordsPerAnswer,
+        ItemsHeading = Blank(group.ItemsHeading),
+        PoolHeading = Blank(group.PoolHeading),
         Questions = group.Questions.Select((question, i) => new Question
         {
             Number = question.Number,
@@ -189,6 +191,8 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
         options is null
             ? null
             : JsonSerializer.Serialize(
-                options.Select(o => new StoredOption(o.Key, o.Text, o.Image is null ? null : assets[o.Image].Id)),
+                options.Select(o => new StoredOption(o.Key, o.Text, o.Image is null ? null : assets[o.Image].Id, Blank(o.Title))),
                 OptionJson);
+
+    private static string? Blank(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 }

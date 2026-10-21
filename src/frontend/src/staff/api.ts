@@ -216,6 +216,7 @@ export interface PaperOption {
   key: string
   text: string | null
   imageUrl: string | null
+  title?: string | null
 }
 
 export interface PaperQuestionDetail {
@@ -235,6 +236,8 @@ export interface PaperGroupDetail {
   bodyHtml: string | null
   optionPool: PaperOption[] | null
   questions: PaperQuestionDetail[]
+  itemsHeading?: string | null
+  poolHeading?: string | null
 }
 
 export interface PaperPartDetail {
