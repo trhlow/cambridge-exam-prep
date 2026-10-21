@@ -193,3 +193,15 @@
 - Thư mục `đề a2/`, `đề b1/` chuyển vào `setup/exam-package/sources/` (git-ignored): `a2-key-2020-sample/` (A2 Key, mới), `b1-pet-2022-sample/`, `b1-pet-fs-sample/`; `504343-…` trùng từng byte với `a2-key-fs-2022-sample/` nên bỏ; bỏ các bản sao mp3 trùng; `_chua-phan-loai/B1 Q1 L P1 P2 V1.mp3` (~15 phút) chờ người dùng cho biết thuộc đề nào
 - Kế hoạch: E15 + VE-64…68 trong sprints.py (VE-64…66 Sprint 3, VE-67 Sprint 4, VE-68 Sprint 6); Jira E15 = SCRUM-82, VE-64…68 = SCRUM-83…87
 - Thiết kế dự kiến ghi trong findings.md; chờ Victory trả lời 3 câu hỏi trước khi làm
+
+## Session: 2026-10-21
+
+### Sprint 3 xong sớm: E15 cho A2 (VE-64, VE-65, VE-66) và báo cáo tuần 3 (VE-27)
+- Người dùng: làm vượt lịch; sprint nào xong thì viết báo cáo tuần của sprint đó ngay, ghi đúng tuần theo kế hoạch. Trộn đề làm theo mặc định (trộn nguyên part, không xáo câu; lưới 2×2 cho từng phần thi), chờ Victory trả lời thì chỉnh
+- VE-64 (849dc6d): `split_listening.py` (ffmpeg qua imageio-ffmpeg, cài `pip --user`); A2 Key Listening tách 5 part; bộ chuyển đo cột đáp án Part 2 theo "(n)" và ghép tiêu đề 2 dòng; `PaperShape`; demo nạp đề gốc thứ hai
+- VE-65 (00781e8): `PaperMixPlan`, `PaperMixer`, `POST /api/admin/paper-mixes`, bảng `paper_mixes`
+- VE-66 (c97897c): `SeatPattern`, `PaperAssignment`, `exams.seats_per_row`, `exam_sections.paper_mix_id`, `attempts.test_paper_id`; demo trộn cả hai phần thi
+- Gói SignalR client/MVC testing lên 10.0.13 (d439291, cảnh báo GHSA-334f-vvp4-7g6p)
+- Toàn bộ: backend 350/350, bộ chuyển 60/60; Docker build lại, thí sinh demo nhận đề trộn (Part 2 từ A2 for Schools, Part 3 từ A2 Key)
+- VE-27: `progress-report/BaoCaoTienDo_Tuan03_TranHoangLong.docx` (26/10–01/11, ký 01/11) và dòng tuần 3 trên Google Sheet
+- Còn lưu ý: form kỳ thi trên web chưa gửi `paperMixId`/`seatsPerRow` → VE-67; file nghe B1 mẫu không tách tự động được

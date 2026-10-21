@@ -51,11 +51,11 @@ Tổng: 9 story, 40 điểm.
 - [x] VE-28 [E9] (5đ) Kiểm tra cấu hình Safe Exam Browser (config key) trước khi cho vào thi
 - [x] VE-29 [E9] (3đ) Cảnh báo vi phạm phía server: thoát trình duyệt khoá, mất kết nối, lệch đồng hồ, làm sớm
 - [x] VE-24 [E4] (2đ) Đổi tên trung tâm và logo (tải PNG)
-- [ ] VE-64 [E15] (3đ) Đề gốc thứ hai cho A2 (A2 Key sample): tách audio 5 part, chuyển PDF thành gói, kiểm tra hai đề cùng khuôn
-- [ ] VE-65 [E15] (8đ) Sinh 4 đề trộn từ 2 đề gốc: mỗi part lấy nguyên từ đề gốc 1 hoặc 2 (kèm hình, audio, đáp án)
-- [ ] VE-66 [E15] (5đ) Sơ đồ phòng máy và chia đề theo vị trí máy (ô 2×2): hai máy kề nhau ngang, dọc, chéo luôn khác đề
-- [ ] VE-27 [E12] (1đ) Báo cáo tiến độ tuần 3
-- **Status:** pending
+- [x] VE-64 [E15] (3đ) Đề gốc thứ hai cho A2 (A2 Key sample): tách audio 5 part, chuyển PDF thành gói, kiểm tra hai đề cùng khuôn
+- [x] VE-65 [E15] (8đ) Sinh 4 đề trộn từ 2 đề gốc: mỗi part lấy nguyên từ đề gốc 1 hoặc 2 (kèm hình, audio, đáp án)
+- [x] VE-66 [E15] (5đ) Sơ đồ phòng máy và chia đề theo vị trí máy (ô 2×2): hai máy kề nhau ngang, dọc, chéo luôn khác đề
+- [x] VE-27 [E12] (1đ) Báo cáo tiến độ tuần 3
+- **Status:** complete
 
 ### Phase 4: Sprint 4 (02/11 – 08/11) — Kiểm thử đầu-cuối A2; bắt đầu B1 Preliminary for Schools
 Tổng: 5 story, 18 điểm.
