@@ -33,6 +33,7 @@ Thi máy khó ở khâu vận hành: giám thị phải tạm dừng đúng thí
 - **Màn hình thí sinh:** vào thi bằng mã PIN, làm bài, ghi chú, đánh dấu câu, đổi cỡ chữ và độ tương phản.
 - **Safe Exam Browser:** server kiểm tra cấu hình SEB (Browser Exam Key) mới cho vào thi; vi phạm hiển thị cảnh báo cho giám thị.
 - **Năm vai trò** (theo yêu cầu Victory 16/10/2026): **admin** tạo mọi tài khoản nhân sự; **quản trị viên** phụ trách từng mảng (đề thi, kỳ thi, thí sinh, trung tâm) — được tạo và sửa, không được xoá; **giám khảo** xem lại bài làm, chấm Writing và xem kết quả của kỳ thi được phân công (chỉ giám khảo mở được bài làm); **giám thị**; **thí sinh**.
+- **Trộn đề** (theo yêu cầu Victory 20/10/2026): hai đề gốc cùng khuôn được trộn theo từng part thành 4 đề; đề chia theo vị trí máy (khối 2×2) nên hai máy kề nhau — ngang, dọc, chéo — không bao giờ cùng đề; thí sinh đổi máy giữa giờ vẫn giữ đề đã làm.
 - **Hai admin duyệt chéo:** mọi thao tác xoá (đề, kỳ thi, thí sinh) và thay đổi tài khoản (khoá/mở, đổi vai trò, đặt lại mật khẩu, thêm admin) thành yêu cầu chờ một admin *khác* duyệt; ai yêu cầu không tự duyệt được, mọi yêu cầu được lưu làm nhật ký.
 
 **Ngoài phạm vi:** các cấp B2 First, C1 Advanced, C2 Proficiency; phần Speaking (thi trực tiếp); máy Mac/Chromebook; chạy nhiều server.
@@ -187,6 +188,8 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Vai trò mới của Victory (16/10): quản trị viên theo mảng, giám khảo (chỉ giám khảo xem bài làm), hai admin duyệt chéo mọi thao tác xoá và thay đổi tài khoản, trang Approvals — 268 test backend, 82 test frontend
 - [x] Cập nhật thời gian thực bằng SignalR: trang giám thị đổi trong ≤ 2 giây, lệnh tạm dừng đến máy thí sinh ngay — 274 test backend, 84 test frontend
 - [x] Safe Exam Browser (kiểm tra Config Key trên mọi yêu cầu của thí sinh), cột cảnh báo cho giám thị (không dùng SEB, mất kết nối, đồng hồ máy lệch, làm trước khi giám thị báo bắt đầu); viết cả đề A2 trên web (đề trắng theo khung A2) và sửa đề nháp; đổi tên và logo trung tâm — 291 test backend, 88 test frontend
+- [x] Trộn đề (Victory 20/10): đề gốc thứ hai A2 Key (công cụ `split_listening.py` tách file nghe theo part), `POST /api/admin/paper-mixes` sinh 4 đề từ 2 đề gốc theo từng part, phần thi chia đề theo số máy (khối 2×2), lượt làm bài giữ đề khi đổi máy — 350 test backend, 60 test bộ chuyển đề
+- [ ] Giao diện trộn đề trên cổng nhân viên (VE-67)
 - [ ] Triển khai HTTPS cho phòng thi thật
 - [x] Test đầu-cuối Playwright (`npm run e2e`, stack Docker riêng cổng 8090): thí sinh đăng nhập + PIN + làm bài + tải lại trang; giám thị tạm dừng/cho làm tiếp và máy thí sinh nhận ngay; quản trị viên tạo đề trắng, gửi yêu cầu xoá, admin khác duyệt; giám thị End now → chấm tự động → giám khảo chấm Writing → điểm Final (chạy lại thì `down -v` stack trước)
 - [ ] Kiểm thử tải, buổi thi thử
