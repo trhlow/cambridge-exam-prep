@@ -31,6 +31,7 @@ EPICS = {
 # 16/10: Victory asked for more roles and two-admin approval (E14, VE-59…63, Sprint 2); VE-13 and VE-25 moved to Sprint 3.
 # 20/10: Victory asked for paper shuffling (E15, VE-64…68): two source papers per section mixed part by part
 # into four papers, neighbouring computers never get the same one; A2 in Sprints 3–4, B1 with E10 in Sprint 6.
+# 21/10: the user asked for a B1 PDF converter (VE-69, Sprint 5) next to the A2 one.
 # On Jira, Sprint 0 and Sprint 1 run as one sprint, "SCRUM Sprint 1" (10/10 – 18/10).
 SPRINTS = [
     ("Sprint 0", "2026-10-10", "2026-10-11", "Khởi động: CSDL và khảo sát giao diện", [
@@ -92,6 +93,7 @@ SPRINTS = [
         ("VE-32", "E12", 1, "Báo cáo tiến độ tuần 4", "File báo cáo có trong progress-report/"),
     ]),
     ("Sprint 5", "2026-11-09", "2026-11-15", "B1 Preliminary for Schools: Writing và Listening — tuần gặp GV 2", [
+        ("VE-69", "E10", 8, "Bộ chuyển đề PDF → gói đề cho B1 Preliminary (Reading, Writing, Listening) và nhập đề B1 trên cổng nhân viên", "Hai bộ đề B1 mẫu chuyển ra gói import được; Writing không cần đáp án; Listening tách 4 track; nhập được từ \"Import from PDF\""),
         ("VE-35", "E10", 3, "B1 Writing: Part 1 email, Part 2 chọn 1 trong 2 đề", "Thí sinh chọn đề Part 2 trước khi viết; đếm từ"),
         ("VE-37", "E10", 3, "B1 Listening 4 part", "Import và làm được đề Listening B1 mẫu"),
         ("VE-36", "E12", 1, "Báo cáo tiến độ tuần 5", "File báo cáo có trong progress-report/"),
