@@ -31,7 +31,7 @@ DRAW_USER_EDGES = {("exam_invigilators", "user_id"), ("exam_examiners", "user_id
 COLUMNS = [  # domain columns, left to right; tables stacked top-down
     ("staff", ["users", "user_areas", "approval_requests", "site_settings"]),
     ("template", ["exam_types", "section_templates", "test_papers", "assets"]),
-    ("content", ["paper_parts", "question_groups", "questions", "answer_keys"]),
+    ("content", ["paper_parts", "question_groups", "questions", "answer_keys", "paper_mixes"]),
     ("exam", ["exams", "exam_sections", "exam_invigilators", "exam_examiners", "candidates", "candidate_messages"]),
     ("delivery", ["attempts", "responses", "manual_marks", "annotations"]),
     ("monitor", ["invigilator_actions", "security_events"]),
