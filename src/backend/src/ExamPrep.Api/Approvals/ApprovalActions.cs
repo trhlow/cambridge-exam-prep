@@ -46,10 +46,22 @@ public static class ApprovalActions
         }
     }
 
-    public static async Task<string?> PaperProblemAsync(ExamPrepDbContext db, int paperId, CancellationToken cancellationToken) =>
-        await db.ExamSections.AnyAsync(s => s.TestPaperId == paperId, cancellationToken)
-            ? "This paper is used by an exam and cannot be deleted."
+    public static async Task<string?> PaperProblemAsync(ExamPrepDbContext db, int paperId, CancellationToken cancellationToken)
+    {
+        if (await db.ExamSections.AnyAsync(s => s.TestPaperId == paperId, cancellationToken))
+        {
+            return "This paper is used by an exam and cannot be deleted.";
+        }
+
+        if (await db.TestPapers.AnyAsync(p => p.Id == paperId && p.PaperMixId != null, cancellationToken))
+        {
+            return "This paper is one of the four papers of a mix and cannot be deleted on its own.";
+        }
+
+        return await db.PaperMixes.AnyAsync(m => m.SourceAPaperId == paperId || m.SourceBPaperId == paperId, cancellationToken)
+            ? "Papers were mixed from this paper, so it cannot be deleted."
             : null;
+    }
 
     public static async Task<string?> ExamProblemAsync(ExamPrepDbContext db, int examId, CancellationToken cancellationToken) =>
         await ExamViews.HasStartedAsync(db, examId, cancellationToken)

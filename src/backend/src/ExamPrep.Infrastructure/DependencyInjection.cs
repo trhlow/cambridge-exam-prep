@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddSingleton<IAssetStorage>(new FileSystemAssetStorage(assetsRoot));
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<PaperPackageImporter>();
+        services.AddScoped<PaperMixer>();
         services.AddScoped<AttemptMarker>();
         return services;
     }

@@ -8,6 +8,7 @@ using ExamPrep.Tests.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamPrep.Tests.Api;
@@ -72,6 +73,30 @@ public sealed class ApiFixture : IAsyncLifetime
         db.TestPapers.AddRange(readingWriting, listening);
         await db.SaveChangesAsync();
         return (readingWriting.Id, listening.Id);
+    }
+
+    /// <summary>
+    /// Imports a sample package as a published paper with its own title; every part title is prefixed with the paper title,
+    /// so a mixed paper shows which source each part came from.
+    /// </summary>
+    public async Task<int> ImportPublishedSampleAsync(string sample, string title)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var adminId = db.Users.Where(u => u.Username == AdminUsername).Select(u => u.Id).Single();
+        var importer = scope.ServiceProvider.GetRequiredService<PaperPackageImporter>();
+        var imported = (await importer.ImportAsync(new MemoryStream(SamplePackages.Zip(sample)), adminId, default)).Paper!;
+        var paper = await db.TestPapers.Include(p => p.Parts).SingleAsync(p => p.Id == imported.Id);
+        paper.Title = title;
+        paper.Status = PaperStatus.Published;
+        paper.PublishedAt = DateTime.UtcNow;
+        foreach (var part in paper.Parts)
+        {
+            part.Title = $"{title} part {part.PartNo}";
+        }
+
+        await db.SaveChangesAsync();
+        return paper.Id;
     }
 
     /// <summary>

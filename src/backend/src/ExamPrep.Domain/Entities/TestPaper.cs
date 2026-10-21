@@ -23,5 +23,16 @@ public class TestPaper
 
     public DateTime? PublishedAt { get; set; }
 
+    /// <summary>Set on the four papers of a mix (Victory 20/10); null for an authored or imported paper.</summary>
+    public int? PaperMixId { get; set; }
+
+    public PaperMix? PaperMix { get; set; }
+
+    /// <summary>Version 1–4 within the mix; versions 1/2 and 3/4 take opposite sources in every part.</summary>
+    public int? MixVersion { get; set; }
+
+    /// <summary>Which source each part came from, in part order, e.g. "ABBAABA".</summary>
+    public string? MixPattern { get; set; }
+
     public ICollection<PaperPart> Parts { get; set; } = [];
 }
