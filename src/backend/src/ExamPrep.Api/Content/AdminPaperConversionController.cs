@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ExamPrep.Api.Content;
 
-/// <summary>The upload: a title, the two PDFs and, for Listening, one track per part.</summary>
+/// <summary>The upload: a title, the question paper, its answer key (none for B1 Writing) and, for Listening, one track per part.</summary>
 public sealed class PaperConversionForm
 {
     public string? Title { get; set; }
@@ -62,12 +62,16 @@ public sealed class AdminPaperConversionController(IPaperConverter converter, Pa
             // Every name on disk is ours; nothing from the upload's file names reaches a path.
             var input = new PaperConversionInput(
                 Path.Combine(work, "questions.pdf"),
-                Path.Combine(work, "answer-key.pdf"),
+                form.AnswerKey is { Length: > 0 } ? Path.Combine(work, "answer-key.pdf") : null,
                 Directory.CreateDirectory(Path.Combine(work, "audio")).FullName,
                 form.Title!.Trim(),
                 Path.Combine(work, "package"));
             await SaveAsync(form.Questions!, input.QuestionsPdf, cancellationToken);
-            await SaveAsync(form.AnswerKey!, input.AnswerKeyPdf, cancellationToken);
+            if (input.AnswerKeyPdf is not null)
+            {
+                await SaveAsync(form.AnswerKey!, input.AnswerKeyPdf, cancellationToken);
+            }
+
             foreach (var (part, file) in form.Audio())
             {
                 await SaveAsync(file, Path.Combine(input.AudioFolder, $"part{part}{Path.GetExtension(file.FileName).ToLowerInvariant()}"), cancellationToken);
@@ -131,7 +135,12 @@ public sealed class AdminPaperConversionController(IPaperConverter converter, Pa
         }
 
         await CheckPdfAsync(form.Questions, "question paper", problems, cancellationToken);
-        await CheckPdfAsync(form.AnswerKey, "answer key", problems, cancellationToken);
+        // The answer key is optional here: the converter reads the paper's cover and says when it needs one.
+        if (form.AnswerKey is { Length: > 0 })
+        {
+            await CheckPdfAsync(form.AnswerKey, "answer key", problems, cancellationToken);
+        }
+
         foreach (var (part, file) in form.Audio())
         {
             if (!AudioExtensions.Contains(Path.GetExtension(file.FileName).ToLowerInvariant()))

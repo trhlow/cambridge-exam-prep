@@ -213,3 +213,10 @@
 - VE-32: `progress-report/BaoCaoTienDo_Tuan04_TranHoangLong.docx` (02–08/11, ký 08/11); Google Sheet chưa điền (chờ đúng ngày)
 - Toàn bộ: backend 359/359, frontend 93/93, bộ chuyển 60/60
 - Tiếp theo Sprint 5: VE-35 B1 Writing (chọn 1 trong 2 câu: Yes/No/Undecided), VE-37 B1 Listening (Part 2 mỗi câu một trang), VE-36 báo cáo tuần 5
+
+### Sprint 5 — VE-69 bộ chuyển đề B1 (21/10)
+- `converter/b1_reading.py`, `b1_writing.py` (7b976a1), `b1_listening.py`; `pdf2package.py` nhận cấp độ + phần thi từ trang bìa (`component()`), mọi loại đều ghi `--report`; thiếu đáp án (trừ B1 Writing) hay thư mục nghe → lỗi trong report
+- Đáp án B1: từ tuỳ chọn trong ngoặc (`expand_optional`, tối đa 64 dạng, không ghép liền mạo từ/giới từ), cột "ACCEPTABLE MIS-SPELLINGS"
+- `split_listening.py` tách được file nghe B1 (mỗi khoảng lặng 10 s là hết part, trừ khoảng trước thời gian chép đáp án) — cả hai bộ B1 đã có `audio-parts/` 4 file
+- Web: file đáp án không bắt buộc (`PaperConversionInput.AnswerKeyPdf` null), hộp thoại ghi "A2 Key 5, B1 Preliminary 4"; thử qua Docker: B1 Writing (2 part, 3 câu), Listening (4 part, 25 câu) import thành Draft, Reading thiếu đáp án báo lỗi rõ
+- Bộ chuyển 69/69 test (thêm test B1 Listening Part 2/3 và đáp án tuỳ chọn), backend conversion 12/12

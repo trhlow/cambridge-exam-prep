@@ -16,8 +16,8 @@ public sealed class PythonPaperConverterTests : IDisposable
     private const string FakeScript = """
         import argparse, json, pathlib
         parser = argparse.ArgumentParser()
-        for name in ("questions", "key"):
-            parser.add_argument(name)
+        parser.add_argument("questions")
+        parser.add_argument("key", nargs="?")
         for name in ("--title", "--audio-dir", "-o", "--report"):
             parser.add_argument(name)
         args = parser.parse_args()
@@ -27,7 +27,7 @@ public sealed class PythonPaperConverterTests : IDisposable
         (pathlib.Path(args.o) / "paper.json").write_text("{}", encoding="utf-8")
         audio = sorted(p.name for p in pathlib.Path(args.audio_dir).iterdir())
         with open(args.report, "w", encoding="utf-8") as report:
-            json.dump({"warnings": [], "checks": ["title=" + args.title, "audio=" + ",".join(audio)]}, report)
+            json.dump({"warnings": [], "checks": ["title=" + args.title, "audio=" + ",".join(audio), "key=" + str(args.key is not None)]}, report)
         """;
 
     private readonly string folder = Directory.CreateTempSubdirectory("converter-test-").FullName;
@@ -56,11 +56,11 @@ public sealed class PythonPaperConverterTests : IDisposable
         return new PythonPaperConverter(options, new HostingEnvironment { ContentRootPath = folder }, NullLogger<PythonPaperConverter>.Instance);
     }
 
-    private PaperConversionInput Input(string title)
+    private PaperConversionInput Input(string title, bool withKey = true)
     {
         var audio = Directory.CreateDirectory(Path.Combine(folder, "audio")).FullName;
         File.WriteAllText(Path.Combine(audio, "part1.mp3"), "track");
-        return new PaperConversionInput(Path.Combine(folder, "q.pdf"), Path.Combine(folder, "k.pdf"), audio, title, Path.Combine(folder, "package"));
+        return new PaperConversionInput(Path.Combine(folder, "q.pdf"), withKey ? Path.Combine(folder, "k.pdf") : null, audio, title, Path.Combine(folder, "package"));
     }
 
     [Fact]
@@ -73,8 +73,20 @@ public sealed class PythonPaperConverterTests : IDisposable
         var report = await Converter("fake.py").ConvertAsync(Input(title), ct);
 
         Assert.Empty(report.Errors);
-        Assert.Equal([$"title={title}", "audio=part1.mp3"], report.Checks);
+        Assert.Equal([$"title={title}", "audio=part1.mp3", "key=True"], report.Checks);
         Assert.True(File.Exists(Path.Combine(folder, "package", "paper.json")));
+    }
+
+    [Fact]
+    public async Task Convert_LeavesTheKeyArgumentOutWhenNoKeyWasUploaded()
+    {
+        SkipWithoutPython();
+        await File.WriteAllTextAsync(Path.Combine(folder, "fake.py"), FakeScript, ct);
+
+        var report = await Converter("fake.py").ConvertAsync(Input("B1 Writing", withKey: false), ct);
+
+        Assert.Empty(report.Errors);
+        Assert.Contains("key=False", report.Checks);
     }
 
     [Fact]

@@ -10,7 +10,8 @@ A pause of about 10 seconds with a 5-second pause right after it is therefore a 
 10-second pauses (time to read the questions) are not followed so closely. Each track is cut one second
 before the end of the long pause, as in the tracks Cambridge supplies for A2 Key for Schools.
 
-A2 Key has 5 parts, B1 Preliminary 4. The tracks are written as P1_<name>.mp3 … into --output (default:
+B1 Preliminary recordings have no announcement pause: there every 10-second pause ends a part except the last
+one, which runs into the transfer time. A2 Key has 5 parts, B1 Preliminary 4. The tracks are written as P1_<name>.mp3 … into --output (default:
 audio-parts/ next to the recording), stream-copied without re-encoding. Listen to the start and end of
 every track before using them. ffmpeg comes from --ffmpeg, the FFMPEG variable, PATH or the
 imageio-ffmpeg package. Keep everything under setup/exam-package/sources/ (git-ignored).
@@ -33,27 +34,45 @@ SHORT_PAUSE = (4.0, 6.5)
 # From the end of the long pause to the end of the short one (announcement + 5 s): 7–8 s in the samples.
 ANNOUNCEMENT_WINDOW = 9.0
 CUT_BEFORE_END = 1.0
+TRANSFER_PAUSE = 60.0       # the minutes left to copy answers at the end (B1: 5 minutes, then 1)
+
+
+def _announced_cuts(silences):
+    """A2: a long pause with the short pause after "Now look at Part n" right behind it."""
+    cuts = []
+    for index, (end, duration) in enumerate(silences):
+        following = silences[index + 1] if index + 1 < len(silences) else None
+        if LONG_PAUSE[0] <= duration <= LONG_PAUSE[1] and following:
+            next_end, next_duration = following
+            if SHORT_PAUSE[0] <= next_duration <= SHORT_PAUSE[1] and next_end - end <= ANNOUNCEMENT_WINDOW:
+                cuts.append(round(end - CUT_BEFORE_END, 3))
+    return cuts
+
+
+def _long_pause_cuts(silences):
+    """B1: every long pause ends a part, except the last part's, which runs straight into the transfer time."""
+    cuts = []
+    for index, (end, duration) in enumerate(silences):
+        following = silences[index + 1] if index + 1 < len(silences) else None
+        transfer = following and following[1] >= TRANSFER_PAUSE and following[0] - following[1] - end <= ANNOUNCEMENT_WINDOW
+        if LONG_PAUSE[0] <= duration <= LONG_PAUSE[1] and not transfer:
+            cuts.append(round(end - CUT_BEFORE_END, 3))
+    return cuts
 
 
 def part_boundaries(silences, parts):
     """Cut times (seconds) between parts, from (end, duration) pairs of the pauses in the recording."""
-    cuts = []
-    for index, (end, duration) in enumerate(silences):
-        if not LONG_PAUSE[0] <= duration <= LONG_PAUSE[1]:
-            continue
-        following = silences[index + 1] if index + 1 < len(silences) else None
-        if following is None:
-            continue
-        next_end, next_duration = following
-        if SHORT_PAUSE[0] <= next_duration <= SHORT_PAUSE[1] and next_end - end <= ANNOUNCEMENT_WINDOW:
-            cuts.append(round(end - CUT_BEFORE_END, 3))
-
-    if len(cuts) != parts - 1:
-        raise ValueError(
-            f"found {len(cuts)} part boundaries, expected {parts - 1}: "
-            + (", ".join(f"{cut:.1f} s" for cut in cuts) or "none")
-            + ". Split this recording by hand.")
-    return cuts
+    found = []
+    for rule in (_announced_cuts, _long_pause_cuts):
+        cuts = rule(silences)
+        if len(cuts) == parts - 1:
+            return cuts
+        found.append(cuts)
+    cuts = found[0]
+    raise ValueError(
+        f"found {len(cuts)} part boundaries, expected {parts - 1}: "
+        + (", ".join(f"{cut:.1f} s" for cut in cuts) or "none")
+        + ". Split this recording by hand.")
 
 
 def find_ffmpeg(explicit):

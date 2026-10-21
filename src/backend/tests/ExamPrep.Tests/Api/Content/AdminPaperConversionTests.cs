@@ -15,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace ExamPrep.Tests.Api.Content;
 
 /// <summary>
-/// An administrator uploads the question paper and answer key PDFs (and the Listening tracks); the server converts
+/// An administrator uploads the question paper and answer key PDFs (no key for B1 Writing; tracks for Listening); the server converts
 /// them and imports the result as a draft. The Python converter is replaced by a fake that writes a sample package.
 /// </summary>
 public sealed class AdminPaperConversionTests(ApiFixture api) : IClassFixture<ApiFixture>
@@ -53,11 +53,15 @@ public sealed class AdminPaperConversionTests(ApiFixture api) : IClassFixture<Ap
         return client;
     }
 
-    private Task<HttpResponseMessage> ConvertAsync(HttpClient client, byte[]? questions = null, params (int Part, string Name)[] audio)
+    private Task<HttpResponseMessage> ConvertAsync(HttpClient client, byte[]? questions = null, bool withKey = true, params (int Part, string Name)[] audio)
     {
         var form = new MultipartFormDataContent { { new StringContent("Converted test paper"), "title" } };
         AddFile(form, "questions", "questions.pdf", questions ?? Pdf, "application/pdf");
-        AddFile(form, "answerKey", "key.pdf", Pdf, "application/pdf");
+        if (withKey)
+        {
+            AddFile(form, "answerKey", "key.pdf", Pdf, "application/pdf");
+        }
+
         foreach (var (part, name) in audio)
         {
             AddFile(form, $"audio{part}", name, Encoding.ASCII.GetBytes($"track {part}"), "audio/mpeg");
@@ -102,6 +106,23 @@ public sealed class AdminPaperConversionTests(ApiFixture api) : IClassFixture<Ap
         Assert.Equal("Converted test paper", converter.Input!.Title);
         Assert.Equal("%PDF-", converter.QuestionsStart);
         Assert.Equal(["part1.mp3", "part3.m4a"], converter.AudioFiles);
+        Assert.EndsWith("answer-key.pdf", converter.Input.AnswerKeyPdf);
+    }
+
+    [Fact]
+    public async Task Convert_RunsWithoutAnAnswerKeyAndLetsTheConverterDecide()
+    {
+        api.SkipIfUnavailable();
+        var converter = new FakeConverter(_ => new PaperConversionReport(["This paper needs its answer key PDF."], []));
+        using var factory = WithConverter(converter);
+        using var client = await AdminClientAsync(factory);
+
+        var response = await ConvertAsync(client, withKey: false);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(converter.Input!.AnswerKeyPdf);
+        var problem = (await response.Content.ReadFromJsonAsync<JsonObject>(ct))!;
+        Assert.Contains("This paper needs its answer key PDF.", problem["errors"]!.AsArray().Select(e => (string)e!));
     }
 
     [Fact]

@@ -207,7 +207,7 @@ export interface PaperConversionResult extends PaperImportSummary {
 export interface PaperConversionUpload {
   title: string
   questions: File
-  answerKey: File
+  answerKey: File | null
   /** Listening: one track per part, index 0 = Part 1; empty slots are left out. */
   audio: (File | null)[]
 }
@@ -541,7 +541,9 @@ export const adminApi = {
     const form = new FormData()
     form.append('title', upload.title)
     form.append('questions', upload.questions)
-    form.append('answerKey', upload.answerKey)
+    if (upload.answerKey) {
+      form.append('answerKey', upload.answerKey)
+    }
     upload.audio.forEach((file, index) => {
       if (file) {
         form.append(`audio${index + 1}`, file)

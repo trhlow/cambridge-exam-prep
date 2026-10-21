@@ -37,3 +37,15 @@ def test_refuses_when_the_count_does_not_match_the_parts():
 def test_refuses_a_recording_without_the_cambridge_pauses():
     with pytest.raises(ValueError, match="found 0 part boundaries.*none"):
         part_boundaries([(10.0, 3.2), (50.0, 4.1)], parts=5)
+
+
+# The pauses of the official B1 Preliminary 2022 sample recording (4 parts; 2134 is the 5-minute transfer time).
+B1_PRELIMINARY = [
+    (28, 5.4), (37, 5.4), (87, 5.4), (126, 5.3), (553, 5.4), (595, 5.4), (608, 10.4), (629, 8.3), (666, 5.4),
+    (1119, 5.5), (1131, 10.4), (1174, 20.9), (1296, 5.4), (1414, 5.3), (1426, 10.4), (1487, 45.4), (1655, 5.4),
+    (1817, 5.4), (1830, 10.3), (2134, 300.3), (2198, 60.3),
+]
+
+
+def test_b1_recordings_end_each_part_with_a_long_pause_except_the_last():
+    assert part_boundaries(B1_PRELIMINARY, parts=4) == pytest.approx([607.0, 1130.0, 1425.0])
