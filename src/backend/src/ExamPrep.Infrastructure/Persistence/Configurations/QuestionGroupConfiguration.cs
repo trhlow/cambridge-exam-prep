@@ -9,6 +9,8 @@ internal sealed class QuestionGroupConfiguration : IEntityTypeConfiguration<Ques
     public void Configure(EntityTypeBuilder<QuestionGroup> builder)
     {
         builder.HasKey(g => g.Id);
+        builder.Property(g => g.ItemsHeading).HasMaxLength(128);
+        builder.Property(g => g.PoolHeading).HasMaxLength(128);
         builder.ToTable(t =>
         {
             t.HasCheckConstraint("CK_question_groups_order", "order_no > 0");

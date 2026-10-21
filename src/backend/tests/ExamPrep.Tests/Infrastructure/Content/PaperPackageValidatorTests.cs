@@ -8,13 +8,17 @@ namespace ExamPrep.Tests.Infrastructure.Content;
 /// <summary>VE-5: a wrong package is rejected with every problem listed, in words an exam administrator understands.</summary>
 public sealed class PaperPackageValidatorTests
 {
-    private static SectionTemplate Template(int id) => SeedData.SectionTemplates.Single(t => t.Id == id);
+    private static SectionTemplate Template(JsonObject paper)
+    {
+        var examType = SeedData.ExamTypes.Single(t => t.Code == (string)paper["examType"]!);
+        return SeedData.SectionTemplates.Single(t => t.ExamTypeId == examType.Id && t.OrderNo == (int)paper["section"]!);
+    }
 
     private static IReadOnlyList<string> Validate(JsonObject paper, IEnumerable<string>? omit = null, IReadOnlyDictionary<string, byte[]>? extraFiles = null)
     {
         var read = PaperPackageReader.Read(new MemoryStream(SamplePackages.Zip(paper, omit, extraFiles)));
         Assert.Empty(read.Errors);
-        return PaperPackageValidator.Validate(read.Package!, Template((int)paper["section"]!));
+        return PaperPackageValidator.Validate(read.Package!, Template(paper));
     }
 
     private static JsonObject ReadingWriting() => SamplePackages.Load(SamplePackages.ReadingWriting);
@@ -24,6 +28,7 @@ public sealed class PaperPackageValidatorTests
     [Theory]
     [InlineData(SamplePackages.ReadingWriting)]
     [InlineData(SamplePackages.Listening)]
+    [InlineData(SamplePackages.B1Reading)]
     public void Validate_AcceptsSamplePackages(string name)
     {
         var errors = Validate(SamplePackages.Load(name));
@@ -216,5 +221,40 @@ public sealed class PaperPackageValidatorTests
         var errors = Validate(paper, omit: ["images/rw-p7-2.png"]);
 
         Assert.Equal(3, errors.Count);
+    }
+
+    [Fact]
+    public void Validate_DragAndDropIntoAText_NeedsEveryGap_ButNoLabels()
+    {
+        // B1 Reading Part 4: sentences are dragged into gaps of the text, so the questions have no labels.
+        var paper = SamplePackages.Load(SamplePackages.B1Reading);
+        var group = paper["parts"]![3]!["groups"]![0]!.AsObject();
+        group["bodyHtml"] = ((string)group["bodyHtml"]!).Replace("{{q:18}}", string.Empty);
+
+        var errors = Validate(paper);
+
+        Assert.Equal(["Part 4: gap {{q:18}} is missing from the text."], errors);
+    }
+
+    [Fact]
+    public void Validate_DragAndDropRowsWithoutAText_StillNeedLabels()
+    {
+        var paper = SamplePackages.Load(SamplePackages.B1Reading);
+        SamplePackages.Question(paper, 7).Remove("promptHtml");
+
+        var errors = Validate(paper);
+
+        Assert.Contains(errors, e => e.Contains("question 7") && e.Contains("need a label"));
+    }
+
+    [Fact]
+    public void Validate_RefusesOverlongColumnHeadings()
+    {
+        var paper = SamplePackages.Load(SamplePackages.B1Reading);
+        paper["parts"]![1]!["groups"]![0]!["poolHeading"] = new string('x', 129);
+
+        var errors = Validate(paper);
+
+        Assert.Contains(errors, e => e.Contains("poolHeading can be at most 128 characters"));
     }
 }

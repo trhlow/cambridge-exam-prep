@@ -190,6 +190,8 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Safe Exam Browser (kiểm tra Config Key trên mọi yêu cầu của thí sinh), cột cảnh báo cho giám thị (không dùng SEB, mất kết nối, đồng hồ máy lệch, làm trước khi giám thị báo bắt đầu); viết cả đề A2 trên web (đề trắng theo khung A2) và sửa đề nháp; đổi tên và logo trung tâm — 291 test backend, 88 test frontend
 - [x] Trộn đề (Victory 20/10): đề gốc thứ hai A2 Key (công cụ `split_listening.py` tách file nghe theo part), `POST /api/admin/paper-mixes` sinh 4 đề từ 2 đề gốc theo từng part, phần thi chia đề theo số máy (khối 2×2), lượt làm bài giữ đề khi đổi máy — 350 test backend, 60 test bộ chuyển đề
 - [x] Giao diện trộn đề trên cổng nhân viên (VE-67): Papers → "Mix two papers" và bảng đề trộn; form kỳ thi chọn bộ trộn cho từng phần thi và số máy mỗi hàng; sơ đồ phòng in được kèm mã đề; cột mã đề ở danh sách thí sinh, trang giám thị, bảng kết quả (cả file CSV) và trang chấm — 353 test backend, 91 test frontend
+- [x] B1 Preliminary for Schools: khảo sát bài thi mẫu trên Inspera (`thesis/refs/inspera-ui-b1.md`); Reading đủ 6 part, thêm hai dạng kéo thả của B1 (ghép người với thẻ văn bản dài, kéo câu vào ô trống trong bài), đề mẫu B1 Reading tự soạn
+- [ ] B1 Writing (chọn 1 trong 2 câu) và B1 Listening
 - [ ] Triển khai HTTPS cho phòng thi thật
 - [x] Test đầu-cuối Playwright (`npm run e2e`, stack Docker riêng cổng 8090): thí sinh đăng nhập + PIN + làm bài + tải lại trang; giám thị tạm dừng/cho làm tiếp và máy thí sinh nhận ngay; quản trị viên tạo đề trắng, gửi yêu cầu xoá, admin khác duyệt; giám thị End now → chấm tự động → giám khảo chấm Writing → điểm Final (chạy lại thì `down -v` stack trước)
 - [ ] Kiểm thử tải, buổi thi thử

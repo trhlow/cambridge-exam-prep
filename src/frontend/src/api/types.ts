@@ -34,6 +34,8 @@ export interface Option {
   key: string
   text: string | null
   imageUrl: string | null
+  /** A long card's heading, in bold before its text (B1 Reading Part 2). */
+  title?: string | null
 }
 
 export interface Question {
@@ -53,6 +55,9 @@ export interface QuestionGroup {
   allowOptionReuse: boolean
   maxWordsPerAnswer: number | null
   questions: Question[]
+  /** DragDropMatch: headings over the questions and over the cards (B1 Reading Part 2). */
+  itemsHeading?: string | null
+  poolHeading?: string | null
 }
 
 export interface Part {

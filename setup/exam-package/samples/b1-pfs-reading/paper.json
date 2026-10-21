@@ -1,0 +1,644 @@
+{
+  "formatVersion": 1,
+  "examType": "B1_PRELIM_FS",
+  "section": 1,
+  "title": "B1 Preliminary for Schools – Victory sample test 1 – Reading",
+  "parts": [
+    {
+      "partNo": 1,
+      "groups": [
+        {
+          "interactionType": "SingleChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "questions": [
+            {
+              "number": 1,
+              "stimulusHtml": "<img src='asset:images/b1-r-p1-q1.png' alt='Notice on the gym door'>",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "Students can only use the gym if a teacher is there."
+                },
+                {
+                  "key": "B",
+                  "text": "The gym will close earlier than usual this week."
+                },
+                {
+                  "key": "C",
+                  "text": "Students must book the gym before they use it."
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            },
+            {
+              "number": 2,
+              "stimulusHtml": "<img src='asset:images/b1-r-p1-q2.png' alt='Message from Ella'>",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "Ella wants Sam to bring a game to the party."
+                },
+                {
+                  "key": "B",
+                  "text": "Ella is asking Sam to help her get ready for the party."
+                },
+                {
+                  "key": "C",
+                  "text": "Ella is telling Sam that the party will start later."
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 3,
+              "stimulusHtml": "<img src='asset:images/b1-r-p1-q3.png' alt='School trip notice'>",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "The trip will cost more than students expected."
+                },
+                {
+                  "key": "B",
+                  "text": "Students who want to go must give in a form soon."
+                },
+                {
+                  "key": "C",
+                  "text": "Places on the trip are only for older students."
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 4,
+              "stimulusHtml": "<img src='asset:images/b1-r-p1-q4.png' alt='Bike shop sign'>",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "Visitors can try the bikes for free on Saturday."
+                },
+                {
+                  "key": "B",
+                  "text": "The shop is selling second-hand bikes this weekend."
+                },
+                {
+                  "key": "C",
+                  "text": "Customers who buy a bike get free repairs for a year."
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            },
+            {
+              "number": 5,
+              "stimulusHtml": "<img src='asset:images/b1-r-p1-q5.png' alt='Message from Jack'>",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "Jack has lost the book he borrowed from Max."
+                },
+                {
+                  "key": "B",
+                  "text": "Jack needs Max's notes before the test."
+                },
+                {
+                  "key": "C",
+                  "text": "Jack wants to study with Max after school."
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 2,
+      "groups": [
+        {
+          "interactionType": "DragDropMatch",
+          "instructions": "The young people below all want to join a club during the summer holidays. On the right there are descriptions of eight clubs. For each question, choose the correct answer.",
+          "itemsHeading": "Young People",
+          "poolHeading": "Summer Clubs",
+          "optionPool": [
+            {
+              "key": "A",
+              "title": "Riverside Rowing",
+              "text": "Never been in a boat? Our coaches teach complete beginners on the calm river every Tuesday and Thursday from 6 pm. All equipment is provided."
+            },
+            {
+              "key": "B",
+              "title": "Stage Nights",
+              "text": "Bands and singers aged 13–17 rehearse together twice a week. At the end of August every group plays a concert in the town square."
+            },
+            {
+              "key": "C",
+              "title": "Art in the Park",
+              "text": "A large drawing class for all ages, every Sunday afternoon. Bring your own materials and draw whatever you like — there is no teacher."
+            },
+            {
+              "key": "D",
+              "title": "Hill Farm Helpers",
+              "text": "Spend your mornings feeding goats, cleaning out the stables and looking after the young animals at our family farm. Volunteers aged 12+ welcome."
+            },
+            {
+              "key": "E",
+              "title": "Small Studio",
+              "text": "Groups of no more than six young artists work with a professional illustrator. Classes are on Saturdays from 9.30 to 12."
+            },
+            {
+              "key": "F",
+              "title": "Film Lab",
+              "text": "Make your own film in a week! We lend cameras, microphones and editing laptops, and the best films are shown at our summer festival."
+            },
+            {
+              "key": "G",
+              "title": "Climbing Wall",
+              "text": "Experienced climbers can join our weekend competitions. You must already know how to use the safety equipment."
+            },
+            {
+              "key": "H",
+              "title": "Pet Care Course",
+              "text": "Learn how to look after cats, dogs and rabbits in a five-day course with a vet. Certificate included. Mornings, Monday to Friday."
+            }
+          ],
+          "questions": [
+            {
+              "number": 6,
+              "stimulusHtml": "<img src='asset:images/b1-r-p2-dina.png' alt='Dina'>",
+              "promptHtml": "<p>Dina is fifteen and loves being outside. She wants to learn a new sport with other beginners, and she can only go on weekday evenings.</p>",
+              "answers": [
+                "A"
+              ]
+            },
+            {
+              "number": 7,
+              "stimulusHtml": "<img src='asset:images/b1-r-p2-omar.png' alt='Omar'>",
+              "promptHtml": "<p>Omar plays the guitar well and would like to perform with other young musicians. He hopes to play in front of an audience before the summer ends.</p>",
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 8,
+              "stimulusHtml": "<img src='asset:images/b1-r-p2-lena.png' alt='Lena'>",
+              "promptHtml": "<p>Lena enjoys drawing and wants to improve. She would prefer a small group with a teacher who can help her, and she is free on Saturday mornings.</p>",
+              "answers": [
+                "E"
+              ]
+            },
+            {
+              "number": 9,
+              "stimulusHtml": "<img src='asset:images/b1-r-p2-tom.png' alt='Tom'>",
+              "promptHtml": "<p>Tom wants to help other people during the holidays. He is interested in animals and does not mind getting his hands dirty.</p>",
+              "answers": [
+                "D"
+              ]
+            },
+            {
+              "number": 10,
+              "stimulusHtml": "<img src='asset:images/b1-r-p2-maya.png' alt='Maya'>",
+              "promptHtml": "<p>Maya is fourteen and wants to make short films with friends. She has her own phone but no other equipment.</p>",
+              "answers": [
+                "F"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 3,
+      "layout": "Split",
+      "title": "My year as a young reporter",
+      "stimulusHtml": "<p><em>Fifteen-year-old Nadia Reyes writes about working for her town's newspaper.</em></p>\n<p>When our English teacher told us that the local newspaper wanted a teenager to write a weekly column, I nearly didn't apply. I had written stories for fun since I was small, but I had never shown them to anyone except my grandmother. In the end my best friend filled in the form with me, mostly so that I would stop talking about it.</p>\n<p>My first article was about the new bus timetable, which I thought was a boring subject. The editor, Mr Patel, didn't change a single word, but he told me that the best articles answer the questions readers actually ask. So for my second article I stood at the bus station for an hour and asked people what they thought. I learnt more in that hour than in a week of reading about it online.</p>\n<p>Not everything went well. In March I wrote about the school canteen and some parents were angry because they thought I had been unfair to the cooks. I was upset at first, but Mr Patel helped me write a reply, and the next week I interviewed the head cook. That article got more letters than anything I had written before — almost all of them kind.</p>\n<p>Now I spend about four hours a week on the column. It isn't always easy to fit it in with homework, and my friends sometimes complain that I'm always asking them questions! But I've discovered that I'm good at listening, and I've started to think that journalism could be a real job for me one day.</p>",
+      "groups": [
+        {
+          "interactionType": "SingleChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "questions": [
+            {
+              "number": 11,
+              "promptHtml": "Nadia almost didn't apply for the job because",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "she was worried she would not have enough time."
+                },
+                {
+                  "key": "B",
+                  "text": "she did not feel confident about her writing."
+                },
+                {
+                  "key": "C",
+                  "text": "her teacher thought she was too young."
+                },
+                {
+                  "key": "D",
+                  "text": "her friend wanted the job too."
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 12,
+              "promptHtml": "What does Nadia say about her first article?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "was the most interesting subject she could think of."
+                },
+                {
+                  "key": "B",
+                  "text": "needed a lot of changes before it was printed."
+                },
+                {
+                  "key": "C",
+                  "text": "taught her how to find out what readers want to know."
+                },
+                {
+                  "key": "D",
+                  "text": "was written after she spoke to people at the bus station."
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            },
+            {
+              "number": 13,
+              "promptHtml": "What did Nadia do after some parents complained?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "She stopped writing about school."
+                },
+                {
+                  "key": "B",
+                  "text": "She apologised to the cooks."
+                },
+                {
+                  "key": "C",
+                  "text": "She asked her editor to write the reply."
+                },
+                {
+                  "key": "D",
+                  "text": "She wrote another article about the canteen."
+                }
+              ],
+              "answers": [
+                "D"
+              ]
+            },
+            {
+              "number": 14,
+              "promptHtml": "Nadia says that now she",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "has less time for her friends."
+                },
+                {
+                  "key": "B",
+                  "text": "has had to stop some of her other hobbies."
+                },
+                {
+                  "key": "C",
+                  "text": "has become better at listening to people."
+                },
+                {
+                  "key": "D",
+                  "text": "wants to stop writing the column next year."
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            },
+            {
+              "number": 15,
+              "promptHtml": "What would be the best description of Nadia?",
+              "options": [
+                {
+                  "key": "A",
+                  "text": "A teenager who had always wanted to work for a newspaper"
+                },
+                {
+                  "key": "B",
+                  "text": "A writer who is not sure she enjoys her job"
+                },
+                {
+                  "key": "C",
+                  "text": "A student who has discovered something new about herself"
+                },
+                {
+                  "key": "D",
+                  "text": "A young journalist who prefers interviewing to writing"
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 4,
+      "title": "Learning to cook",
+      "groups": [
+        {
+          "interactionType": "DragDropMatch",
+          "instructions": "Five sentences have been removed from the text below. For each question, choose the correct answer. There are three extra sentences which you do not need to use.",
+          "bodyHtml": "<p><em>by Leo Brandt, aged 14</em></p>\n<p>Last winter I decided that I wanted to learn to cook. {{q:16}} Until then I had only ever made toast!</p>\n<p>At first I watched lots of videos online. {{q:17}} The recipes used ingredients I had never heard of, and the cooks did everything so fast that I couldn't follow them.</p>\n<p>{{q:18}} He has been cooking for sixty years, so he seemed like the perfect teacher. He showed me how to make a simple vegetable soup, and the first time I made it on my own I was really proud. {{q:19}}</p>\n<p>Not every meal has been a success. I once burnt a cake so badly that the kitchen was full of smoke. {{q:20}} Now my cakes are almost as good as my grandfather's!</p>",
+          "optionPool": [
+            {
+              "key": "A",
+              "text": "So I decided to ask my grandfather to teach me instead."
+            },
+            {
+              "key": "B",
+              "text": "It tasted much better than anything I had made before."
+            },
+            {
+              "key": "C",
+              "text": "My parents were surprised, because I had never shown any interest in it."
+            },
+            {
+              "key": "D",
+              "text": "That's why I always write down exactly what I do."
+            },
+            {
+              "key": "E",
+              "text": "The second time, I remembered to turn the oven down."
+            },
+            {
+              "key": "F",
+              "text": "Most of them were too difficult for a beginner like me."
+            },
+            {
+              "key": "G",
+              "text": "I also found out that shopping is part of the fun."
+            },
+            {
+              "key": "H",
+              "text": "The weather that weekend was perfect for a picnic."
+            }
+          ],
+          "questions": [
+            {
+              "number": 16,
+              "answers": [
+                "C"
+              ]
+            },
+            {
+              "number": 17,
+              "answers": [
+                "F"
+              ]
+            },
+            {
+              "number": 18,
+              "answers": [
+                "A"
+              ]
+            },
+            {
+              "number": 19,
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 20,
+              "answers": [
+                "E"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 5,
+      "title": "A week in the forest",
+      "groups": [
+        {
+          "interactionType": "InlineChoice",
+          "instructions": "For each question, choose the correct answer.",
+          "bodyHtml": "<p>Every summer, thousands of young people {{q:21}} a week in the forest at Camp Green Lake. The camp was {{q:22}} up fifty years ago by a group of teachers who wanted children to learn outside the classroom.</p>\n<p>Campers sleep in wooden huts and {{q:23}} part in activities such as canoeing, map reading and building shelters. Mobile phones are not {{q:24}}, which some campers find difficult at first.</p>\n<p>\"By the end of the week, most of them don't {{q:25}} their phones at all,\" says camp leader Rosa Diaz. \"They're too {{q:26}} making new friends.\"</p>",
+          "questions": [
+            {
+              "number": 21,
+              "options": [
+                {
+                  "key": "A",
+                  "text": "spend"
+                },
+                {
+                  "key": "B",
+                  "text": "pass"
+                },
+                {
+                  "key": "C",
+                  "text": "use"
+                },
+                {
+                  "key": "D",
+                  "text": "take"
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            },
+            {
+              "number": 22,
+              "options": [
+                {
+                  "key": "A",
+                  "text": "set"
+                },
+                {
+                  "key": "B",
+                  "text": "put"
+                },
+                {
+                  "key": "C",
+                  "text": "made"
+                },
+                {
+                  "key": "D",
+                  "text": "got"
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            },
+            {
+              "number": 23,
+              "options": [
+                {
+                  "key": "A",
+                  "text": "take"
+                },
+                {
+                  "key": "B",
+                  "text": "make"
+                },
+                {
+                  "key": "C",
+                  "text": "have"
+                },
+                {
+                  "key": "D",
+                  "text": "do"
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            },
+            {
+              "number": 24,
+              "options": [
+                {
+                  "key": "A",
+                  "text": "let"
+                },
+                {
+                  "key": "B",
+                  "text": "allowed"
+                },
+                {
+                  "key": "C",
+                  "text": "agreed"
+                },
+                {
+                  "key": "D",
+                  "text": "admitted"
+                }
+              ],
+              "answers": [
+                "B"
+              ]
+            },
+            {
+              "number": 25,
+              "options": [
+                {
+                  "key": "A",
+                  "text": "lose"
+                },
+                {
+                  "key": "B",
+                  "text": "forget"
+                },
+                {
+                  "key": "C",
+                  "text": "miss"
+                },
+                {
+                  "key": "D",
+                  "text": "leave"
+                }
+              ],
+              "answers": [
+                "C"
+              ]
+            },
+            {
+              "number": 26,
+              "options": [
+                {
+                  "key": "A",
+                  "text": "busy"
+                },
+                {
+                  "key": "B",
+                  "text": "full"
+                },
+                {
+                  "key": "C",
+                  "text": "tired"
+                },
+                {
+                  "key": "D",
+                  "text": "active"
+                }
+              ],
+              "answers": [
+                "A"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "partNo": 6,
+      "title": "Our clean park",
+      "groups": [
+        {
+          "interactionType": "InlineText",
+          "instructions": "For each question, write the correct answer. Write one word for each gap.",
+          "bodyHtml": "<p><em>by Sofia Marin</em></p>\n<p>Last term our class decided to do something about the rubbish in {{q:27}} local park. Every Saturday morning about twenty of us met at the gate {{q:28}} spent two hours collecting plastic bottles, paper and cans.</p>\n<p>At first some people laughed at us, but soon other families {{q:29}} joining in. The town council was so pleased that it gave us money to buy new bins. Now the park is one {{q:30}} the cleanest places in town.</p>\n<p>We learnt that you don't have to be an adult to change things. If you see a problem, don't wait {{q:31}} somebody else to fix it — do it {{q:32}}!</p>",
+          "maxWordsPerAnswer": 1,
+          "questions": [
+            {
+              "number": 27,
+              "answers": [
+                "our",
+                "the"
+              ]
+            },
+            {
+              "number": 28,
+              "answers": [
+                "and"
+              ]
+            },
+            {
+              "number": 29,
+              "answers": [
+                "started",
+                "began"
+              ]
+            },
+            {
+              "number": 30,
+              "answers": [
+                "of"
+              ]
+            },
+            {
+              "number": 31,
+              "answers": [
+                "for"
+              ]
+            },
+            {
+              "number": 32,
+              "answers": [
+                "yourself"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

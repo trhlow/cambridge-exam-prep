@@ -19,17 +19,20 @@ public sealed record CandidateGroup(
     IReadOnlyList<CandidateOption>? OptionPool,
     bool AllowOptionReuse,
     int? MaxWordsPerAnswer,
-    IReadOnlyList<CandidateQuestion> Questions);
+    IReadOnlyList<CandidateQuestion> Questions,
+    string? ItemsHeading = null,
+    string? PoolHeading = null);
 
 public sealed record CandidateQuestion(int Id, int Number, string? PromptHtml, string? StimulusHtml, IReadOnlyList<CandidateOption>? Options, int? MinWords);
 
-public sealed record CandidateOption(string Key, string? Text, string? ImageUrl);
+/// <param name="Title">A card's heading, shown in bold before its text.</param>
+public sealed record CandidateOption(string Key, string? Text, string? ImageUrl, string? Title = null);
 
 internal static class CandidatePaperMapper
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    private sealed record StoredOption(string Key, string? Text, int? ImageAssetId);
+    private sealed record StoredOption(string Key, string? Text, int? ImageAssetId, string? Title = null);
 
     public static CandidatePaper From(ExamSection section, TestPaper paper) => new(
         section.Id,
@@ -49,7 +52,9 @@ internal static class CandidatePaperMapper
                 group.AllowOptionReuse,
                 group.MaxWordsPerAnswer,
                 group.Questions.OrderBy(q => q.OrderNo).Select(q => new CandidateQuestion(
-                    q.Id, q.Number, q.PromptHtml, q.StimulusHtml, Options(q.OptionsJson), q.MinWords)).ToList())).ToList()))
+                    q.Id, q.Number, q.PromptHtml, q.StimulusHtml, Options(q.OptionsJson), q.MinWords)).ToList(),
+                group.ItemsHeading,
+                group.PoolHeading)).ToList()))
             .ToList());
 
     public static string AssetUrl(int assetId) => $"{PaperPackageImporter.AssetUrlPrefix}{assetId}";
@@ -58,6 +63,6 @@ internal static class CandidatePaperMapper
         json is null
             ? null
             : JsonSerializer.Deserialize<List<StoredOption>>(json, Json)!
-                .Select(o => new CandidateOption(o.Key, o.Text, o.ImageAssetId is { } id ? AssetUrl(id) : null))
+                .Select(o => new CandidateOption(o.Key, o.Text, o.ImageAssetId is { } id ? AssetUrl(id) : null, o.Title))
                 .ToList();
 }
