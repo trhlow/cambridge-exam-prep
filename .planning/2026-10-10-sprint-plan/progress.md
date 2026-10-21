@@ -205,3 +205,11 @@
 - Toàn bộ: backend 350/350, bộ chuyển 60/60; Docker build lại, thí sinh demo nhận đề trộn (Part 2 từ A2 for Schools, Part 3 từ A2 Key)
 - VE-27: `progress-report/BaoCaoTienDo_Tuan03_TranHoangLong.docx` (26/10–01/11, ký 01/11). Dòng tuần 3 trên Google Sheet để trống: người dùng chỉ điền Sheet khi đến đúng ngày báo cáo (đã điền thử rồi xoá lại 21/10)
 - Còn lưu ý: form kỳ thi trên web chưa gửi `paperMixId`/`seatsPerRow` → VE-67; file nghe B1 mẫu không tách tự động được
+
+### Sprint 4 xong sớm (21/10): VE-67, VE-33, VE-34, VE-32
+- VE-67 (b6313e7): trộn đề trên cổng nhân viên, sơ đồ phòng in được, cột mã đề (thí sinh, giám thị, kết quả + CSV, chấm)
+- VE-33 (6e48eb3): `thesis/refs/inspera-ui-b1.md` từ bài mẫu B1 trên ceq.inspera.com (Playwright headless)
+- VE-34 (c35cd51): DragDropMatch 3 bố cục (hàng nhãn, người có ảnh, ô trống trong bài), tiêu đề thẻ/cột, đề mẫu `samples/b1-pfs-reading`
+- VE-32: `progress-report/BaoCaoTienDo_Tuan04_TranHoangLong.docx` (02–08/11, ký 08/11); Google Sheet chưa điền (chờ đúng ngày)
+- Toàn bộ: backend 359/359, frontend 93/93, bộ chuyển 60/60
+- Tiếp theo Sprint 5: VE-35 B1 Writing (chọn 1 trong 2 câu: Yes/No/Undecided), VE-37 B1 Listening (Part 2 mỗi câu một trang), VE-36 báo cáo tuần 5

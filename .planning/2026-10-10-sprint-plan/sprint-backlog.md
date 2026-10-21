@@ -60,11 +60,11 @@ Tổng: 9 story, 40 điểm.
 ### Phase 4: Sprint 4 (02/11 – 08/11) — Kiểm thử đầu-cuối A2; bắt đầu B1 Preliminary for Schools
 Tổng: 5 story, 18 điểm.
 - [x] VE-31 [E11] (5đ) Test đầu-cuối Playwright cho luồng thi A2 và thao tác giám thị chính
-- [ ] VE-33 [E10] (2đ) Khảo sát giao diện bài thi mẫu B1 PfS (Reading, Writing, Listening)
-- [ ] VE-67 [E15] (5đ) Cổng nhân viên cho trộn đề: chọn 2 đề gốc, xem 4 đề trộn, in sơ đồ phòng kèm mã đề; mã đề trên trang giám thị và bảng kết quả
-- [ ] VE-34 [E10] (5đ) Bổ sung kiểu câu còn thiếu cho B1 Reading (6 part)
-- [ ] VE-32 [E12] (1đ) Báo cáo tiến độ tuần 4
-- **Status:** pending
+- [x] VE-33 [E10] (2đ) Khảo sát giao diện bài thi mẫu B1 PfS (Reading, Writing, Listening)
+- [x] VE-67 [E15] (5đ) Cổng nhân viên cho trộn đề: chọn 2 đề gốc, xem 4 đề trộn, in sơ đồ phòng kèm mã đề; mã đề trên trang giám thị và bảng kết quả
+- [x] VE-34 [E10] (5đ) Bổ sung kiểu câu còn thiếu cho B1 Reading (6 part)
+- [x] VE-32 [E12] (1đ) Báo cáo tiến độ tuần 4
+- **Status:** complete
 
 ### Phase 5: Sprint 5 (09/11 – 15/11) — B1 Preliminary for Schools: Writing và Listening — tuần gặp GV 2
 Tổng: 3 story, 7 điểm.
