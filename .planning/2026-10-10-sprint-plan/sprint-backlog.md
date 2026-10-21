@@ -76,11 +76,11 @@ Tổng: 4 story, 15 điểm.
 
 ### Phase 6: Sprint 6 (16/11 – 22/11) — Kỳ thi B1 chạy đầu-cuối, sửa lỗi tồn đọng A2/B1
 Tổng: 4 story, 10 điểm.
-- [ ] VE-38 [E10] (3đ) Kỳ thi B1 3 phần thi chạy đầu-cuối, chấm tự động
-- [ ] VE-68 [E15] (3đ) Trộn đề B1 (Reading, Writing, Listening) từ hai đề gốc B1 Preliminary 2022 và B1 Preliminary for Schools
-- [ ] VE-39 [E11] (3đ) Sửa lỗi tồn đọng A2/B1
-- [ ] VE-40 [E12] (1đ) Báo cáo tiến độ tuần 6
-- **Status:** pending
+- [x] VE-38 [E10] (3đ) Kỳ thi B1 3 phần thi chạy đầu-cuối, chấm tự động
+- [x] VE-68 [E15] (3đ) Trộn đề B1 (Reading, Writing, Listening) từ hai đề gốc B1 Preliminary 2022 và B1 Preliminary for Schools
+- [x] VE-39 [E11] (3đ) Sửa lỗi tồn đọng A2/B1
+- [x] VE-40 [E12] (1đ) Báo cáo tiến độ tuần 6
+- **Status:** complete
 
 ### Phase 7: Sprint 7 (23/11 – 29/11) — Kiểm thử tải và buổi thi thử
 Tổng: 4 story, 12 điểm.
