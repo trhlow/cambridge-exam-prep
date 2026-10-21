@@ -10,3 +10,10 @@ services:
       Demo__ListeningFolder: ""
       Demo__SecondReadingWritingFolder: ""
       Demo__SecondListeningFolder: ""
+      # The B1 exam uses the self-written B1 samples, each mixed with itself, so seats still get versions 1–4.
+      Demo__B1__Reading__Folder: ""
+      Demo__B1__Reading__SecondFolder: /demo/samples/b1-pfs-reading
+      Demo__B1__Writing__Folder: ""
+      Demo__B1__Writing__SecondFolder: /demo/samples/b1-pfs-writing
+      Demo__B1__Listening__Folder: ""
+      Demo__B1__Listening__SecondFolder: /demo/samples/b1-pfs-listening
