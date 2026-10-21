@@ -17,7 +17,9 @@ public sealed record SectionResult(int SectionId, string Title, string Status, s
 public sealed record CandidateResult(int CandidateId, string CandidateNumber, string FullName, IReadOnlyList<SectionResult> Sections);
 
 /// <param name="Comment">Writing: the teacher's comment with the mark.</param>
-public sealed record QuestionMark(int Number, int PartNo, string InteractionType, string? Response, IReadOnlyList<string> AcceptedAnswers, bool? IsCorrect, decimal? Score, decimal Points, string? Comment);
+/// <param name="Selection">Where the candidate chooses which questions to answer: Yes, No or Undecided; null elsewhere.</param>
+/// <param name="Counts">False for a question the candidate did not choose: it is not marked.</param>
+public sealed record QuestionMark(int Number, int PartNo, string InteractionType, string? Response, IReadOnlyList<string> AcceptedAnswers, bool? IsCorrect, decimal? Score, decimal Points, string? Comment, string? Selection = null, bool Counts = true);
 
 /// <param name="PaperTitle">The paper the candidate sat: with mixed papers, the version of their seat (VE-67).</param>
 public sealed record AttemptMarking(int AttemptId, string SectionTitle, string GradingStatus, decimal? RawScore, decimal? MaxScore, IReadOnlyList<QuestionMark> Questions, string? PaperTitle = null, int? PaperVersion = null);
@@ -131,6 +133,7 @@ public static class WritingMarks
             .Where(r => r.AttemptId == attemptId)
             .ToDictionaryAsync(r => r.QuestionId, cancellationToken);
 
+        var counted = Counted(questions, responses);
         var marks = questions.Select(q =>
         {
             var type = q.QuestionGroup!.InteractionType;
@@ -138,11 +141,27 @@ public static class WritingMarks
             var manual = response?.ManualMarks.OrderByDescending(m => m.MarkedAt).FirstOrDefault();
             bool? isCorrect = AnswerMatcher.CanAutoMark(type) ? AnswerMatcher.IsCorrect(type, response?.Value, q.AnswerKeys.ToList()) : null;
             decimal? score = isCorrect is null ? manual?.Score : isCorrect.Value ? q.Points : 0;
-            return new QuestionMark(q.Number, q.QuestionGroup.PaperPart!.PartNo, type.ToString(), response?.Value, q.AnswerKeys.Select(k => k.Value).ToList(), isCorrect, score, q.Points, manual?.Comment);
+            var selection = q.QuestionGroup.ChooseCount is null ? null : (response?.Selection ?? QuestionSelection.Undecided).ToString();
+            return new QuestionMark(q.Number, q.QuestionGroup.PaperPart!.PartNo, type.ToString(), response?.Value, q.AnswerKeys.Select(k => k.Value).ToList(), isCorrect, score, q.Points, manual?.Comment, selection, counted.Contains(q.Id));
         }).ToList();
 
         return new AttemptMarking(attempt.Id, attempt.ExamSection!.SectionTemplate!.Title, attempt.GradingStatus.ToString(), attempt.RawScore, attempt.MaxScore, marks, attempt.TestPaper!.Title, attempt.TestPaper.MixVersion);
     }
+
+    /// <summary>
+    /// The ids of the questions that are marked: all of them, except in a group where the candidate answers only some
+    /// (B1 Writing Part 2), where <see cref="ChosenQuestions"/> decides. Needs each question's group loaded.
+    /// </summary>
+    private static HashSet<int> Counted(IReadOnlyCollection<Question> questions, IReadOnlyDictionary<int, Response> responses) =>
+        questions.GroupBy(q => q.QuestionGroupId).SelectMany(group =>
+        {
+            var numbers = ChosenQuestions.Counted(group.First().QuestionGroup!.ChooseCount, group.Select(q =>
+            {
+                var response = responses.GetValueOrDefault(q.Id);
+                return new ChosenQuestions.Answer(q.Number, response?.Selection ?? QuestionSelection.Undecided, !string.IsNullOrWhiteSpace(response?.Value));
+            }));
+            return group.Where(q => numbers.Contains(q.Number)).Select(q => q.Id);
+        }).ToHashSet();
 
     /// <summary>
     /// Records (or replaces) the mark of one Writing question and recomputes the attempt's score. Returns the status
@@ -162,11 +181,21 @@ public static class WritingMarks
         }
 
         var essays = await db.Questions
+            .Include(q => q.QuestionGroup)
             .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.TestPaperId && q.QuestionGroup.InteractionType == InteractionType.Essay)
             .ToDictionaryAsync(q => q.Number, cancellationToken);
         if (!essays.TryGetValue(request.QuestionNumber, out var question))
         {
             return (StatusCodes.Status400BadRequest, $"Question {request.QuestionNumber} is not a Writing question of this paper.");
+        }
+
+        var essayResponses = await db.Responses.AsNoTracking()
+            .Where(r => r.AttemptId == attemptId && r.Question!.QuestionGroup!.InteractionType == InteractionType.Essay)
+            .ToDictionaryAsync(r => r.QuestionId, cancellationToken);
+        var counted = Counted(essays.Values, essayResponses);
+        if (!counted.Contains(question.Id))
+        {
+            return (StatusCodes.Status400BadRequest, $"The candidate did not choose question {request.QuestionNumber}, so it is not marked.");
         }
 
         if (request.Score < 0 || request.Score > question.Points)
@@ -194,12 +223,12 @@ public static class WritingMarks
         });
         await db.SaveChangesAsync(cancellationToken);
 
-        await RecomputeAsync(db, attempt, essays.Values.Select(q => q.Id).ToList(), cancellationToken);
+        await RecomputeAsync(db, attempt, counted.ToList(), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         return (StatusCodes.Status200OK, null);
     }
 
-    /// <summary>Automatic marks plus Writing marks; Final once every Writing question has a mark.</summary>
+    /// <summary>Automatic marks plus the marks of the Writing questions that count; Final once each of them has a mark.</summary>
     private static async Task RecomputeAsync(ExamPrepDbContext db, Attempt attempt, List<int> essayIds, CancellationToken cancellationToken)
     {
         var responses = await db.Responses.AsNoTracking().Include(r => r.ManualMarks).Where(r => r.AttemptId == attempt.Id).ToListAsync(cancellationToken);

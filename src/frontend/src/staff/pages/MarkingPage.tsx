@@ -18,7 +18,10 @@ export function MarkingPage({ examId, attemptId }: { examId: number; attemptId: 
     return error ? <ErrorBox error={error} /> : <p className="st-empty">Loading…</p>
   }
 
-  const writing = marking.questions.filter((q) => q.interactionType === 'Essay')
+  // VE-35: a question the candidate did not choose (B1 Writing Part 2) is shown but not marked.
+  const essays = marking.questions.filter((q) => q.interactionType === 'Essay')
+  const writing = essays.filter((q) => q.counts !== false)
+  const notChosen = essays.filter((q) => q.counts === false)
   const automatic = marking.questions.filter((q) => q.interactionType !== 'Essay')
 
   return (
@@ -51,6 +54,18 @@ export function MarkingPage({ examId, attemptId }: { examId: number; attemptId: 
 
       {writing.map((question) => (
         <WritingMark key={question.number} attemptId={attemptId} question={question} onSaved={setData} />
+      ))}
+
+      {notChosen.map((question) => (
+        <section key={question.number} className="st-panel st-card st-writing">
+          <div className="st-panel-head">
+            <h2 className="st-h2">
+              Question {question.number} · Part {question.partNo}
+            </h2>
+            <span className="st-faint">Not chosen by the candidate ({question.selection}) — not marked</span>
+          </div>
+          {question.response && <div className="st-essay">{question.response}</div>}
+        </section>
       ))}
 
       {automatic.length > 0 && (
@@ -107,7 +122,10 @@ function WritingMark({ attemptId, question, onSaved }: { attemptId: number; ques
         <h2 className="st-h2">
           Question {question.number} · Part {question.partNo}
         </h2>
-        <span className="st-faint">{question.response ? `${countWords(question.response)} words` : 'nothing written'}</span>
+        <span className="st-faint">
+          {question.selection && <>{question.selection === 'Yes' ? 'Chosen by the candidate' : 'Left undecided, marked because it was written'} · </>}
+          {question.response ? `${countWords(question.response)} words` : 'nothing written'}
+        </span>
       </div>
       <div className="st-essay">{question.response || <span className="st-faint">The candidate wrote nothing.</span>}</div>
       <form className="st-mark-form" onSubmit={submit}>

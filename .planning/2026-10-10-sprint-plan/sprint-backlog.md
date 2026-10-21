@@ -69,7 +69,7 @@ Tổng: 5 story, 18 điểm.
 ### Phase 5: Sprint 5 (09/11 – 15/11) — B1 Preliminary for Schools: Writing và Listening — tuần gặp GV 2
 Tổng: 4 story, 15 điểm.
 - [x] VE-69 [E10] (8đ) Bộ chuyển đề PDF → gói đề cho B1 Preliminary (Reading, Writing, Listening) và nhập đề B1 trên cổng nhân viên
-- [ ] VE-35 [E10] (3đ) B1 Writing: Part 1 email, Part 2 chọn 1 trong 2 đề
+- [x] VE-35 [E10] (3đ) B1 Writing: Part 1 email, Part 2 chọn 1 trong 2 đề
 - [x] VE-37 [E10] (3đ) B1 Listening 4 part
 - [ ] VE-36 [E12] (1đ) Báo cáo tiến độ tuần 5
 - **Status:** pending

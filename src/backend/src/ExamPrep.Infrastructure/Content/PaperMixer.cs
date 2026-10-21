@@ -133,6 +133,7 @@ public sealed class PaperMixer(ExamPrepDbContext db, TimeProvider clock)
             MaxWordsPerAnswer = group.MaxWordsPerAnswer,
             ItemsHeading = group.ItemsHeading,
             PoolHeading = group.PoolHeading,
+            ChooseCount = group.ChooseCount,
             Questions = group.Questions.OrderBy(q => q.OrderNo).Select(question => new Question
             {
                 Number = question.Number,

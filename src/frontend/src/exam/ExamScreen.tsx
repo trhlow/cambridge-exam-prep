@@ -224,6 +224,8 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange }: Pr
             questionNumbers={page.questionNumbers}
             answers={attempt.answers}
             onAnswer={answer}
+            selections={attempt.selections}
+            onSelect={attempt.setSelection}
             flagged={flagged}
             onToggleFlag={toggleFlag}
           />

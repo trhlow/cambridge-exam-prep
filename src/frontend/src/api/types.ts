@@ -58,6 +58,8 @@ export interface QuestionGroup {
   /** DragDropMatch: headings over the questions and over the cards (B1 Reading Part 2). */
   itemsHeading?: string | null
   poolHeading?: string | null
+  /** Essay: the candidate answers only this many of the questions (B1 Writing Part 2: 1). */
+  chooseCount?: number | null
 }
 
 export interface Part {
@@ -81,6 +83,12 @@ export interface Paper {
 /** The candidate's answer per question number: an option key, a typed word or a piece of writing. */
 export type Answers = Record<number, string>
 
+/** VE-35: "Answering this question?" where the candidate chooses which questions to answer. */
+export type Selection = 'Yes' | 'No' | 'Undecided'
+
+/** Choices other than Undecided, by question number. */
+export type Selections = Record<number, Selection>
+
 /** The server's view of the candidate's section: its clock and every saved answer. */
 export interface AttemptState {
   sectionId: number
@@ -93,6 +101,8 @@ export interface AttemptState {
   audioPositionMs: number | null
   /** From the invigilator, to the whole room or to this candidate; oldest first. */
   messages: CandidateMessage[]
+  /** "Answering this question?" choices other than Undecided (B1 Writing Part 2). */
+  selections?: Selections
 }
 
 export interface CandidateMessage {

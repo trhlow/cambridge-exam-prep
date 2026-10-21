@@ -193,7 +193,7 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] B1 Preliminary for Schools: khảo sát bài thi mẫu trên Inspera (`thesis/refs/inspera-ui-b1.md`); Reading đủ 6 part, thêm hai dạng kéo thả của B1 (ghép người với thẻ văn bản dài, kéo câu vào ô trống trong bài), đề mẫu B1 Reading tự soạn
 - [x] Bộ chuyển đề PDF → gói đề cho B1 Preliminary (Reading, Writing, Listening; đáp án có từ tuỳ chọn), tách file nghe B1 theo part, "Import from PDF" nhận đề B1 — 69 test Python
 - [x] B1 Listening 4 part: Part 2 mỗi câu một trang (cờ `questionPerPage` trên part), đề mẫu tự soạn có audio đọc máy
-- [ ] B1 Writing (chọn 1 trong 2 câu)
+- [x] B1 Writing: Part 2 chọn 1 trong 2 câu ("Answering this question? Yes/No/Undecided"), giám khảo chỉ chấm câu được chọn, đề mẫu tự soạn
 - [ ] Triển khai HTTPS cho phòng thi thật
 - [x] Test đầu-cuối Playwright (`npm run e2e`, stack Docker riêng cổng 8090): thí sinh đăng nhập + PIN + làm bài + tải lại trang; giám thị tạm dừng/cho làm tiếp và máy thí sinh nhận ngay; quản trị viên tạo đề trắng, gửi yêu cầu xoá, admin khác duyệt; giám thị End now → chấm tự động → giám khảo chấm Writing → điểm Final (chạy lại thì `down -v` stack trước)
 - [ ] Kiểm thử tải, buổi thi thử
