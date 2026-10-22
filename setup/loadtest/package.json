@@ -1,0 +1,12 @@
+{
+  "name": "victory-exam-loadtest",
+  "private": true,
+  "type": "module",
+  "description": "VE-41: load test of the exam room — many candidates answering at once while an invigilator watches.",
+  "scripts": {
+    "loadtest": "node loadtest.mjs"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "8.0.7"
+  }
+}

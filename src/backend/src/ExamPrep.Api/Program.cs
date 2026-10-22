@@ -10,6 +10,11 @@ using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
+// MySql.Data's async database calls block a thread each. Without spare threads a busy exam room (every candidate's
+// heartbeat every 5 s) waits for the thread pool to grow, holding database connections meanwhile (VE-41 load test).
+ThreadPool.GetMinThreads(out var minWorkers, out var minIo);
+ThreadPool.SetMinThreads(Math.Max(minWorkers, 200), Math.Max(minIo, 200));
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration, Path.Combine(builder.Environment.ContentRootPath, "App_Data", "assets"));
@@ -34,7 +39,8 @@ builder.Services.AddDataProtection()
         : Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, keysPath))));
 builder.Services.AddSignalR(options =>
 {
-    // VE-13: a candidate whose network drops is seen offline within seconds, not after the default 30 s.
+    // VE-13: a candidate whose network drops is seen offline within seconds, not after the default 30 s. Clients
+    // must ping more often than every 6 s (src/frontend/src/api/live.ts: 4 s), or quiet connections are cut (VE-41).
     options.KeepAliveInterval = TimeSpan.FromSeconds(5);
     options.ClientTimeoutInterval = TimeSpan.FromSeconds(12);
 });

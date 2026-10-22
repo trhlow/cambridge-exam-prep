@@ -17,6 +17,8 @@ services:
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
+      # The API pools up to 250 connections (DependencyInjection.DefaultMaxPoolSize); the default 151 is too few.
+      - --max-connections=300
     ports:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:

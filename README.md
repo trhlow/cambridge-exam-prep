@@ -200,5 +200,6 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Kỳ thi B1 ba phần thi chạy đầu-cuối và trộn đề B1 (máy kề nhau khác đề), kiểm thử Playwright; kỳ thi demo B1
 - [ ] Triển khai HTTPS cho phòng thi thật
 - [x] Test đầu-cuối Playwright (`npm run e2e`, stack Docker riêng cổng 8090): thí sinh đăng nhập + PIN + làm bài + tải lại trang; giám thị tạm dừng/cho làm tiếp và máy thí sinh nhận ngay; quản trị viên tạo đề trắng, gửi yêu cầu xoá, admin khác duyệt; giám thị End now → chấm tự động → giám khảo chấm Writing → điểm Final (chạy lại thì `down -v` stack trước)
-- [ ] Kiểm thử tải, buổi thi thử
+- [x] Kiểm thử tải: 100 và 200 thí sinh đồng thời không lỗi (`setup/loadtest/`, kết quả trong `setup/loadtest/results/TONG_KET.md`); sửa kết nối SignalR bị cắt mỗi 12 giây và pool kết nối CSDL
+- [ ] Buổi thi thử với người đóng vai thí sinh, giám thị (kịch bản và mẫu biên bản trong `setup/mock-exam/`)
 - [ ] Quyển báo cáo
