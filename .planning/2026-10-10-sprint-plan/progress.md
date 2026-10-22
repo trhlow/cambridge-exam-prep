@@ -253,3 +253,10 @@
 - e2e 6/6 đạt; lần chạy đầu trên stack vừa build, test A2 04 hết giờ một lần, hai lần sau đều đạt
 - VE-40: `progress-report/BaoCaoTienDo_Tuan06_TranHoangLong.docx` (16–22/11, ký 22/11); Google Sheet chưa điền. Sprint 6 xong; backend 381/381, frontend 98/98, bộ chuyển 69/69, e2e 6/6
 - Tiếp theo Sprint 7: VE-41 kiểm thử tải, VE-42 buổi thi thử (cần người thật), VE-43 sửa lỗi sau thi thử, VE-44 báo cáo tuần 7
+
+### Sprint 7 (22/10): VE-41 kiểm thử tải
+- Công cụ `setup/loadtest/loadtest.mjs` (Node + @microsoft/signalr): tạo kỳ thi + N thí sinh qua API, mỗi thí sinh đăng nhập, PIN, bắt đầu R&W, giữ /hubs/candidate, heartbeat 5 s, lưu câu 4–12 s; giám thị /hubs/staff + monitor 3 s, giữa giờ Pause/Resume một nhóm; báo cáo p50/p95/p99, lỗi, độ trễ lệnh tới màn hình, docker stats
+- Lỗi 1: client SignalR keep-alive 15 s > ClientTimeoutInterval 12 s của server → kết nối im lặng bị cắt mỗi 12 s (giám thị nhận 25 thay vì ~600 sự kiện/5 phút) → `live.ts` keep-alive 4 s, server timeout 12 s, `live.test.ts`
+- Lỗi 2: 200 thí sinh → 1 485 lỗi "max pool size was reached", heartbeat 500 (MySql.Data async chạy đồng bộ) → pool 250 (`WithPoolSize`), MySQL --max-connections=300, ThreadPool.SetMinThreads(200)
+- Kết quả sau sửa: 100 thí sinh 5 phút 0 lỗi (lưu p95 27 ms, heartbeat p95 144 ms, Pause tới màn hình 16 ms); 200 thí sinh 3 phút 0 lỗi (heartbeat p99 546 ms) — `setup/loadtest/results/TONG_KET.md`
+- Toàn bộ: backend 385/385, frontend 100/100, e2e 6/6

@@ -5,6 +5,15 @@ import { useEffect, useRef, useState } from 'react'
 const RETRY_MS = 3_000
 
 /**
+ * The API drops a connection it has not heard from for 12 s and pings every 5 s (Program.cs, AddSignalR). The
+ * client must ping at most every 6 s, or a quiet page — the monitor, a candidate between saves — is cut off and
+ * reconnects every 12 s, missing updates and showing candidates offline; VE-41 found the default 15 s did that.
+ */
+export const KEEP_ALIVE_MS = 4_000
+/** The server pings every 5 s: two missed pings mean the connection is gone. */
+export const SERVER_TIMEOUT_MS = 12_000
+
+/**
  * VE-13: a live connection to one of the API's SignalR hubs (`/hubs/staff`, `/hubs/candidate`), sharing the page's
  * sign-in cookie. `handlers` receive the server's messages; `onConnected` runs after every connect and reconnect
  * (to join a section again). Returns whether the connection is up, so the page can poll slower meanwhile and
@@ -26,6 +35,8 @@ export function useLive(path: string, handlers: Record<string, (...args: never[]
     const connection = new HubConnectionBuilder()
       .withUrl(path)
       .withAutomaticReconnect({ nextRetryDelayInMilliseconds: () => RETRY_MS })
+      .withKeepAliveInterval(KEEP_ALIVE_MS)
+      .withServerTimeout(SERVER_TIMEOUT_MS)
       .configureLogging(LogLevel.None)
       .build()
 
