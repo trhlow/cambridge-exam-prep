@@ -85,10 +85,10 @@ Tổng: 4 story, 10 điểm.
 ### Phase 7: Sprint 7 (23/11 – 29/11) — Kiểm thử tải và buổi thi thử
 Tổng: 4 story, 12 điểm.
 - [x] VE-41 [E11] (5đ) Kiểm thử tải ~100 thí sinh đồng thời (SignalR + lưu bài)
-- [ ] VE-42 [E11] (3đ) Buổi thi thử với các bạn đóng vai thí sinh và giám thị
-- [ ] VE-43 [E11] (3đ) Sửa lỗi sau thi thử
-- [ ] VE-44 [E12] (1đ) Báo cáo tiến độ tuần 7
-- **Status:** pending
+- [x] VE-42 [E11] (3đ) Buổi thi thử với các bạn đóng vai thí sinh và giám thị
+- [x] VE-43 [E11] (3đ) Sửa lỗi sau thi thử
+- [x] VE-44 [E12] (1đ) Báo cáo tiến độ tuần 7
+- **Status:** complete
 
 ### Phase 8: Sprint 8 (30/11 – 06/12) — Viết quyển báo cáo Mở đầu, Chương 1–3 — tuần gặp GV 3
 Tổng: 1 story, 5 điểm.

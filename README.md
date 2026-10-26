@@ -201,5 +201,5 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [ ] Triển khai HTTPS cho phòng thi thật
 - [x] Test đầu-cuối Playwright (`npm run e2e`, stack Docker riêng cổng 8090): thí sinh đăng nhập + PIN + làm bài + tải lại trang; giám thị tạm dừng/cho làm tiếp và máy thí sinh nhận ngay; quản trị viên tạo đề trắng, gửi yêu cầu xoá, admin khác duyệt; giám thị End now → chấm tự động → giám khảo chấm Writing → điểm Final (chạy lại thì `down -v` stack trước)
 - [x] Kiểm thử tải: 100 và 200 thí sinh đồng thời không lỗi (`setup/loadtest/`, kết quả trong `setup/loadtest/results/TONG_KET.md`); sửa kết nối SignalR bị cắt mỗi 12 giây và pool kết nối CSDL
-- [ ] Buổi thi thử với người đóng vai thí sinh, giám thị (kịch bản và mẫu biên bản trong `setup/mock-exam/`)
+- [x] Buổi thi thử 16 tình huống theo `setup/mock-exam/KICH_BAN_THI_THU.md`, chạy tự động bằng trình duyệt (`npm run mock-exam`): mỗi vai một trình duyệt (2 quản trị viên, giám thị, giám khảo, 6 thí sinh A2 và 1 thí sinh B1), Listening chạy hết giờ thật. Tìm ra và đã sửa 4 lỗi: máy cũ không bị đăng xuất khi thí sinh đổi máy; End now đôi khi ghi lý do "hết giờ"; thông báo đã đọc bật lại khi sang phần thi sau; cột Audio vẫn đếm sau khi nộp bài. Lần chạy cuối đạt 16/16; biên bản, ảnh chụp và CSV trong `setup/mock-exam/results/`
 - [ ] Quyển báo cáo
