@@ -397,7 +397,8 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
 
         var attemptClock = AttemptExpiry.ClockFor(attempt, section, candidate);
         var isRunning = attempt.Status != AttemptStatus.Submitted;
-        var audio = attempt.AudioStartedAt is null ? (int?)null : (int)attemptClock.AudioPosition(now).TotalSeconds;
+        // Once the section is submitted the recording is over: the position would otherwise keep counting (mock exam).
+        var audio = attempt.AudioStartedAt is null || !isRunning ? (int?)null : (int)attemptClock.AudioPosition(now).TotalSeconds;
         return new MonitorRow(
             candidate.Id,
             candidate.CandidateNumber,
