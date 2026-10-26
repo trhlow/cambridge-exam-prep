@@ -260,3 +260,16 @@
 - Lỗi 2: 200 thí sinh → 1 485 lỗi "max pool size was reached", heartbeat 500 (MySql.Data async chạy đồng bộ) → pool 250 (`WithPoolSize`), MySQL --max-connections=300, ThreadPool.SetMinThreads(200)
 - Kết quả sau sửa: 100 thí sinh 5 phút 0 lỗi (lưu p95 27 ms, heartbeat p95 144 ms, Pause tới màn hình 16 ms); 200 thí sinh 3 phút 0 lỗi (heartbeat p99 546 ms) — `setup/loadtest/results/TONG_KET.md`
 - Toàn bộ: backend 385/385, frontend 100/100, e2e 6/6
+
+### Sprint 7 (26/10): VE-42 buổi thi thử, VE-43 sửa lỗi, VE-44 báo cáo tuần 7
+- Người dùng giao tự chạy buổi thi thử: kịch bản 16 tình huống chạy bằng Playwright (`src/frontend/mock-exam/mock-exam.spec.ts`, `npm run mock-exam`), mỗi vai một trình duyệt (2 admin, giám thị, giám khảo, 6 thí sinh A2 — một người +25 %, một người vắng — và 1 thí sinh B1); tự chuẩn bị kỳ thi A2 và B1 (đề trộn) qua cổng nhân viên; Listening chạy hết 30 phút thật (~43 phút mỗi lần)
+- Lỗi 1 (Cao): thí sinh đăng nhập ở máy khác thì máy cũ vẫn mở bài, đồng hồ đứng, chỉ báo "Not connected" (heartbeat 401 bị coi là mất mạng) → `useAttempt.isSignedOut`, ExamScreen về màn hình đăng nhập kèm thông báo; `signedOut.test.tsx`
+- Lỗi 2 (TB): End now làm tròn giờ kết thúc tới giây gần nhất → bấm ở nửa sau một giây thì bài kết thúc trễ <1 s và worker nộp với lý do TimeExpired (trang giám thị không ghi "Ended by invigilator") → làm tròn xuống; test `EndNow_SubmitsImmediately_AsInvigilatorEndNow_WhenPressedBetweenWholeSeconds`
+- Lỗi 3 (TB, thấy trên ảnh chụp): thông báo đọc ở Reading & Writing bật lại như tin mới khi sang Listening (đã đọc lưu theo phần thi, thông báo thuộc kỳ thi) → lưu theo thí sinh + kỳ thi
+- Lỗi 4 (Thấp, thấy trên ảnh chụp): cột Audio trang giám thị vẫn đếm sau khi nộp bài (37:30 ở bài 30 phút) → để trống khi đã nộp; test `Monitor_ShowsTheRecordingPositionOnlyWhileTheCandidateIsWorking`
+- Ghi nhận, không sửa: đổi sang máy mới thì thông báo đã đọc ở máy cũ hiện lại một lần (trạng thái đã đọc nằm trong tab trình duyệt); "+8 min" cho 25 % của 30 phút là cách làm tròn có chủ ý
+- Toàn bộ: backend 390/390, frontend 104/104
+- Lỗi của chính kịch bản (không phải hệ thống) đã sửa: "Large" trùng "Extra large", hai link Approvals, ô phân công phải click
+- Lần chạy cuối 16/16 đạt: biên bản `setup/mock-exam/results/2026-10-26/BienBan_ThiThu_2026-10-26.docx`, `ket-qua.json`, ảnh, CSV; `make_minutes.py --results` điền biên bản từ kết quả
+- VE-44: `progress-report/BaoCaoTienDo_Tuan07_TranHoangLong.docx` (23–29/11, ký 29/11); Google Sheet chưa điền. Sprint 7 xong
+- Tiếp theo Sprint 8 (30/11–06/12): VE-47 viết quyển báo cáo Mở đầu, Chương 1–3
