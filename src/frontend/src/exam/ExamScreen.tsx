@@ -216,7 +216,7 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
         isNotesDisabled={!canNote}
         saveStatus={attempt.saveStatus}
         isAudioPlaying={player.state === 'playing'}
-        bell={<MessageCentre sectionId={section.id} messages={attempt.messages} />}
+        bell={<MessageCentre reader={`${profile.examName}/${profile.candidateNumber}`} messages={attempt.messages} />}
       />
       {audioNotice && (
         <div className="audio-notice" role="status">

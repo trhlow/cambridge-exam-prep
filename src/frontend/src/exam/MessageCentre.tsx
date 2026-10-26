@@ -2,11 +2,15 @@ import { useState } from 'react'
 import type { CandidateMessage } from '../api/types'
 import { BellIcon } from '../ui/icons'
 
-const seenKey = (sectionId: number) => `victory.messages.seen.${sectionId}`
+/**
+ * Messages belong to the exam, not to a section, so what was read is kept per candidate and exam: a message read
+ * during Reading & Writing must not pop up again when Listening opens (mock exam, VE-43).
+ */
+const seenKey = (reader: string) => `victory.messages.seen.${reader}`
 
-function readSeen(sectionId: number): number {
+function readSeen(reader: string): number {
   try {
-    return Number(sessionStorage.getItem(seenKey(sectionId)) ?? 0)
+    return Number(sessionStorage.getItem(seenKey(reader)) ?? 0)
   } catch {
     return 0
   }
@@ -18,8 +22,8 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour
  * VE-17: the bell in the candidate header. A new message from the invigilator appears on screen until the candidate
  * presses OK; every message stays listed under the bell. What was read survives a reload of this tab.
  */
-export function MessageCentre({ sectionId, messages }: { sectionId: number; messages: CandidateMessage[] }) {
-  const [seenId, setSeenId] = useState(() => readSeen(sectionId))
+export function MessageCentre({ reader, messages }: { reader: string; messages: CandidateMessage[] }) {
+  const [seenId, setSeenId] = useState(() => readSeen(reader))
   const [isOpen, setIsOpen] = useState(false)
   const unread = messages.filter((m) => m.id > seenId)
   const newest = unread.at(-1)
@@ -28,7 +32,7 @@ export function MessageCentre({ sectionId, messages }: { sectionId: number; mess
     const lastId = messages.at(-1)?.id ?? seenId
     setSeenId(lastId)
     try {
-      sessionStorage.setItem(seenKey(sectionId), String(lastId))
+      sessionStorage.setItem(seenKey(reader), String(lastId))
     } catch {
       // Private mode: messages are simply shown again after a reload.
     }
