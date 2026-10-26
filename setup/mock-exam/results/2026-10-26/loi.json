@@ -1,0 +1,39 @@
+{
+  "time": "18 giờ 33 – 19 giờ 17, ngày 26/10/2026 (lần chạy cuối; các lần trước tìm lỗi và kiểm tra bản sửa)",
+  "place": "Máy phát triển của sinh viên; hệ thống chạy bằng Docker (stack thử nghiệm riêng, cổng 8090, CSDL trống)",
+  "exams": "Thi thử A2 2026-10-26 (A2 Key for Schools: Reading & Writing 60 phút, Listening 30 phút) và Thi thử B1 2026-10-26 (B1 Preliminary for Schools, đề trộn 4 mã theo vị trí máy)",
+  "participants": [
+    ["Trần Hoàng Long", "Người tổ chức, lập biên bản", "Viết và chạy kịch bản; theo dõi kết quả"],
+    ["Trình duyệt tự động 1", "Admin", "hoanglong"],
+    ["Trình duyệt tự động 2", "Admin thứ hai", "admin2"],
+    ["Trình duyệt tự động 3", "Giám thị", "giamthi"],
+    ["Trình duyệt tự động 4", "Giám khảo", "giamkhao"],
+    ["Trình duyệt tự động 5–10", "6 thí sinh A2 (0101–0106)", "Theo phiếu đăng nhập; 0102 thêm 25 % giờ"],
+    ["Trình duyệt tự động 11", "Thí sinh B1 (0201)", "Theo phiếu đăng nhập"]
+  ],
+  "errors": [
+    ["Thí sinh đăng nhập ở máy khác thì máy cũ vẫn mở bài thi, đồng hồ đứng, chỉ báo \"Not connected\" (máy chủ đã từ chối máy cũ bằng mã 401 nhưng trình duyệt coi là mất mạng). Tái hiện: thí sinh đang làm bài, đăng nhập lại ở máy thứ hai. Đã sửa: máy cũ về màn hình đăng nhập kèm thông báo lý do.", "Cao", "VE-43"],
+    ["End now đôi khi ghi lý do nộp bài là \"hết giờ\" (TimeExpired) thay vì \"giám thị kết thúc\", trang giám thị không hiện \"Ended by invigilator\". Nguyên nhân: giờ kết thúc làm tròn tới giây gần nhất nên khi bấm ở nửa sau một giây, bài kết thúc trễ dưới 1 giây và tiến trình quét hết giờ nộp bài. Đã sửa: làm tròn xuống.", "Trung bình", "VE-43"],
+    ["Thông báo giám thị gửi trong giờ Reading & Writing, thí sinh đã bấm OK, lại bật lên như tin mới khi mở Listening và che câu hỏi (trạng thái đã đọc lưu theo phần thi trong khi thông báo thuộc kỳ thi). Thấy trên ảnh chụp. Đã sửa: lưu theo thí sinh và kỳ thi.", "Trung bình", "VE-43"],
+    ["Cột Audio trên trang giám thị phần Listening vẫn tiếp tục chạy sau khi thí sinh đã nộp bài (37:30 ở bài 30 phút). Thấy trên ảnh chụp. Đã sửa: để trống khi đã nộp.", "Thấp", "VE-43"]
+  ],
+  "remarks": [
+    "Buổi thi thử chạy bằng trình duyệt tự động theo đúng kịch bản KICH_BAN_THI_THU.md: mỗi người một trình duyệt riêng (cookie, phiên đăng nhập riêng như một máy), thao tác qua giao diện như người dùng; Listening chạy hết 30 phút thật, thí sinh thêm 25 % giờ chạy 37,5 phút.",
+    "Lần chạy cuối 16/16 tình huống đạt sau khi sửa 4 lỗi trên. Các lỗi của chính kịch bản (chọn nhầm nút trùng tên) không tính là lỗi hệ thống.",
+    "Số đo nổi bật: lệnh tạm dừng và thông báo đến màn hình thí sinh dưới 0,6 giây; trang giám thị báo Offline khoảng 10 giây sau khi mất mạng; khi mất mạng 1 phút đồng hồ vẫn chạy và đáp án chọn lúc mất mạng được lưu khi có mạng lại; mọi thí sinh tự nộp trong vòng 15 giây sau giờ kết thúc, kể cả máy đã tắt.",
+    "Ghi nhận, không sửa: khi đổi sang máy mới, thông báo đã đọc ở máy cũ hiện lại một lần (trạng thái đã đọc nằm trong trình duyệt); cột thêm giờ hiện \"+8 min\" cho 25 % của 30 phút (làm tròn phút).",
+    "Chưa thử được bằng cách này: tai nghe, loa và mạng LAN thật của phòng máy Victory; nên thử lại trên phòng máy khi triển khai."
+  ],
+  "figures": [
+    ["00-phieu-dang-nhap-A2.png", "Hình 1. Phiếu đăng nhập in cho thí sinh"],
+    ["03-canh-bao-started-early.png", "Hình 2. Cảnh báo thí sinh bắt đầu trước khi giám thị cho phép"],
+    ["06-ca-phong-tam-dung.png", "Hình 3. Giám thị tạm dừng cả phòng"],
+    ["08-offline.png", "Hình 4. Trang giám thị báo thí sinh mất kết nối"],
+    ["11-thi-sinh-nghe-lai.png", "Hình 5. Thí sinh nghe lại sau khi giám thị tua audio"],
+    ["12-b1-chon-cau.png", "Hình 6. B1 Writing Part 2: chỉ được chọn một câu"],
+    ["13-end-now.png", "Hình 7. End now: thí sinh kết thúc, không hoàn tác được"],
+    ["14-het-gio.png", "Hình 8. Listening hết giờ: cả phòng tự nộp"],
+    ["15-bang-ket-qua.png", "Hình 9. Bảng kết quả sau khi giám khảo chấm Writing"],
+    ["16-nhat-ky-duyet.png", "Hình 10. Nhật ký duyệt chéo: admin thứ hai duyệt xoá thí sinh"]
+  ]
+}
