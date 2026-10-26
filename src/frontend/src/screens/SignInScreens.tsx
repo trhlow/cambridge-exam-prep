@@ -21,8 +21,8 @@ function Frame({ title, children }: { title: string; children: React.ReactNode }
   )
 }
 
-/** Step 1: the username and password printed on the candidate's login slip. */
-export function LoginScreen({ onSignedIn }: { onSignedIn: (profile: CandidateProfile) => void }) {
+/** Step 1: the username and password printed on the candidate's login slip; `notice` says why the test closed. */
+export function LoginScreen({ onSignedIn, notice }: { onSignedIn: (profile: CandidateProfile) => void; notice?: string }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -43,6 +43,11 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (profile: CandidatePro
 
   return (
     <Frame title="Log in">
+      {notice && (
+        <p className="signin-notice" role="status">
+          {notice}
+        </p>
+      )}
       <form onSubmit={submit} className="signin-form">
         <label>
           Username
