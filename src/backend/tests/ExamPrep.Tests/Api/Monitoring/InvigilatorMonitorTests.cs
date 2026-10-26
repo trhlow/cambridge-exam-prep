@@ -220,6 +220,24 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
     }
 
     [Fact]
+    public async Task Monitor_ShowsTheRecordingPositionOnlyWhileTheCandidateIsWorking()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var listening = room.First.ListeningSectionId;
+        await api.StartAttemptAsync(room.First.CandidateId, listening, durationMinutes: 30, audioPlayedMinutes: 3);
+        await api.StartAttemptAsync(room.SecondId, listening, durationMinutes: 30, audioPlayedMinutes: 3);
+
+        await ActAsync(room.Invigilator, room.First, listening, new { action = "EndNow", candidateIds = new[] { room.SecondId } });
+        var rows = (await MonitorAsync(room.Invigilator, room.First, listening))!.Candidates;
+
+        Assert.InRange(rows.Single(r => r.CandidateId == room.First.CandidateId).AudioPositionSeconds ?? 0, 179, 181);
+        var ended = rows.Single(r => r.CandidateId == room.SecondId);
+        Assert.Equal("Submitted", ended.Status);
+        Assert.Null(ended.AudioPositionSeconds);
+    }
+
+    [Fact]
     public async Task Actions_RefuseUnknownActionsAndCandidatesOfAnotherSession()
     {
         api.SkipIfUnavailable();
