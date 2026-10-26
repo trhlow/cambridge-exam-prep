@@ -9,10 +9,10 @@ describe('MessageCentre', () => {
   beforeEach(() => sessionStorage.clear())
 
   it('shows a new invigilator message on screen until the candidate closes it', async () => {
-    const { rerender } = render(<MessageCentre sectionId={1} messages={[]} />)
+    const { rerender } = render(<MessageCentre reader="A2/0101" messages={[]} />)
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
 
-    rerender(<MessageCentre sectionId={1} messages={[message(7, 'Ten minutes left.')]} />)
+    rerender(<MessageCentre reader="A2/0101" messages={[message(7, 'Ten minutes left.')]} />)
     expect(screen.getByRole('alertdialog')).toHaveTextContent('Ten minutes left.')
 
     await userEvent.click(screen.getByRole('button', { name: 'OK' }))
@@ -20,7 +20,7 @@ describe('MessageCentre', () => {
   })
 
   it('keeps every message under the bell, with a count of unread ones', async () => {
-    render(<MessageCentre sectionId={1} messages={[message(1, 'Please sit down.'), message(2, 'Ten minutes left.')]} />)
+    render(<MessageCentre reader="A2/0101" messages={[message(1, 'Please sit down.'), message(2, 'Ten minutes left.')]} />)
 
     expect(screen.getByRole('button', { name: /Messages, 2 new/ })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'OK' }))
@@ -29,6 +29,18 @@ describe('MessageCentre', () => {
     const list = screen.getByRole('list', { name: 'Messages from the invigilator' })
     expect(list).toHaveTextContent('Please sit down.')
     expect(list).toHaveTextContent('Ten minutes left.')
+    expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument()
+  })
+
+  it('does not show a message read in one section again when the next section opens', async () => {
+    const roomMessage = [message(3, 'Forty minutes left.')]
+    const { unmount } = render(<MessageCentre reader="A2/0101" messages={roomMessage} />)
+    await userEvent.click(screen.getByRole('button', { name: 'OK' }))
+    unmount()
+
+    // Listening: a new screen, the same exam and candidate.
+    render(<MessageCentre reader="A2/0101" messages={roomMessage} />)
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument()
   })
 })
