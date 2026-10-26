@@ -28,6 +28,8 @@ type Props = {
   onProfileChange?: (profile: CandidateProfile) => void
   /** The section has ended; go back to the list, where the next section is now open. */
   onFinished: () => void
+  /** The server signed this computer out (the candidate logged in on another one): back to the login. */
+  onSignedOut: () => void
 }
 
 /** The page shown, kept for this tab so a reload (F5) opens the same page. */
@@ -94,7 +96,7 @@ function useTabFlags(sectionId: number): [ReadonlySet<number>, (number: number) 
   return [flagged, toggle]
 }
 
-export function ExamScreen({ profile, section, onFinished, onProfileChange }: Props) {
+export function ExamScreen({ profile, section, onFinished, onProfileChange, onSignedOut }: Props) {
   const [paper, setPaper] = useState<Paper | null>(null)
   const [paperError, setPaperError] = useState<string | null>(null)
   const [storedPage, setPageIndex] = useStoredPage(section.id)
@@ -155,6 +157,13 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange }: Pr
   useEffect(() => {
     candidateApi.paper(section.id).then(setPaper, (e: Error) => setPaperError(e.message))
   }, [section.id])
+
+  useEffect(() => {
+    if (attempt.isSignedOut) {
+      stopRecording()
+      onSignedOut()
+    }
+  }, [attempt.isSignedOut, stopRecording, onSignedOut])
 
   const changeDisplay = (next: DisplayOptions) => {
     setDisplay(next)

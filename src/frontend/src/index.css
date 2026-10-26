@@ -784,6 +784,13 @@ button {
   margin: -8px 0 20px;
 }
 
+.signin-notice {
+  margin: -8px 0 20px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--number-ring);
+  background: var(--selected);
+}
+
 .signin-form {
   display: flex;
   flex-direction: column;

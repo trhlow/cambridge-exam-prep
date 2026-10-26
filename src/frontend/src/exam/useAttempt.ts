@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { candidateApi } from '../api/client'
+import { ApiError, candidateApi } from '../api/client'
 import { useLive } from '../api/live'
 import type { Answers, AttemptState, CandidateMessage, Selection, Selections } from '../api/types'
 import { AutosaveQueue, type SaveStatus } from './autosave'
@@ -33,6 +33,8 @@ export interface AttemptView {
   messages: CandidateMessage[]
   /** When the server's figures were last received (changes on every heartbeat). */
   syncedAt: number | null
+  /** The server no longer knows this computer (401): the candidate signed in on another one, or the session ended. */
+  isSignedOut: boolean
 }
 
 type Clock = { status: AttemptState['status']; remaining: number; audioPositionMs: number | null; receivedAt: number }
@@ -49,6 +51,7 @@ export function useAttempt(sectionId: number): AttemptView {
   const selectionsRef = useRef<Selections>({})
   const [error, setError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+  const [isSignedOut, setIsSignedOut] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const queueRef = useRef<AutosaveQueue | null>(null)
 
@@ -58,7 +61,7 @@ export function useAttempt(sectionId: number): AttemptView {
   }, [])
 
   const sync = useCallback(() => {
-    candidateApi.heartbeat(sectionId).then(apply, () => setSaveStatus('offline'))
+    candidateApi.heartbeat(sectionId).then(apply, (e: unknown) => (isSignedOutError(e) ? setIsSignedOut(true) : setSaveStatus('offline')))
   }, [sectionId, apply])
 
   // VE-13: the invigilator's pause, time change, rewind or message arrives now instead of at the next heartbeat.
@@ -80,7 +83,7 @@ export function useAttempt(sectionId: number): AttemptView {
         selectionsRef.current = state.selections ?? {}
         setSelections(selectionsRef.current)
       },
-      (e: Error) => setError(e.message),
+      (e: Error) => (isSignedOutError(e) ? setIsSignedOut(true) : setError(e.message)),
     )
 
     const tick = setInterval(() => setNow(Date.now()), 1_000)
@@ -157,7 +160,11 @@ export function useAttempt(sectionId: number): AttemptView {
     playAudio,
     messages,
     syncedAt: clock?.receivedAt ?? null,
+    isSignedOut,
   }
 }
+
+/** VE-43: a 401 is not a network failure — signing in again elsewhere rotated this computer's session. */
+const isSignedOutError = (e: unknown) => e instanceof ApiError && e.status === 401
 
 const sameMessages = (a: CandidateMessage[], b: CandidateMessage[]) => a.length === b.length && a.every((m, i) => m.id === b[i].id)
