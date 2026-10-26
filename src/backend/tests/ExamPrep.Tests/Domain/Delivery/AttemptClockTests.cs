@@ -185,6 +185,23 @@ public sealed class AttemptClockTests
         Assert.Equal(AttemptStatus.Submitted, attempt.Status);
     }
 
+    [Theory]
+    [InlineData(100)]
+    [InlineData(400)]
+    [InlineData(600)]
+    [InlineData(999)]
+    public void EndNow_SubmitsImmediately_AsInvigilatorEndNow_WhenPressedBetweenWholeSeconds(int milliseconds)
+    {
+        var (attempt, clock) = Started();
+        var now = At(20).AddMilliseconds(milliseconds);
+
+        clock.EndNow(disregardExtraTime: false, now);
+
+        Assert.Equal(AttemptStatus.Submitted, attempt.Status);
+        Assert.Equal(SubmitReason.InvigilatorEndNow, attempt.SubmitReason);
+        Assert.True(attempt.EndsAt <= now);
+    }
+
     [Fact]
     public void UseTestEndTime_UndoesEndInAndDisregard()
     {

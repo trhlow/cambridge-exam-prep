@@ -94,7 +94,9 @@ public sealed class AttemptClock(Attempt attempt, int sectionDurationMinutes, Da
         }
 
         RequireStatus(AttemptStatus.InProgress, "Only a candidate who is working can be ended.");
-        attempt.EndAdjustSeconds += WholeSeconds(now - StandardEnd());
+        // Rounded down, so standard time never ends a fraction of a second after now: rounded to the nearest
+        // second it could, and the expiry sweep then submitted the attempt as TimeExpired (mock exam, VE-43).
+        attempt.EndAdjustSeconds += (int)Math.Floor((now - StandardEnd()).TotalSeconds);
         attempt.DisregardExtraTime = disregardExtraTime;
         Recompute();
 
