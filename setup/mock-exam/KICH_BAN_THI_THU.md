@@ -54,3 +54,23 @@ Mỗi lỗi một dòng trong biên bản: mô tả, bước tái hiện, máy/t
 - **Thấp**: giao diện, chữ, bố cục.
 
 Sau buổi thi, đưa các lỗi vào Jira (VE-43) và sửa hết lỗi mức Cao trước khi viết Chương 4.
+
+## Chạy tự động bằng trình duyệt (`npm run mock-exam`)
+
+Kịch bản trên cũng có bản chạy bằng Playwright (`src/frontend/mock-exam/mock-exam.spec.ts`). Mỗi người là một trình duyệt riêng: admin, admin thứ hai, giám thị, giám khảo và 6 thí sinh A2 (một người được 25 % thêm giờ, một người vắng). Kịch bản tự chuẩn bị qua cổng nhân viên: tạo kỳ thi A2 và B1 (B1 dùng đề trộn), dán danh sách thí sinh, phân công giám thị và giám khảo, chuyển sang Active, đọc phiếu đăng nhập. Sau đó nó đi qua đủ 16 tình huống, đo thời gian và chụp màn hình.
+
+Phần Listening chạy hết 30 phút thật (người được 25 % thêm giờ là 37,5 phút), nên mỗi lần chạy mất khoảng 50 phút. Nếu một tình huống không đạt, kịch bản ghi lại rồi chạy tiếp, giống một buổi thi thử thật.
+
+```bash
+# từ thư mục gốc repo: stack e2e tách riêng (cổng 8090), CSDL trống
+WEB_PORT=8090 MYSQL_PORT=3307 docker compose -p examprep-e2e -f docker/docker-compose.yml -f docker/docker-compose.e2e.yml --env-file docker/.env up -d --build
+(cd src/frontend && npm run mock-exam)
+# biên bản Word từ kết quả (sau khi viết loi.json: lỗi, nhận xét, ảnh đưa vào phụ lục)
+python -I setup/mock-exam/make_minutes.py --results setup/mock-exam/results/<ngày>
+```
+
+Kết quả nằm trong `results/<ngày>/`:
+- `ket-qua.json`: từng tình huống Đạt / Không đạt kèm số đo, và nhật ký theo giờ;
+- ảnh chụp màn hình;
+- `ket-qua-thi-thu-A2.csv`: bảng điểm giám khảo tải về;
+- `BienBan_ThiThu_<ngày>.docx`: biên bản.

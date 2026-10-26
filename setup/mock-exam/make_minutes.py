@@ -1,10 +1,14 @@
-"""Writes BienBan_ThiThu_Mau.docx, the blank minutes of the mock exam (VE-42): who took part, the 16 situations of
-KICH_BAN_THI_THU.md with a result column, the errors found, and the signatures. Times New Roman 13 pt, as the
-faculty asks for documents.
+"""Writes the minutes of the mock exam (VE-42): who took part, the 16 situations of KICH_BAN_THI_THU.md with a
+result column, the errors found, and the signatures. Times New Roman 13 pt, as the faculty asks for documents.
 
-    python setup/mock-exam/make_minutes.py   (python-docx)
+    python setup/mock-exam/make_minutes.py                                   blank BienBan_ThiThu_Mau.docx
+    python setup/mock-exam/make_minutes.py --results results/2026-10-26      filled from a run of `npm run mock-exam`
+                                                                             (ket-qua.json, loi.json, screenshots)
+(python-docx)
 """
 
+import argparse
+import json
 from pathlib import Path
 
 import docx
@@ -70,7 +74,7 @@ def table(document, header, rows, widths):
     return grid
 
 
-def main():
+def blank():
     document = docx.Document()
     font(document)
     for section in document.sections:
@@ -112,5 +116,79 @@ def main():
     print(f"Wrote {out}")
 
 
+def filled(folder: Path):
+    """The minutes of one run: ket-qua.json from the browser run, loi.json with the errors and remarks written after
+    reading it ({"time", "place", "exams", "participants": [[name, role, account]], "errors": [[text, level, jira]],
+    "remarks": [str], "figures": [[file, caption]]})."""
+    run = json.loads((folder / "ket-qua.json").read_text(encoding="utf-8"))
+    extra = json.loads((folder / "loi.json").read_text(encoding="utf-8"))
+    results = {s["no"]: s for s in run["situations"]}
+
+    document = docx.Document()
+    font(document)
+    for section in document.sections:
+        section.left_margin, section.right_margin = Cm(3), Cm(2)
+        section.top_margin, section.bottom_margin = Cm(2), Cm(2)
+
+    centred(document, "TRƯỜNG KỸ THUẬT VÀ CÔNG NGHỆ", bold=True)
+    centred(document, "KHOA CÔNG NGHỆ THÔNG TIN", bold=True)
+    centred(document, "")
+    centred(document, "BIÊN BẢN BUỔI THI THỬ", bold=True, size=15)
+    centred(document, "Hệ thống thi tiếng Anh trên máy cho Trung tâm Anh ngữ Victory")
+    document.add_paragraph(f"Thời gian: {extra['time']}        Địa điểm: {extra['place']}")
+    document.add_paragraph(f"Kỳ thi: {extra['exams']}")
+
+    document.add_paragraph().add_run("1. Người tham gia").bold = True
+    table(document, ["Họ tên", "Vai trò", "Máy / tài khoản"], extra["participants"], [6, 4, 5.5])
+
+    document.add_paragraph().add_run("2. Các tình huống đã thử").bold = True
+    rows = []
+    for i, text in enumerate(SITUATIONS, start=1):
+        result = results.get(i)
+        if result is None:
+            rows.append([str(i), text, "Chưa thử", ""])
+            continue
+        remark = "; ".join(result["notes"])
+        if not result["passed"]:
+            remark = (remark + "; " if remark else "") + "Lỗi: " + result.get("error", "").split(chr(10))[0]
+        rows.append([str(i), text, "Đạt" if result["passed"] else "Không đạt", remark])
+    table(document, ["#", "Tình huống", "Kết quả", "Ghi chú"], rows, [1, 5, 2.5, 7])
+
+    document.add_paragraph().add_run("3. Lỗi phát hiện").bold = True
+    errors = extra["errors"] or [["Không có lỗi", "", ""]]
+    table(document, ["#", "Mô tả và bước tái hiện", "Mức độ (Cao/TB/Thấp)", "Mã Jira"], [[str(i), *e] for i, e in enumerate(errors, start=1)], [1, 9, 3, 2.5])
+
+    document.add_paragraph().add_run("4. Nhận xét chung").bold = True
+    for remark in extra["remarks"]:
+        document.add_paragraph(remark, style="List Bullet")
+
+    signatures = document.add_table(rows=2, cols=2)
+    for cell, text in zip(signatures.rows[0].cells, ["Người lập biên bản", "Đại diện người tham gia"]):
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell.paragraphs[0].add_run(text).bold = True
+    for cell in signatures.rows[1].cells:
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell.paragraphs[0].add_run("(Ký, ghi rõ họ tên)").italic = True
+    signatures.rows[1].cells[0].add_paragraph(chr(10) * 2 + "Trần Hoàng Long").alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    if extra.get("figures"):
+        document.add_page_break()
+        document.add_paragraph().add_run("Phụ lục: ảnh chụp màn hình").bold = True
+        for file, caption in extra["figures"]:
+            document.add_picture(str(folder / file), width=Cm(15.5))
+            document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            centred(document, caption).runs[0].italic = True
+
+    out = folder / f"BienBan_ThiThu_{folder.name}.docx"
+    document.save(out)
+    print(f"Wrote {out}")
+
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--results", type=Path, help="folder of a mock-exam run (ket-qua.json, loi.json, screenshots)")
+    args = parser.parse_args()
+    if args.results:
+        filled(args.results)
+    else:
+        blank()
