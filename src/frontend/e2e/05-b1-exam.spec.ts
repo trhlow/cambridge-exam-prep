@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { b1Candidate, b1ExamName, candidateSignsIn, endSectionNow, invigilator, staffSignsIn } from './accounts'
+import { b1Candidate, b1ExamName, candidateSignsIn, endSectionNow, invigilator, staffSignsIn, openSection } from './accounts'
 
 const examiner = { username: 'giamkhao', password: '19072005' }
 
@@ -22,16 +22,15 @@ test('a B1 exam runs through Reading, Writing and Listening and ends with a fina
   await candidateSignsIn(screen, b1Candidate)
   await expect(screen.getByRole('button', { name: 'Writing is locked' })).toBeDisabled()
   await expect(screen.getByRole('button', { name: 'Listening is locked' })).toBeDisabled()
-  await screen.getByRole('button', { name: 'Open Reading' }).click()
+  await openSection(screen, 'Reading')
   const saved = screen.waitForResponse((r) => r.url().includes('/responses') && r.request().method() === 'PUT' && r.status() === 204)
   await screen.getByRole('radiogroup', { name: 'Answers for question 1' }).getByRole('radio').first().check()
   await saved
   await endSectionNow(portal, b1ExamName, /Reading/, b1Candidate.fullName)
   await expect(screen.getByText('The test has now finished. Your answers have been saved.')).toBeVisible({ timeout: 10_000 })
-  await screen.getByRole('button', { name: 'Continue' }).click()
 
   // Writing: Part 1 email, then Part 2 — the candidate chooses question 2, and Yes is no longer offered on question 3.
-  await screen.getByRole('button', { name: 'Open Writing' }).click()
+  await openSection(screen, 'Writing')
   await screen.getByRole('textbox', { name: 'Question 1' }).fill('Hi Alex, the morning is better because the cooking show starts at ten.')
   await screen.getByRole('button', { name: /^Part 2/ }).click()
   const choice2 = screen.getByRole('combobox', { name: 'Answering question 2?' })
@@ -48,10 +47,9 @@ test('a B1 exam runs through Reading, Writing and Listening and ends with a fina
   await screen.waitForResponse((r) => r.url().includes('/responses') && r.status() === 204)
   await endSectionNow(portal, b1ExamName, /Writing/, b1Candidate.fullName)
   await expect(screen.getByText('The test has now finished. Your answers have been saved.')).toBeVisible({ timeout: 10_000 })
-  await screen.getByRole('button', { name: 'Continue' }).click()
 
   // Listening: after Play, Part 2 shows one question per page.
-  await screen.getByRole('button', { name: 'Open Listening' }).click()
+  await openSection(screen, 'Listening')
   await screen.getByRole('dialog', { name: 'Listening' }).getByRole('button', { name: 'Play' }).click()
   await screen.getByRole('button', { name: /^Part 2/ }).click()
   await expect(screen.getByRole('radiogroup', { name: 'Answers for question 8' })).toBeVisible()

@@ -65,6 +65,17 @@ File này chứa mật khẩu nên **không được đưa lên Git** (đã có 
 
 Trang theo dõi của giám thị cập nhật tức thì qua SignalR (WebSocket). Nếu mạng chặn WebSocket, trang tự chuyển sang tải lại mỗi 3 giây.
 
+### Khoá máy thí sinh bằng Safe Exam Browser
+
+Kỳ thi Cambridge chạy trong trình duyệt khoá; ở đây dùng Safe Exam Browser (SEB, miễn phí, safeexambrowser.org):
+
+1. Cài SEB trên mọi máy thí sinh. Trên một máy, mở **SEB Config Tool** và đặt:
+   - *Start URL*: `http://192.168.1.10:8080` (địa chỉ máy chủ ở trên).
+   - *Quit/unlock password*: **mật khẩu giám thị của kỳ thi** (Invigilator password, xem ở trang kỳ thi). Giống Inspera, mật khẩu này dùng để thoát trình duyệt khoá trước giờ kết thúc và khi chuyển thí sinh sang máy khác.
+   - Bật *Use Browser & Config Keys (send in HTTP header)*.
+2. Lưu tệp `.seb`, chép **Config Key** (64 ký tự) mà Config Tool hiện ra vào ô *SEB Config Key* của kỳ thi. Từ đó máy chủ từ chối mọi yêu cầu không đến từ SEB với đúng tệp cấu hình này.
+3. Trước khi thí sinh vào phòng, mở tệp `.seb` trên từng máy để SEB vào thẳng trang đăng nhập (như hướng dẫn ngày thi của Cambridge: mở trình duyệt khoá và để sẵn trang đăng nhập trên mọi máy).
+
 ## 6. Hằng ngày
 
 ```powershell

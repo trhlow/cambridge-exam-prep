@@ -143,7 +143,7 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
         <span>{counts.InProgress} in progress</span>
         <span>{counts.Paused} paused</span>
         <span>{counts.Submitted} submitted</span>
-        <span>{counts.NotStarted} not started</span>
+        <span>{counts.NotStarted} never started</span>
         <span>{rows.filter((r) => r.status !== 'Submitted' && r.status !== 'NotStarted' && !r.isOnline).length} offline</span>
       </div>
       <ErrorBox error={error} />
@@ -159,8 +159,8 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
             {view.paperMixTitle && <th>Paper</th>}
             <th>Status</th>
             <th>Connection</th>
-            <th className="st-num">Time left</th>
-            <th>Started</th>
+            <th className="st-num">Minutes remaining</th>
+            <th>Candidate started</th>
             <th>Extra time</th>
             <th>Incident time</th>
             {view.hasAudio && <th className="st-num">Audio</th>}
@@ -245,7 +245,7 @@ function Row(props: { row: MonitorRow; hasAudio: boolean; showsVersion: boolean;
       </td>
       <td>{isRunning ? <span className={row.isOnline ? 'st-dot st-dot--on' : 'st-dot st-dot--off'}>{row.isOnline ? 'Online' : 'Offline'}</span> : '–'}</td>
       <td className="st-num st-mono">
-        {isRunning ? clockText(row.remainingSeconds) : '–'}
+        {isRunning && row.remainingSeconds !== null ? Math.ceil(row.remainingSeconds / 60) : '–'}
         {row.endTimeEdited && isRunning && <div className="st-faint">end edited</div>}
       </td>
       <td>{formatTime(row.startedAt)}</td>

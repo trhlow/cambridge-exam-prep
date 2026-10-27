@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { candidate, candidateSignsIn, examName, invigilator, staffSignsIn } from './accounts'
+import { candidate, candidateSignsIn, examName, invigilator, staffSignsIn, openSection } from './accounts'
 
 const examiner = { username: 'giamkhao', password: '19072005' }
 
@@ -12,7 +12,7 @@ test('the invigilator ends the section, it is marked automatically, and the exam
   const marking = await examinerContext.newPage()
 
   await candidateSignsIn(screen)
-  await screen.getByRole('button', { name: 'Open Reading & Writing' }).click()
+  await openSection(screen, 'Reading & Writing')
   await expect(screen.getByRole('radiogroup', { name: 'Answers for question 1' })).toBeVisible()
 
   // The invigilator ends the section now (Edit end time → End now, two clicks: it cannot be undone).
@@ -37,7 +37,11 @@ test('the invigilator ends the section, it is marked automatically, and the exam
   await marking.getByRole('link', { name: examName }).click()
   await marking.getByRole('link', { name: 'Results' }).click()
   const mark = marking.getByRole('link', { name: 'Mark Writing' }).first()
-  await expect(mark).toBeVisible({ timeout: 20_000 })
+  // The marker runs every 5 s after the section ends; the results page shows what was marked when it loaded.
+  await expect(async () => {
+    await marking.reload()
+    await expect(mark).toBeVisible({ timeout: 2_000 })
+  }).toPass({ timeout: 30_000 })
   await mark.click()
 
   for (const number of [31, 32]) {

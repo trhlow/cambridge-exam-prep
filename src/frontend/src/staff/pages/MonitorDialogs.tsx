@@ -49,12 +49,19 @@ export function ActionDialog({ dialog, examId, sectionId, selected, onClose, onD
     <Modal title={title} onClose={onClose}>
       <p className="st-faint">For {who}.</p>
       {dialog.kind === 'Pause' && <ReasonForm submitLabel="Submit event" isBusy={isBusy} onSubmit={(reason) => run({ action: 'Pause', reason }, 'Paused')} note="Candidates see a message that the test is paused. Their time stops; it is given back when you resume." />}
-      {dialog.kind === 'Resume' && <ReasonForm submitLabel="Resume" isBusy={isBusy} onSubmit={(reason) => run({ action: 'Resume', reason }, 'Resumed')} />}
+      {dialog.kind === 'Resume' && (
+        <div className="st-form-actions">
+          <button type="button" className="st-btn st-btn--primary" disabled={isBusy} onClick={() => void run({ action: 'Resume' }, 'Resumed')}>
+            Resume
+          </button>
+        </div>
+      )}
       {dialog.kind === 'AddIncidentTime' && <MinutesForm label="Minutes to add" submitLabel="Update" initialMinutes={dialog.minutes} initialReason={dialog.reason} isBusy={isBusy} onSubmit={(minutes, reason) => run({ action: 'AddIncidentTime', minutes, reason }, `Added ${minutes} min`)} note="Incident time is for time lost on the day. Special-arrangement extra time is set on the candidate before the exam." />}
       {dialog.kind === 'RewindAudio' && (
         <MinutesForm
           label="Rewind by (minutes)"
           submitLabel="Rewind now"
+          withDetails
           isBusy={isBusy}
           note="At most the minutes already played, and not while a candidate is paused. Then add the same minutes as incident extra time."
           onSubmit={(minutes, reason) => run({ action: 'RewindAudio', minutes, reason }, `Rewound ${minutes} min`, (outcome) => (outcome.applied > 0 ? { kind: 'AddIncidentTime', minutes, reason } : undefined))}
@@ -100,13 +107,24 @@ function ReasonForm({ submitLabel, isBusy, onSubmit, note }: { submitLabel: stri
   )
 }
 
-function MinutesForm(props: { label: string; submitLabel: string; isBusy: boolean; onSubmit: (minutes: number, reason: string) => void; note?: string; initialMinutes?: number; initialReason?: string }) {
-  const { label, submitLabel, isBusy, onSubmit, note, initialMinutes, initialReason } = props
+function MinutesForm(props: {
+  label: string
+  submitLabel: string
+  isBusy: boolean
+  onSubmit: (minutes: number, reason: string) => void
+  note?: string
+  initialMinutes?: number
+  initialReason?: string
+  /** An optional free-text detail after the reason, kept with it in the action log. */
+  withDetails?: boolean
+}) {
+  const { label, submitLabel, isBusy, onSubmit, note, initialMinutes, initialReason, withDetails = false } = props
   const [minutes, setMinutes] = useState(initialMinutes ?? 5)
   const [reason, setReason] = useState(initialReason ?? REASONS[0])
+  const [details, setDetails] = useState('')
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    onSubmit(minutes, reason)
+    onSubmit(minutes, details.trim() ? `${reason}: ${details.trim()}` : reason)
   }
 
   return (
@@ -116,6 +134,12 @@ function MinutesForm(props: { label: string; submitLabel: string; isBusy: boolea
         <input type="number" min={1} max={180} value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} required />
       </label>
       <ReasonSelect value={reason} onChange={setReason} />
+      {withDetails && (
+        <label className="st-field">
+          Details <span className="st-faint">(if required)</span>
+          <input value={details} onChange={(e) => setDetails(e.target.value)} maxLength={150} />
+        </label>
+      )}
       {note && <p className="st-note">{note}</p>}
       <div className="st-form-actions">
         <button type="submit" className="st-btn st-btn--primary" disabled={isBusy || minutes < 1}>

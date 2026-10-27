@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { CandidateProfile } from '../api/types'
-import { BellIcon, MenuIcon, NotesIcon, WifiIcon } from '../ui/icons'
+import { CandidateIcon } from '../ui/CandidateIcon'
+import { BellIcon, MenuIcon, NotesIcon, VolumeIcon, WifiIcon } from '../ui/icons'
 import { VictoryLogo } from '../ui/VictoryLogo'
 import type { SaveStatus } from './autosave'
 
@@ -18,14 +19,17 @@ type Props = {
   /** Opens or closes the Notes panel (pen); off with large text, as in the Cambridge booklet. */
   onToggleNotes?: () => void
   isNotesDisabled?: boolean
+  /** Listening: the volume control of the headphones (0–1). */
+  volume?: { value: number; onChange: (value: number) => void }
 }
 
 /**
  * Inspera header: logo, candidate name and number, the countdown, then connection, messages, options and
  * notes. The connection icon turns red while answers cannot reach the server (they are kept and retried).
  */
-export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, bell, onOpenOptions, onToggleNotes, isNotesDisabled = false }: Props) {
+export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, bell, onOpenOptions, onToggleNotes, isNotesDisabled = false, volume }: Props) {
   const isOffline = saveStatus === 'offline'
+  const [isVolumeOpen, setIsVolumeOpen] = useState(false)
 
   return (
     <header className="top-bar">
@@ -45,6 +49,18 @@ export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, 
         </div>
       )}
       <div className="top-icons">
+        {volume && (
+          <div className="volume">
+            <button type="button" className="top-icon" aria-label="Volume" aria-expanded={isVolumeOpen} onClick={() => setIsVolumeOpen(!isVolumeOpen)}>
+              <VolumeIcon />
+            </button>
+            {isVolumeOpen && (
+              <div className="volume-panel">
+                <input type="range" min={0} max={1} step={0.05} value={volume.value} onChange={(e) => volume.onChange(Number(e.target.value))} aria-label="Volume level" />
+              </div>
+            )}
+          </div>
+        )}
         <span
           className={isOffline ? 'top-icon is-offline' : 'top-icon'}
           role="img"
@@ -71,6 +87,7 @@ export function TopBar({ profile, timeLeft, saveStatus, isAudioPlaying = false, 
         >
           <NotesIcon />
         </button>
+        <CandidateIcon fullName={profile.fullName} candidateNumber={profile.candidateNumber} />
       </div>
     </header>
   )

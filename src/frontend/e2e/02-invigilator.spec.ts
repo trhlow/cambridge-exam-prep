@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { candidate, candidateSignsIn, examName, invigilator, staffSignsIn } from './accounts'
+import { candidate, candidateSignsIn, examName, invigilator, staffSignsIn, openSection } from './accounts'
 
 test('the invigilator pauses and resumes a candidate, and the candidate screen follows at once', async ({ browser }) => {
   const candidateContext = await browser.newContext()
@@ -8,7 +8,7 @@ test('the invigilator pauses and resumes a candidate, and the candidate screen f
   const portal = await staffContext.newPage()
 
   await candidateSignsIn(screen)
-  await screen.getByRole('button', { name: 'Open Reading & Writing' }).click()
+  await openSection(screen, 'Reading & Writing')
   await expect(screen.getByRole('radiogroup', { name: 'Answers for question 1' })).toBeVisible()
 
   await staffSignsIn(portal, invigilator)
