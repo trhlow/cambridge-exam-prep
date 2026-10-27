@@ -19,6 +19,7 @@ orders are tried), so no two lines share a segment.
 """
 import itertools
 import os
+import random
 import subprocess
 from collections import defaultdict
 from xml.sax.saxutils import escape
@@ -103,7 +104,12 @@ group_of = {t: g for g, (_, _, columns) in GROUPS.items() for column in columns 
 assert set(group_of) == set(cols), f"layout mismatch: {set(cols) ^ set(group_of)}"
 
 
-def label(table, col, ctype, ckey, nullable):
+def in_group(t, c, ref):
+    """Group ERDs draw a key only when both tables are in the same group."""
+    return group_of[ref] == group_of[t]
+
+
+def label(table, col, ctype, ckey, nullable, drawn=in_group):
     keys = []
     if ckey == "PRI":
         keys.append("PK")
@@ -113,13 +119,13 @@ def label(table, col, ctype, ckey, nullable):
         keys.append("UQ")
     text = f"{col} : {ctype}" + ("" if nullable or ckey == "PRI" else " NN")
     ref = fks.get((table, col))
-    if ref and group_of[ref] != group_of[table]:
+    if ref and not drawn(table, col, ref):
         text += f"  → {ref}"
     return ",".join(keys), text, ckey == "PRI"
 
 
-def width(table):
-    longest = max(len(label(table, *c)[1]) for c in cols[table])
+def width(table, drawn=in_group):
+    longest = max(len(label(table, *c, drawn=drawn)[1]) for c in cols[table])
     return max(230, int(round((KEY_W + 18 + longest * 6.4) / 10.0)) * 10)
 
 
@@ -154,13 +160,13 @@ class Doc:
                     + "".join(self.cells) + "</root></mxGraphModel></diagram></mxfile>\n")
 
 
-def table_box(d, t, x, y, w, colours):
+def table_box(d, t, x, y, w, colours, drawn=in_group):
     fill, stroke = colours
     tid = d.vertex(t, "shape=table;startSize=28;container=1;collapsible=0;childLayout=tableLayout;fixedRows=1;rowLines=0;"
                    f"fontStyle=1;align=center;resizeLast=1;html=1;{FONT}fillColor={fill};strokeColor={stroke};",
                    x, y, w, HEAD + ROW * len(cols[t]), cid=f"t_{t}")
     for i, (c, ctype, ckey, nullable) in enumerate(cols[t]):
-        keys, text, is_pk = label(t, c, ctype, ckey, nullable)
+        keys, text, is_pk = label(t, c, ctype, ckey, nullable, drawn=drawn)
         rid = f"r_{t}_{c}"
         d.vertex("", "shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;"
                  "dropTarget=0;portConstraint=eastwest;top=0;left=0;right=0;bottom=0;html=1;",
@@ -174,35 +180,68 @@ def table_box(d, t, x, y, w, colours):
                  parent=rid)
 
 
-def crossings(order, edges):
-    """Lines that cross when the edges of one corridor take the lanes in this order (lane 0 nearest the left)."""
+def crossings(order, items):
+    """Lines that cross when the items of one corridor take the lanes in this order (lane 0 nearest the left)."""
     lane = {id(e): i for i, e in enumerate(order)}
     count = 0
-    for a, b in itertools.combinations(edges, 2):
+    for a, b in itertools.combinations(items, 2):
         for e, f in ((a, b), (b, a)):
             # e's horizontal stubs run from the corridor sides to e's lane; f's vertical segment sits at f's lane.
             low, high = sorted((f["y1"], f["y2"]))
             for side, y in ((e["side1"], e["y1"]), (e["side2"], e["y2"])):
+                if side == "T":            # this end goes on up to a track above the tables: no stub here
+                    continue
                 between = lane[id(f)] < lane[id(e)] if side == "L" else lane[id(f)] > lane[id(e)]
                 if between and low < y < high:
                     count += 1
     return count
 
 
-def group_diagram(key):
-    title, colours, columns = GROUPS[key]
-    d = Doc()
-    d.vertex(f"ERD: {title}", f"text;html=1;align=left;verticalAlign=middle;{FONT}fontSize=16;fontStyle=1;", 40, 0, 600, 30)
+def best_order(items):
+    """Every order of the lanes for up to 7 lines; beyond that, swaps and moves from many random starts, keeping the
+    order with the fewest crossings (deterministic: the random generator is seeded)."""
+    if len(items) <= 7:
+        return min(itertools.permutations(items), key=lambda o: crossings(o, items))
+    rng = random.Random(7)
+    best, best_cost = None, None
+    for start in range(60):
+        order = sorted(items, key=lambda e: min(e["y1"], e["y2"])) if start == 0 else rng.sample(items, len(items))
+        cost = crossings(order, items)
+        improved = True
+        while improved:
+            improved = False
+            for i, j in itertools.permutations(range(len(order)), 2):
+                trial = order[:]
+                trial.insert(j, trial.pop(i))
+                trial_cost = crossings(trial, items)
+                if trial_cost < cost:
+                    order, cost, improved = trial, trial_cost, True
+        if best_cost is None or cost < best_cost:
+            best, best_cost = order, cost
+    return best
 
-    # place the tables: columns left to right, tables top-down
+
+def draw_erd(title, filename, columns, colour_of, drawn, loop_left=frozenset(), note=""):
+    """Tables in columns; every drawn key is one line. A key between the same or neighbouring columns turns once in a
+    lane of the corridor between them; a key that skips columns climbs in a lane next to its table, runs along its
+    own track above all tables and comes down in a lane next to the other table. No two lines share a lane or a
+    track, and the lanes of each corridor are ordered for the fewest crossings."""
+    keys = [((t, c), ref) for (t, c), ref in sorted(fks.items()) if t in colour_of and ref in colour_of and drawn(t, c, ref)]
+    column_of = {t: i for i, column in enumerate(columns) for t in column}
+    long_keys = [k for k in keys if abs(column_of[k[0][0]] - column_of[k[1]]) > 1]
+
+    d = Doc()
+    d.vertex(title, f"text;html=1;align=left;verticalAlign=middle;{FONT}fontSize=16;fontStyle=1;", 40, 0, 900, 30)
+    top = 60 + 16 * len(long_keys)
+
     pos, col_x, col_w = {}, [], []
     x = 100               # room for loops on the far left
     for column in columns:
-        w = max(width(t) for t in column)
-        y = 50
+        w = max(width(t, drawn) for t in column)
+        y = top
         for t in column:
             pos[t] = (x, y, w, len(col_x))
-            table_box(d, t, x, y, w, colours)
+            table_box(d, t, x, y, w, colour_of[t], drawn)
             y += HEAD + ROW * len(cols[t]) + ROW_GAP
         col_x.append(x)
         col_w.append(w)
@@ -211,64 +250,133 @@ def group_diagram(key):
     def row_y(t, c):
         return pos[t][1] + HEAD + ROW * [n for n, *_ in cols[t]].index(c) + ROW / 2
 
-    # every foreign key inside the group, assigned to a corridor (0 = far left, i = between column i-1 and i)
-    corridors = defaultdict(list)
-    for (t, c), ref in sorted(fks.items()):
-        if group_of.get(ref) != key or group_of[t] != key:
+    # A long key runs on a track above the tables when its rows are in the upper half, below them otherwise, so its
+    # lanes cross as few rows as possible.
+    table_bottom = max(p[1] + HEAD + ROW * len(cols[t]) for t, p in pos.items())
+    middle = (top + table_bottom) / 2
+    above, below = [], []
+    for (t, c), ref in long_keys:
+        pk = next(name for name, _, k, _ in cols[ref] if k == "PRI")
+        (above if (row_y(t, c) + row_y(ref, pk)) / 2 < middle else below).append(((t, c), ref))
+
+    def track_y(key):
+        if key in above:
+            return top - 24 - 16 * above.index(key)
+        return table_bottom + 24 + 16 * below.index(key)
+
+    corridors = defaultdict(list)       # corridor i lies left of column i; its items are vertical lanes
+    lines = []
+    for (t, c), ref in keys:
+        pk = next(name for name, _, k, _ in cols[ref] if k == "PRI")
+        ci, cr = column_of[t], column_of[ref]
+        if abs(ci - cr) > 1:
+            track = track_y(((t, c), ref))
+            near_child = ci + 1 if cr > ci else ci          # corridor next to the child, on the parent's side
+            near_parent = cr if cr > ci else cr + 1
+            a = {"y1": row_y(t, c), "side1": "L" if near_child - 1 == ci else "R", "y2": track, "side2": "T", "end": (t, c)}
+            b = {"y1": track, "side1": "T", "y2": row_y(ref, pk), "side2": "L" if near_parent - 1 == cr else "R",
+                 "end2": (ref, pk)}
+            corridors[near_child].append(a)
+            corridors[near_parent].append(b)
+            lines.append(("long", a, b, near_child, near_parent))
             continue
-        pk = next(n for n, _, k, _ in cols[ref] if k == "PRI")
-        ci, cr = pos[t][3], pos[ref][3]
-        assert abs(ci - cr) <= 1, f"{t}.{c} -> {ref}: tables must sit in the same or neighbouring columns"
         if ci != cr:
             corridor = max(ci, cr)
-        elif (t, c) in LOOP_LEFT:
+        elif (t, c) in loop_left:
             corridor = ci
         elif ci == 0 and len(columns) > 1:
-            corridor = 0                 # first column: loop on the outer left
+            corridor = 0
         else:
-            corridor = ci + 1            # otherwise: loop through the corridor on its right
-        left_col = corridor - 1          # the column on the corridor's left; "L" = the line comes from that side
-        e = {"t": t, "c": c, "ref": ref, "pk": pk, "y1": row_y(t, c), "y2": row_y(ref, pk),
-             "side1": "L" if ci == left_col else "R", "side2": "L" if cr == left_col else "R"}
-        e["x1"], e["x2"] = ci, cr
+            corridor = ci + 1
+        left_col = corridor - 1
+        e = {"y1": row_y(t, c), "y2": row_y(ref, pk), "side1": "L" if ci == left_col else "R",
+             "side2": "L" if cr == left_col else "R", "end": (t, c), "end2": (ref, pk)}
         corridors[corridor].append(e)
+        lines.append(("short", e, None, corridor, corridor))
 
-    # Lines that leave or reach the same row into the same corridor are spread a few pixels apart, ordered by where
-    # their other end lies, so they run side by side instead of on top of each other.
+    # heights touched by several lines in one corridor: spread the ends apart so the lines run side by side
     ends = defaultdict(list)
-    for corridor, edges in corridors.items():
-        for e in edges:
-            ends[(e["t"], e["c"], corridor)].append((e, "y1", e["y2"]))
-            ends[(e["ref"], e["pk"], corridor)].append((e, "y2", e["y1"]))
+    for corridor, items in corridors.items():
+        for e in items:
+            # keyed by height, not by row: rows of two tables on either side of a corridor may line up too
+            if e["side1"] != "T":
+                ends[(corridor, round(e["y1"]))].append((e, "y1", e["y2"]))
+            if e["side2"] != "T":
+                ends[(corridor, round(e["y2"]))].append((e, "y2", e["y1"]))
     for items in ends.values():
         if len(items) > 1:
             items.sort(key=lambda item: item[2])
             for i, (e, field, _) in enumerate(items):
                 e[field] += 7 * i - 7 * (len(items) - 1) / 2
 
-    for corridor, edges in corridors.items():
-        best = min(itertools.permutations(edges), key=lambda o: crossings(o, edges)) if len(edges) <= 7 else edges
-        if corridor == 0:                                  # outer left: lanes step leftwards from the tables
+    bounds = {}
+    for corridor, items in corridors.items():
+        if corridor == 0:
             right_edge = col_x[0]
-            left_edge = right_edge - 16 * (len(edges) + 1)
-        elif corridor == len(columns):                     # outer right
+            left_edge = right_edge - 16 * (len(items) + 1)
+        elif corridor == len(columns):
             left_edge = col_x[-1] + col_w[-1]
-            right_edge = left_edge + 16 * (len(edges) + 1)
+            right_edge = left_edge + 16 * (len(items) + 1)
         else:
             left_edge, right_edge = col_x[corridor - 1] + col_w[corridor - 1], col_x[corridor]
-        step = (right_edge - left_edge) / (len(edges) + 1)
-        for i, e in enumerate(best):
-            lane = left_edge + step * (i + 1)
-            x1 = left_edge if e["side1"] == "L" else right_edge
-            x2 = left_edge if e["side2"] == "L" else right_edge
-            d.path(EDGE, [(x1, e["y1"]), (lane, e["y1"]), (lane, e["y2"]), (x2, e["y2"])])
+        bounds[corridor] = (left_edge, right_edge)
+        step = (right_edge - left_edge) / (len(items) + 1)
+        for i, e in enumerate(best_order(items)):
+            e["lane"] = left_edge + step * (i + 1)
 
-    bottom = max(p[1] + HEAD + ROW * len(cols[t]) for t, p in pos.items())
-    d.vertex("PK khoá chính · FK khoá ngoại · UQ duy nhất · NN bắt buộc (NOT NULL) · “→ bảng”: khoá ngoại sang nhóm khác "
-             "· chân gà: nhiều, hai vạch: đúng một",
-             f"text;html=1;align=left;verticalAlign=middle;{FONT}fontColor=#444444;", 40, bottom + 30, 1000, 24)
-    d.save(f"erd-{key}.drawio", f"ERD {title}")
-    return len(cols), sum(len(v) for k, v in corridors.items())
+    def side_x(corridor, side):
+        left_edge, right_edge = bounds[corridor]
+        return left_edge if side == "L" else right_edge
+
+    for kind, a, b, ca, cb in lines:
+        if kind == "short":
+            d.path(EDGE, [(side_x(ca, a["side1"]), a["y1"]), (a["lane"], a["y1"]), (a["lane"], a["y2"]),
+                          (side_x(ca, a["side2"]), a["y2"])])
+        else:
+            d.path(EDGE, [(side_x(ca, a["side1"]), a["y1"]), (a["lane"], a["y1"]), (a["lane"], a["y2"]),
+                          (b["lane"], b["y1"]), (b["lane"], b["y2"]), (side_x(cb, b["side2"]), b["y2"])])
+
+    bottom = table_bottom + 16 * len(below) + (16 if below else 0)
+    d.vertex("PK khoá chính · FK khoá ngoại · UQ duy nhất · NN bắt buộc (NOT NULL) · chân gà: nhiều, hai vạch: đúng một" + note,
+             f"text;html=1;align=left;verticalAlign=middle;{FONT}fontColor=#444444;", 40, bottom + 30, 1600, 24)
+    d.save(filename, title)
+    return len(keys)
+
+
+def group_diagram(key):
+    title, colours, columns = GROUPS[key]
+    tables = {t: colours for column in columns for t in column}
+    return draw_erd(f"ERD: {title}", f"erd-{key}.drawio", columns, tables, in_group, LOOP_LEFT,
+                    " · “→ bảng”: khoá ngoại sang nhóm khác (xem ERD toàn bộ)")
+
+
+# The whole schema on one page: the columns follow the flow staff → session → delivery → content, so most keys join
+# neighbouring columns. Only the audit keys to users (who created, uploaded, decided, marked, sent, acted) are written
+# as "→ users" instead of drawn; the room's staff (exam_invigilators, exam_examiners) and user_areas are drawn.
+FULL_COLUMNS = [
+    ["users", "user_areas", "approval_requests", "site_settings"],
+    ["exam_invigilators", "exam_examiners", "candidate_messages"],
+    ["exams", "candidates", "invigilator_actions"],
+    ["exam_types", "exam_sections", "attempts", "security_events"],
+    ["section_templates", "test_papers", "paper_mixes"],
+    ["paper_parts", "assets", "responses", "annotations"],
+    ["question_groups", "questions", "answer_keys", "manual_marks"],
+]
+AUDIT_TO_USERS = {"created_by_user_id", "uploaded_by_user_id", "updated_by_user_id", "sent_by_user_id",
+                  "resolved_by_user_id", "marker_user_id", "requested_by_user_id", "decided_by_user_id"}
+ACTIONS_USER = {("invigilator_actions", "user_id")}
+
+
+def all_but_audit(t, c, ref):
+    return not (ref == "users" and (c in AUDIT_TO_USERS or (t, c) in ACTIONS_USER))
+
+
+def full_diagram():
+    assert {t for col in FULL_COLUMNS for t in col} == set(cols)
+    colour_of = {t: GROUPS[group_of[t]][1] for t in cols}
+    return draw_erd("ERD toàn bộ: 25 bảng của hệ thống thi", "erd-full.drawio", FULL_COLUMNS, colour_of, all_but_audit,
+                    {("answer_keys", "question_id"), ("security_events", "attempt_id")},
+                    " · “→ users”: khoá ngoại ghi người tạo, duyệt, chấm, gửi, thao tác (không vẽ đường) · màu theo nhóm như ERD tổng quan")
 
 
 def overview():
@@ -328,6 +436,7 @@ def overview():
 
 
 if __name__ == "__main__":
+    print("wrote erd-full.drawio;", full_diagram(), "lines")
     for key in GROUPS:
         group_diagram(key)
         print("wrote", f"erd-{key}.drawio")
