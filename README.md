@@ -93,7 +93,13 @@ Sơ đồ nguồn `.drawio` mở bằng [draw.io](https://www.drawio.com/); file
 
 ### Sơ đồ thực thể – quan hệ (ERD)
 
-![ERD](thesis/diagrams/erd.drawio.png)
+25 bảng chia bốn nhóm. Sơ đồ tổng quan cho thấy các nhóm tham chiếu nhau ra sao; mỗi nhóm có một ERD chi tiết, chỉ vẽ khoá ngoại trong nhóm, khoá ngoại sang nhóm khác ghi ngay sau cột (“→ exams”).
+
+![ERD tổng quan](thesis/diagrams/erd.drawio.png)
+
+- [Nội dung đề thi](thesis/diagrams/erd-content.drawio.png) · [Kỳ thi và thí sinh](thesis/diagrams/erd-exams.drawio.png) · [Làm bài, chấm điểm và giám sát](thesis/diagrams/erd-delivery.drawio.png) · [Tài khoản nhân sự và cấu hình](thesis/diagrams/erd-accounts.drawio.png)
+
+Mọi cột trạng thái chỉ nhận đúng các giá trị của enum (ràng buộc CHECK sinh từ code); trạng thái lượt làm bài và các mốc thời gian phải khớp nhau; bài làm không bao giờ bị xoá dây chuyền khi xoá thí sinh, phần thi hay kỳ thi.
 
 ### Sơ đồ trạng thái lượt làm bài
 
@@ -106,6 +112,8 @@ Sơ đồ nguồn `.drawio` mở bằng [draw.io](https://www.drawio.com/); file
 - [Duyệt chéo hai admin](thesis/diagrams/seq-approval.drawio.png)
 
 Đặc tả yêu cầu và đặc tả thiết kế + API (Word) nằm trong [thesis/doc](thesis/doc).
+
+Quyển báo cáo `thesis/doc/BaoCao_DoAnChuyenNganh_TranHoangLong.docx` được dựng từ mẫu của Khoa và nội dung `thesis/doc/report-src/noidung.md` (tài liệu tham khảo IEEE trong `refs.py`): `python -I thesis/doc/report-src/build_report.py`, sau đó `powershell -ExecutionPolicy Bypass -File thesis/doc/report-src/update_fields.ps1` để Word cập nhật mục lục, danh mục bảng/hình (cần đóng file trong Word trước). Hình minh hoạ chương 1–2: `python -I thesis/diagrams/tools/gen_report_figs.py`.
 
 ## Kế hoạch thực hiện
 
@@ -202,4 +210,4 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Test đầu-cuối Playwright (`npm run e2e`, stack Docker riêng cổng 8090): thí sinh đăng nhập + PIN + làm bài + tải lại trang; giám thị tạm dừng/cho làm tiếp và máy thí sinh nhận ngay; quản trị viên tạo đề trắng, gửi yêu cầu xoá, admin khác duyệt; giám thị End now → chấm tự động → giám khảo chấm Writing → điểm Final (chạy lại thì `down -v` stack trước)
 - [x] Kiểm thử tải: 100 và 200 thí sinh đồng thời không lỗi (`setup/loadtest/`, kết quả trong `setup/loadtest/results/TONG_KET.md`); sửa kết nối SignalR bị cắt mỗi 12 giây và pool kết nối CSDL
 - [x] Buổi thi thử 16 tình huống theo `setup/mock-exam/KICH_BAN_THI_THU.md`, chạy tự động bằng trình duyệt (`npm run mock-exam`): mỗi vai một trình duyệt (2 quản trị viên, giám thị, giám khảo, 6 thí sinh A2 và 1 thí sinh B1), Listening chạy hết giờ thật. Tìm ra và đã sửa 4 lỗi: máy cũ không bị đăng xuất khi thí sinh đổi máy; End now đôi khi ghi lý do "hết giờ"; thông báo đã đọc bật lại khi sang phần thi sau; cột Audio vẫn đếm sau khi nộp bài. Lần chạy cuối đạt 16/16; biên bản, ảnh chụp và CSV trong `setup/mock-exam/results/`
-- [ ] Quyển báo cáo
+- [ ] Quyển báo cáo: đã có phần đầu (cam đoan, cảm ơn, mục lục, danh mục, tóm tắt), Mở đầu, Chương 1 Tổng quan, Chương 2 Cơ sở lý thuyết và 52 tài liệu tham khảo; còn Chương 3–5

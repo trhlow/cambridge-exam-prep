@@ -64,7 +64,7 @@ def state_machine():
     # Submitted, with the grading sub-machine inside.
     done = d.vertex("Đã nộp (Submitted) — chấm điểm (grading_status)",
                     f"swimlane;rounded=1;html=1;{FONT}fontStyle=1;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;",
-                    960, 60, 520, 460)
+                    960, 60, 580, 460)
     d.edge(work, done, "Hết giờ [TimeExpired]\nGiám thị End now [InvigilatorEndNow]\n/ ghi submitted_at", "entryX=0;entryY=0.24;", dy=-44)
 
     g_init = d.vertex("", INITIAL, 30, 60, 22, 22, parent=done)
@@ -78,7 +78,7 @@ def state_machine():
     d.edge(not_graded, auto, "AttemptMarker\n[đề không có Writing]", "exitX=0.3;exitY=1;entryX=0.5;entryY=0;", parent=done, dx=-30)
     d.edge(not_graded, manual, "AttemptMarker\n[có bài Writing]", "exitX=0.8;exitY=1;entryX=0.5;entryY=0;", parent=done, dx=30)
     d.edge(manual, manual, "Giám khảo chấm một câu\n[còn câu chưa chấm]", "exitX=1;exitY=0.3;entryX=1;entryY=0.7;",
-           points=[(478, 247), (478, 270)], parent=done, dx=-70, dy=-46)
+           points=[(478, 247), (478, 270)], parent=done, dx=-25, dy=-58)
     d.edge(manual, final, "Giám khảo chấm câu Writing cuối\n/ điểm = tự động + Writing", "", parent=done, dx=-4)
     d.edge(auto, end, "", "exitX=0.5;exitY=1;entryX=0.5;entryY=0;", parent=done)
     d.edge(final, end, "", "exitX=0;exitY=0.5;entryX=1;entryY=0.5;", parent=done)
