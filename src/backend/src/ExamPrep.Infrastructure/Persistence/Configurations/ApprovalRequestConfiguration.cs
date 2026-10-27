@@ -19,6 +19,11 @@ internal sealed class ApprovalRequestConfiguration : IEntityTypeConfiguration<Ap
         // Requests are the approval log: staff accounts are switched off, never deleted, so the links stay.
         builder.HasOne(r => r.RequestedBy).WithMany().HasForeignKey(r => r.RequestedByUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(r => r.DecidedBy).WithMany().HasForeignKey(r => r.DecidedByUserId).OnDelete(DeleteBehavior.Restrict);
-        builder.ToTable(t => t.HasCheckConstraint("CK_approval_requests_decider", "decided_by_user_id IS NULL OR decided_by_user_id <> requested_by_user_id OR status = 'Cancelled'"));
+        builder.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_approval_requests_decider", "decided_by_user_id IS NULL OR decided_by_user_id <> requested_by_user_id OR status = 'Cancelled'");
+            // A pending request has no decision yet; every other status records who decided and when.
+            t.HasCheckConstraint("CK_approval_requests_decision", "(status = 'Pending') = (decided_by_user_id IS NULL AND decided_at IS NULL)");
+        });
     }
 }

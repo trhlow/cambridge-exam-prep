@@ -247,6 +247,12 @@ public static class DemoSeeder
             return;
         }
 
+        // The database keeps attempts when a candidate or section goes (they are exam records); the demo reset is the
+        // one place that throws them away on purpose, with their answers, notes and warnings.
+        var attempts = await db.Attempts.Where(a => a.ExamSection!.ExamId == exam.Id).ToListAsync(cancellationToken);
+        db.Attempts.RemoveRange(attempts);
+        await db.SaveChangesAsync(cancellationToken);
+
         var paperIds = exam.Sections.Select(s => s.TestPaperId).ToList();
         var mixIds = exam.Sections.Where(s => s.PaperMixId != null).Select(s => s.PaperMixId!.Value).ToList();
         db.Exams.Remove(exam);

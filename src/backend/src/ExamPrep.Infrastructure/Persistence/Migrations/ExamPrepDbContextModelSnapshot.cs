@@ -66,7 +66,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("QuestionId");
 
-                    b.ToTable("annotations");
+                    b.ToTable("annotations", t =>
+                        {
+                            t.HasCheckConstraint("CK_annotations_kind_values", "kind IN ('Highlight', 'Note')");
+                        });
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.AnswerKey", b =>
@@ -168,6 +171,12 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.ToTable("approval_requests", t =>
                         {
                             t.HasCheckConstraint("CK_approval_requests_decider", "decided_by_user_id IS NULL OR decided_by_user_id <> requested_by_user_id OR status = 'Cancelled'");
+
+                            t.HasCheckConstraint("CK_approval_requests_decision", "(status = 'Pending') = (decided_by_user_id IS NULL AND decided_at IS NULL)");
+
+                            t.HasCheckConstraint("CK_approval_requests_kind_values", "kind IN ('DeletePaper', 'DeleteExam', 'DeleteCandidate', 'ChangeStaffAccount', 'CreateAdmin')");
+
+                            t.HasCheckConstraint("CK_approval_requests_status_values", "status IN ('Pending', 'Approved', 'Rejected', 'Cancelled', 'Failed')");
                         });
                 });
 
@@ -233,6 +242,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.ToTable("assets", t =>
                         {
+                            t.HasCheckConstraint("CK_assets_kind_values", "kind IN ('Image', 'Audio')");
+
                             t.HasCheckConstraint("CK_assets_size", "size_bytes >= 0");
                         });
                 });
@@ -353,7 +364,19 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.ToTable("attempts", t =>
                         {
+                            t.HasCheckConstraint("CK_attempts_connection_status_values", "connection_status IN ('Offline', 'Online')");
+
+                            t.HasCheckConstraint("CK_attempts_grading_status_values", "grading_status IN ('NotGraded', 'AutoGraded', 'NeedsManualMarking', 'Final')");
+
                             t.HasCheckConstraint("CK_attempts_non_negative", "paused_seconds >= 0 AND planned_extra_seconds >= 0 AND incident_extra_seconds >= 0 AND audio_adjust_ms >= 0");
+
+                            t.HasCheckConstraint("CK_attempts_score", "(raw_score IS NULL OR max_score IS NOT NULL) AND (raw_score IS NULL OR (raw_score >= 0 AND raw_score <= max_score)) AND (max_score IS NULL OR max_score >= 0)");
+
+                            t.HasCheckConstraint("CK_attempts_state", "(status = 'NotStarted' OR started_at IS NOT NULL) AND ((status = 'Paused') = (paused_at IS NOT NULL)) AND ((status = 'Submitted') = (submitted_at IS NOT NULL AND submit_reason IS NOT NULL)) AND (grading_status = 'NotGraded' OR status = 'Submitted')");
+
+                            t.HasCheckConstraint("CK_attempts_status_values", "status IN ('NotStarted', 'InProgress', 'Paused', 'Submitted')");
+
+                            t.HasCheckConstraint("CK_attempts_submit_reason_values", "submit_reason IS NULL OR submit_reason IN ('Candidate', 'TimeExpired', 'InvigilatorEndNow')");
                         });
                 });
 
@@ -451,7 +474,11 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.ToTable("candidates", t =>
                         {
+                            t.HasCheckConstraint("CK_candidates_contrast_values", "contrast IN ('BlackOnWhite', 'WhiteOnBlack', 'YellowOnBlack')");
+
                             t.HasCheckConstraint("CK_candidates_planned_extra", "planned_extra_percent BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("CK_candidates_text_size_values", "text_size IN ('Regular', 'Large', 'ExtraLarge')");
                         });
                 });
 
@@ -568,6 +595,12 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.ToTable("exams", t =>
                         {
                             t.HasCheckConstraint("CK_exams_seats_per_row", "seats_per_row IS NULL OR seats_per_row BETWEEN 1 AND 50");
+
+                            t.HasCheckConstraint("CK_exams_seb_config_key", "seb_config_key_hash IS NULL OR REGEXP_LIKE(seb_config_key_hash, '^[0-9a-f]{64}$', 'c')");
+
+                            t.HasCheckConstraint("CK_exams_session_pin", "REGEXP_LIKE(session_pin, '^[0-9]{4,8}$', 'c')");
+
+                            t.HasCheckConstraint("CK_exams_status_values", "status IN ('Draft', 'Scheduled', 'Active', 'Closed')");
                         });
                 });
 
@@ -766,7 +799,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ExamId", "CreatedAt");
 
-                    b.ToTable("invigilator_actions");
+                    b.ToTable("invigilator_actions", t =>
+                        {
+                            t.HasCheckConstraint("CK_invigilator_actions_action_type_values", "action_type IN ('Pause', 'Resume', 'AddIncidentExtraTime', 'EditEndTime', 'EndNow', 'UseTestEndTime', 'RewindAudio', 'SendMessage', 'AnnounceStart')");
+                        });
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.ManualMark", b =>
@@ -919,6 +955,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.ToTable("paper_parts", t =>
                         {
+                            t.HasCheckConstraint("CK_paper_parts_layout_values", "layout IN ('Single', 'Split')");
+
                             t.HasCheckConstraint("CK_paper_parts_part_no", "part_no > 0");
                         });
                 });
@@ -1044,6 +1082,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_question_groups_choose_count", "choose_count IS NULL OR choose_count > 0");
 
+                            t.HasCheckConstraint("CK_question_groups_interaction_type_values", "interaction_type IN ('SingleChoice', 'ImageChoice', 'InlineChoice', 'InlineText', 'DragDropMatch', 'Essay')");
+
                             t.HasCheckConstraint("CK_question_groups_max_words", "max_words_per_answer IS NULL OR max_words_per_answer > 0");
 
                             t.HasCheckConstraint("CK_question_groups_order", "order_no > 0");
@@ -1099,7 +1139,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.HasIndex("AttemptId", "QuestionId")
                         .IsUnique();
 
-                    b.ToTable("responses");
+                    b.ToTable("responses", t =>
+                        {
+                            t.HasCheckConstraint("CK_responses_selection_values", "selection IN ('Undecided', 'Yes', 'No')");
+                        });
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.SectionTemplate", b =>
@@ -1147,6 +1190,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_section_templates_duration", "duration_minutes > 0");
 
                             t.HasCheckConstraint("CK_section_templates_order", "order_no > 0 AND part_count > 0");
+
+                            t.HasCheckConstraint("CK_section_templates_skill_values", "skill IN ('Reading', 'Writing', 'ReadingWriting', 'Listening')");
                         });
 
                     b.HasData(
@@ -1242,7 +1287,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("AttemptId", "DetectedAt");
 
-                    b.ToTable("security_events");
+                    b.ToTable("security_events", t =>
+                        {
+                            t.HasCheckConstraint("CK_security_events_type_values", "type IN ('InvalidSebKey', 'LockdownBrowserExited', 'ConnectionLost', 'ClockSkew', 'StartedEarly')");
+                        });
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.SiteSetting", b =>
@@ -1275,7 +1323,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UpdatedByUserId");
 
-                    b.ToTable("site_settings");
+                    b.ToTable("site_settings", t =>
+                        {
+                            t.HasCheckConstraint("CK_site_settings_single_row", "id = 1");
+                        });
 
                     b.HasData(
                         new
@@ -1350,6 +1401,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.ToTable("test_papers", t =>
                         {
                             t.HasCheckConstraint("CK_test_papers_mix_version", "(paper_mix_id IS NULL AND mix_version IS NULL AND mix_pattern IS NULL) OR (paper_mix_id IS NOT NULL AND mix_version BETWEEN 1 AND 4 AND mix_pattern IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_test_papers_status_values", "status IN ('Draft', 'Published', 'Archived')");
                         });
                 });
 
@@ -1406,7 +1459,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("users");
+                    b.ToTable("users", t =>
+                        {
+                            t.HasCheckConstraint("CK_users_role_values", "role IN ('Admin', 'Invigilator', 'Manager', 'Examiner')");
+                        });
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.UserArea", b =>
@@ -1422,7 +1478,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.HasKey("UserId", "Area");
 
-                    b.ToTable("user_areas");
+                    b.ToTable("user_areas", t =>
+                        {
+                            t.HasCheckConstraint("CK_user_areas_area_values", "area IN ('Papers', 'Exams', 'Candidates', 'Centre')");
+                        });
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.Annotation", b =>
@@ -1491,13 +1550,13 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.HasOne("ExamPrep.Domain.Entities.Candidate", "Candidate")
                         .WithMany("Attempts")
                         .HasForeignKey("CandidateId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ExamPrep.Domain.Entities.ExamSection", "ExamSection")
                         .WithMany("Attempts")
                         .HasForeignKey("ExamSectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ExamPrep.Domain.Entities.TestPaper", "TestPaper")

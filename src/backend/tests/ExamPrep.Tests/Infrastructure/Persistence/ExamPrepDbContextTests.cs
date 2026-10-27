@@ -148,6 +148,7 @@ public sealed class ExamPrepDbContextTests(MySqlDatabaseFixture database) : ICla
         var heartbeatFromCandidate = await candidate.Attempts.SingleAsync(a => a.Id == attemptId, ct);
 
         pausedByInvigilator.Status = AttemptStatus.Paused;
+        pausedByInvigilator.PausedAt = DateTime.UtcNow;
         await invigilator.SaveChangesAsync(ct);
 
         heartbeatFromCandidate.LastHeartbeatAt = DateTime.UtcNow;
@@ -200,13 +201,34 @@ public sealed class ExamPrepDbContextTests(MySqlDatabaseFixture database) : ICla
     }
 
     [Fact]
-    public async Task DeletingExam_RemovesItsCandidatesAndAttempts()
+    public async Task DeletingExam_IsRefusedByTheDatabase_OnceACandidateHasAnAttempt()
+    {
+        database.SkipIfUnavailable();
+        A2ExamBuilder.SeededExam seeded;
+        await using (var seedDb = database.CreateContext())
+        {
+            seeded = await A2ExamBuilder.SeedAsync(seedDb, ct);
+        }
+
+        await using var db = database.CreateContext();
+        db.Exams.Remove(await db.Exams.SingleAsync(e => e.Id == seeded.ExamId, ct));
+
+        // Attempts are exam records: no delete of an exam, section or candidate may take them along.
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync(ct));
+        await using var read = database.CreateContext();
+        Assert.True(await read.Attempts.AnyAsync(a => a.Id == seeded.AttemptId, ct));
+    }
+
+    [Fact]
+    public async Task DeletingExam_RemovesItsCandidates_WhenNobodyHasStarted()
     {
         database.SkipIfUnavailable();
         A2ExamBuilder.SeededExam seeded;
         await using (var db = database.CreateContext())
         {
             seeded = await A2ExamBuilder.SeedAsync(db, ct);
+            db.Attempts.Remove(await db.Attempts.SingleAsync(a => a.Id == seeded.AttemptId, ct));
+            await db.SaveChangesAsync(ct);
             db.Exams.Remove(await db.Exams.SingleAsync(e => e.Id == seeded.ExamId, ct));
             await db.SaveChangesAsync(ct);
         }
@@ -214,7 +236,24 @@ public sealed class ExamPrepDbContextTests(MySqlDatabaseFixture database) : ICla
         await using var read = database.CreateContext();
 
         Assert.False(await read.Candidates.AnyAsync(c => c.Id == seeded.CandidateId, ct));
-        Assert.False(await read.Attempts.AnyAsync(a => a.Id == seeded.AttemptId, ct));
         Assert.True(await read.TestPapers.AnyAsync(p => p.Id == seeded.PaperId, ct));
+    }
+
+    [Theory]
+    [InlineData("UPDATE attempts SET status = 'Finished' WHERE id = {0}")]
+    [InlineData("UPDATE attempts SET status = 'Submitted' WHERE id = {0}")]
+    [InlineData("UPDATE attempts SET status = 'Paused' WHERE id = {0}")]
+    [InlineData("UPDATE attempts SET grading_status = 'Final' WHERE id = {0}")]
+    [InlineData("UPDATE exams SET session_pin = '12a4' WHERE id = {1}")]
+    [InlineData("UPDATE exams SET status = 'Open' WHERE id = {1}")]
+    public async Task Database_RefusesStatesTheCodeCannotProduce(string sql)
+    {
+        database.SkipIfUnavailable();
+        await using var db = database.CreateContext();
+        var seeded = await A2ExamBuilder.SeedAsync(db, ct);
+
+        // An unknown status, a submitted attempt without its time and reason, a pause without its start, a grade on a
+        // running attempt, a PIN with a letter: each breaks a CHECK constraint whoever writes it.
+        await Assert.ThrowsAnyAsync<Exception>(() => db.Database.ExecuteSqlRawAsync(string.Format(sql, seeded.AttemptId, seeded.ExamId), ct));
     }
 }

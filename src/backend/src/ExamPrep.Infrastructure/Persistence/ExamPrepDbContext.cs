@@ -59,6 +59,7 @@ public class ExamPrepDbContext(DbContextOptions<ExamPrepDbContext> options) : Db
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ExamPrepDbContext).Assembly);
         SnakeCaseNaming.Apply(modelBuilder);
+        EnumCheckConstraints.Apply(modelBuilder);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
