@@ -11,6 +11,9 @@ export interface RecordingPlayer {
   stop: () => void
   /** Where the recording is now (ms from its start), or null while it is not playing. */
   positionMs: () => number | null
+  /** The candidate's volume, 0–1 (Cambridge: candidates may change the volume during Listening). */
+  volume: number
+  setVolume: (volume: number) => void
 }
 
 function trackDuration(url: string): Promise<number> {
@@ -31,6 +34,8 @@ const IGNORED_MEDIA_ACTIONS: MediaSessionAction[] = ['pause', 'stop', 'seekbackw
  */
 export function useRecordingPlayer(urls: string[]): RecordingPlayer {
   const [state, setState] = useState<PlayerState>('idle')
+  const [volume, setVolumeState] = useState(1)
+  const volumeRef = useRef(1)
   const urlsRef = useRef(urls)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const durationsRef = useRef<Promise<number[]> | null>(null)
@@ -49,6 +54,7 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
 
     const audio = new Audio()
     audio.preload = 'auto'
+    audio.volume = volumeRef.current
     audioRef.current = audio
     durationsRef.current = Promise.all(tracks.map(trackDuration))
     void durationsRef.current.then((durations) => {
@@ -132,5 +138,14 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
     return (offsets[trackRef.current] ?? 0) + audio.currentTime * 1000
   }, [])
 
-  return { state, start, stop, positionMs }
+  const setVolume = useCallback((next: number) => {
+    const clamped = Math.min(1, Math.max(0, next))
+    volumeRef.current = clamped
+    setVolumeState(clamped)
+    if (audioRef.current) {
+      audioRef.current.volume = clamped
+    }
+  }, [])
+
+  return { state, start, stop, positionMs, volume, setVolume }
 }

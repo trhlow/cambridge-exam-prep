@@ -49,7 +49,7 @@ const BADGE_TONE: Record<string, string> = {
   NeedsManualMarking: 'yellow',
 }
 
-const BADGE_TEXT: Record<string, string> = { NotStarted: 'Not started', InProgress: 'In progress', NeedsManualMarking: 'Writing to mark' }
+const BADGE_TEXT: Record<string, string> = { NotStarted: 'Never started', InProgress: 'In progress', NeedsManualMarking: 'Writing to mark' }
 
 export function Badge({ value }: { value: string }) {
   return <span className={`st-badge st-badge--${BADGE_TONE[value] ?? 'grey'}`}>{BADGE_TEXT[value] ?? value}</span>

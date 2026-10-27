@@ -5,10 +5,11 @@ describe('timeLeftText', () => {
     [3600, '60 minutes left'],
     [3541, '60 minutes left'],
     [3540, '59 minutes left'],
-    [61, '2 minutes left'],
-    [60, '1 minute left'],
-    [59, '59 seconds left'],
-    [1, '1 second left'],
+    [301, '6 minutes left'],
+    [300, '5:00 left'],
+    [299, '4:59 left'],
+    [61, '1:01 left'],
+    [9, '0:09 left'],
     [0, 'Time is up'],
   ])('shows %i seconds as "%s"', (seconds, text) => {
     expect(timeLeftText(seconds)).toBe(text)

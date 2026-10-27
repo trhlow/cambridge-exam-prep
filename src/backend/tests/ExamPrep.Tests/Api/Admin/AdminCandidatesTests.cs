@@ -104,6 +104,21 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
     }
 
     [Fact]
+    public async Task Update_RefusesANewPlannedExtraTime_OnceTheCandidateHasStarted()
+    {
+        api.SkipIfUnavailable();
+        using var admin = await api.AdminClientAsync();
+        var seeded = await api.CreateCandidateAsync("x-pass-1234");
+        await api.StartAttemptAsync(seeded.CandidateId, seeded.ReadingWritingSectionId);
+
+        var extra = await admin.PutAsJsonAsync($"/api/admin/candidates/{seeded.CandidateId}", new { firstName = "An", lastName = "Nguyen", plannedExtraPercent = 25 }, ct);
+        var nameOnly = await admin.PutAsJsonAsync($"/api/admin/candidates/{seeded.CandidateId}", new { firstName = "An", lastName = "Nguyễn", plannedExtraPercent = 0 }, ct);
+
+        Assert.Equal(HttpStatusCode.Conflict, extra.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, nameOnly.StatusCode);
+    }
+
+    [Fact]
     public async Task UpdateAndDelete_AreAllowedUntilTheCandidateStarts()
     {
         api.SkipIfUnavailable();

@@ -11,13 +11,32 @@ export const examName = 'Victory demo – A2 Key for Schools'
 export const b1Candidate = { ...candidate, username: 'hoanglongb1' }
 export const b1ExamName = 'Victory demo – B1 Preliminary for Schools'
 
+/**
+ * The candidate steps of the Cambridge exam day booklet: Login, Next, PIN, "Unlock and Select", Next, then the
+ * readiness check (Confirm and the forward arrow), back to the dashboard.
+ */
 export async function candidateSignsIn(page: Page, account = candidate) {
   await page.goto('/')
   await page.getByLabel('Username').fill(account.username)
   await page.getByLabel('Password').fill(account.password)
-  await page.getByRole('button', { name: 'Log in' }).click()
-  await page.getByLabel('Enter the PIN your invigilator gives you').fill(account.pin)
-  await page.getByRole('button', { name: 'Start' }).click()
+  await page.getByRole('button', { name: 'Login' }).click()
+  await page.getByRole('button', { name: 'Next' }).click()
+  await page.getByLabel('PIN code').fill(account.pin)
+  await page.getByRole('button', { name: 'Unlock and Select' }).click()
+  await page.getByRole('button', { name: 'Next' }).click()
+  await page.getByRole('button', { name: /^(Start|Watch again)$/ }).click()
+  await page.getByRole('button', { name: 'Confirm' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+}
+
+/** From the dashboard into a component: Open, read the instructions, "I confirm", "Start (name)". */
+export async function openSection(page: Page, title: string) {
+  await page.getByRole('button', { name: `Open ${title}` }).click()
+  const start = page.getByRole('button', { name: `Start ${title}` })
+  if (await start.isVisible().catch(() => false)) {
+    await page.getByRole('button', { name: 'I confirm' }).click()
+    await start.click()
+  }
 }
 
 export async function staffSignsIn(page: Page, account: { username: string; password: string }) {

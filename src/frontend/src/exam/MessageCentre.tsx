@@ -20,7 +20,8 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour
 
 /**
  * VE-17: the bell in the candidate header. A new message from the invigilator appears on screen until the candidate
- * presses OK; every message stays listed under the bell. What was read survives a reload of this tab.
+ * presses OK; every message stays listed under the bell, on a screen that hides the test. What was read survives a
+ * reload of this tab.
  */
 export function MessageCentre({ reader, messages }: { reader: string; messages: CandidateMessage[] }) {
   const [seenId, setSeenId] = useState(() => readSeen(reader))
@@ -54,7 +55,15 @@ export function MessageCentre({ reader, messages }: { reader: string; messages: 
         {unread.length > 0 && <span className="messages-count">{unread.length}</span>}
       </button>
       {isOpen && (
-        <div className="messages-panel">
+        // Covers the test like the Options screen: the Cambridge booklet lets candidates hide their answers with the
+        // notification icon too, and click X to come back (Exam Day Booklet for Digital exams 2026, pp. 12-13).
+        <div className="opt-screen messages-panel" role="dialog" aria-modal="true" aria-label="Messages">
+          <div className="opt-screen-head">
+            <h2>Messages</h2>
+            <button type="button" className="opt-screen-close" aria-label="Close messages" onClick={() => setIsOpen(false)}>
+              ✕
+            </button>
+          </div>
           {messages.length === 0 ? (
             <p className="messages-empty">No messages.</p>
           ) : (

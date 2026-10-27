@@ -111,13 +111,33 @@ async function logIn(page: Page, slip: Slip) {
   await page.goto('/')
   await page.getByLabel('Username').fill(slip.username)
   await page.getByLabel('Password').fill(slip.password)
-  await page.getByRole('button', { name: 'Log in' }).click()
-  await expect(page.getByLabel('Enter the PIN your invigilator gives you')).toBeVisible()
+  await page.getByRole('button', { name: 'Login' }).click()
+  await page.getByRole('button', { name: 'Next' }).click()
+  await expect(page.getByLabel('PIN code')).toBeVisible()
+}
+
+/** PIN, "Unlock and Select", Next, then the readiness check (Confirm, forward arrow), as the exam day booklet says. */
+async function typePin(page: Page, pin: string) {
+  await page.getByLabel('PIN code').fill(pin)
+  await page.getByRole('button', { name: 'Unlock and Select' }).click()
 }
 
 async function enterPin(page: Page, pin: string) {
-  await page.getByLabel('Enter the PIN your invigilator gives you').fill(pin)
-  await page.getByRole('button', { name: 'Start' }).click()
+  await typePin(page, pin)
+  await page.getByRole('button', { name: 'Next' }).click()
+  await page.getByRole('button', { name: /^(Start|Watch again)$/ }).click()
+  await page.getByRole('button', { name: 'Confirm' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+}
+
+/** Dashboard → instructions → "I confirm" → "Start (name)". */
+async function openSection(page: Page, title: string) {
+  await page.getByRole('button', { name: `Open ${title}` }).click()
+  const start = page.getByRole('button', { name: `Start ${title}` })
+  if (await start.isVisible().catch(() => false)) {
+    await page.getByRole('button', { name: 'I confirm' }).click()
+    await start.click()
+  }
 }
 
 async function getJson<T>(page: Page, url: string): Promise<T> {
@@ -307,7 +327,7 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
 
   await situation(2, 'Nhập sai mã PIN', async (s) => {
     for (const wrong of ['0000', '1111', '9999']) {
-      await enterPin(an.page, wrong)
+      await typePin(an.page, wrong)
       const alert = an.page.getByRole('alert')
       await expect(alert).toBeVisible()
       if (s.notes.length === 0) {
@@ -326,7 +346,7 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
   await expect(portal.getByText('live')).toBeVisible()
 
   await situation(3, 'Bắt đầu trước khi giám thị Announce start (cảnh báo StartedEarly)', async (s) => {
-    await binh.page.getByRole('button', { name: 'Open Reading & Writing' }).click()
+    await openSection(binh.page, 'Reading & Writing')
     await expect(binh.page.getByRole('radiogroup', { name: 'Answers for question 1' })).toBeVisible()
     await waitForRow(portal, a2.examId, rw, binh.name, (r) => r.status === 'InProgress', 'InProgress')
 
@@ -336,7 +356,7 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
     await expect(portal.getByRole('button', { name: `1 warning for ${binh.name}` })).toBeVisible()
 
     for (const c of [an, hoa, chi, dung, giang]) {
-      await c.page.getByRole('button', { name: 'Open Reading & Writing' }).click()
+      await openSection(c.page, 'Reading & Writing')
       await expect(c.page.getByRole('radiogroup', { name: 'Answers for question 1' })).toBeVisible()
     }
 
@@ -551,7 +571,7 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
     await enterPin(page, A2_PIN)
     await expect(oldPage.getByLabel('Username')).toBeVisible({ timeout: 20_000 })
     s.notes.push('Máy cũ tự về màn hình đăng nhập')
-    await page.getByRole('button', { name: 'Open Reading & Writing' }).click()
+    await openSection(page, 'Reading & Writing')
     await expect(page.getByRole('radiogroup', { name: 'Answers for question 1' }).getByRole('radio').first()).toBeChecked()
     s.notes.push('Máy mới tiếp tục cùng lượt làm bài, còn đáp án câu 1')
     await shot(s, page, 'may-moi')
@@ -586,10 +606,10 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
     const { row: ending } = await waitForRow(portal, a2.examId, rw, dung.name, (r) => r.endTimeEdited, 'end edited', 10_000)
     expect(ending.remainingSeconds).toBeGreaterThanOrEqual(110)
     expect(ending.remainingSeconds).toBeLessThanOrEqual(121)
-    await expect(dung.page.getByRole('timer')).toHaveText(/^(2 minutes|1 minute|\d+ seconds) left/, { timeout: 12_000 })
+    await expect(dung.page.getByRole('timer')).toHaveText(/^[0-2]:\d\d left/, { timeout: 12_000 })
     await expect(portal.getByRole('row', { name: new RegExp(dung.name) }).getByText('end edited')).toBeVisible()
     await shot(s, portal, 'gio-bu-va-end-in')
-    s.notes.push(`${dung.name} End in 2 phút: còn ${ending.remainingSeconds} s, màn hình thí sinh còn "2 minutes left"`)
+    s.notes.push(`${dung.name} End in 2 phút: còn ${ending.remainingSeconds} s, màn hình thí sinh đếm phút và giây (dưới 5 phút)`)
 
     const expiry = await waitForRow(portal, a2.examId, rw, dung.name, (r) => r.status === 'Submitted', 'submitted at the edited end', 150_000)
     expect(expiry.row.submitReason).toBe('TimeExpired')
@@ -634,8 +654,7 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
   note('Reading & Writing kết thúc cho cả phòng')
   for (const c of candidates) {
     await expect(c.page.getByText('The test has now finished. Your answers have been saved.')).toBeVisible({ timeout: 15_000 })
-    await c.page.getByRole('button', { name: 'Continue' }).click()
-    await c.page.getByRole('button', { name: 'Open Listening' }).click()
+    await openSection(c.page, 'Listening')
     await c.page.getByRole('dialog', { name: 'Listening' }).getByRole('button', { name: 'Play' }).click()
   }
 
@@ -689,7 +708,7 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
     await logIn(page, slip)
     await enterPin(page, B1_PIN)
     await expect(page.getByRole('button', { name: 'Writing is locked' })).toBeDisabled()
-    await page.getByRole('button', { name: 'Open Reading' }).click()
+    await openSection(page, 'Reading')
     await expect(page.getByRole('radiogroup', { name: 'Answers for question 1' })).toBeVisible()
 
     const b1Portal = await invigilatorContext.newPage()
@@ -701,9 +720,8 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
       await dialog.getByRole('button', { name: 'Click again to end now' }).click()
     })
     await expect(page.getByText('The test has now finished. Your answers have been saved.')).toBeVisible({ timeout: 10_000 })
-    await page.getByRole('button', { name: 'Continue' }).click()
 
-    await page.getByRole('button', { name: 'Open Writing' }).click()
+    await openSection(page, 'Writing')
     await page.getByRole('button', { name: /^Part 2/ }).click()
     await expect(page.getByText('0 of 1 question selected')).toBeVisible()
     const chosen = page.waitForResponse((r) => r.url().includes('/selections') && r.status() === 204)

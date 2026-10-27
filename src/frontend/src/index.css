@@ -766,7 +766,7 @@ button {
 }
 
 .signin-card {
-  max-width: 460px;
+  max-width: 640px;
   margin: 72px auto;
   padding: 32px;
   background: var(--surface);
@@ -1067,22 +1067,11 @@ button {
   text-align: center;
 }
 
-.messages-panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 30;
-  width: 340px;
-  max-height: 360px;
-  overflow-y: auto;
-  border: 1px solid var(--rule);
-  background: var(--surface);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-}
-
-.messages-panel ul {
-  margin: 0;
-  padding: 0;
+.messages-panel ul,
+.messages-panel .messages-empty {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
   list-style: none;
 }
 
@@ -1424,4 +1413,97 @@ button {
 
 .exam-main.has-notes .part-page {
   padding-right: calc(min(340px, 40vw) + var(--gutter));
+}
+
+/* Candidate icon (top right): the name and number, to check the spelling after the PIN. */
+.candidate-icon,
+.volume {
+  position: relative;
+  display: inline-flex;
+}
+
+.candidate-card,
+.volume-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  min-width: 240px;
+  padding: 16px 44px 16px 16px;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.volume-panel {
+  min-width: 200px;
+  padding: 14px 16px;
+}
+
+.volume-panel input {
+  width: 100%;
+}
+
+.candidate-card-name {
+  font-weight: 700;
+}
+
+.candidate-card-number {
+  margin-top: 4px;
+  font-family: var(--mono, monospace);
+}
+
+.candidate-card-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.signin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Readiness check and the instructions before each component. */
+.readiness-list {
+  margin: 0 0 20px;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+
+.readiness-list li + li {
+  margin-top: 8px;
+}
+
+.readiness-sound,
+.readiness-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.readiness-sound label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.readiness-actions .nav-arrow {
+  position: static;
+}
+
+.signin-finish {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
 }

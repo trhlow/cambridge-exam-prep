@@ -4,11 +4,14 @@ namespace ExamPrep.Domain.Candidates;
 
 /// <summary>
 /// Cambridge login usernames: the first 5 letters of the family name, the first letter of the given name and the
-/// candidate number, in lower case without accents (Nguyễn An 0001 → nguyea0001).
+/// candidate number, in lower case without accents (Nguyễn An 0001 → nguyea0001). A family name shorter than 5 letters
+/// takes more letters from the given name (Exam Day Booklet for Digital exams 2026, p. 11), so the letters are always
+/// six when the names allow it (Lê Thị Hoa 0002 → lethih0002).
 /// </summary>
 public static class CandidateUsername
 {
     private const int FamilyLetters = 5;
+    private const int NameLetters = 6;
 
     public static string For(string familyName, string givenName, string candidateNumber)
     {
@@ -20,7 +23,9 @@ public static class CandidateUsername
         }
 
         var number = new string(candidateNumber.Where(char.IsAsciiLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
-        return family[..Math.Min(FamilyLetters, family.Length)] + given[0] + number;
+        var fromFamily = family[..Math.Min(FamilyLetters, family.Length)];
+        var fromGiven = given[..Math.Min(given.Length, NameLetters - fromFamily.Length)];
+        return fromFamily + fromGiven + number;
     }
 
     /// <summary>Lower-case ASCII letters only: accents dropped, Vietnamese đ read as d, everything else removed.</summary>

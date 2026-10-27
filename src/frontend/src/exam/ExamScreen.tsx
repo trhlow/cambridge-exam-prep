@@ -109,8 +109,9 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
   const [annotations, updateAnnotations] = useAnnotations(section.id)
   const [isNotesOpen, setIsNotesOpen] = useState(false)
   const [newNoteId, setNewNoteId] = useState<string | null>(null)
-  // Cambridge booklet: notes are switched off with large text sizes.
-  const canNote = display.textSize === 'Regular'
+  // Cambridge booklet (2026, p. 11): no notepad with Large or Extra large text, or at 1366×768, 1280×1024 or
+  // 1280×720 screen resolutions.
+  const canNote = display.textSize === 'Regular' && window.screen.width > 1366
   const attempt = useAttempt(section.id)
   usePaintedAnnotations(annotations, `${storedPage}:${isReviewing}:${paper ? 'paper' : ''}:${attempt.isLoaded}:${display.textSize}`)
   const pages = useMemo(() => (paper ? buildPages(paper) : []), [paper])
@@ -180,7 +181,8 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
   }
 
   if (attempt.status === 'Submitted') {
-    return <FinishedScreen profile={profile} title={paper.title} display={display} onContinue={onFinished} />
+    // Inspera closes the component and takes the candidate back to the dashboard.
+    return <FinishWhenSubmitted onFinished={onFinished} />
   }
 
   const page = pages[pageIndex]
@@ -217,6 +219,7 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
         saveStatus={attempt.saveStatus}
         isAudioPlaying={player.state === 'playing'}
         bell={<MessageCentre reader={`${profile.examName}/${profile.candidateNumber}`} messages={attempt.messages} />}
+        volume={isListening ? { value: player.volume, onChange: player.setVolume } : undefined}
       />
       {audioNotice && (
         <div className="audio-notice" role="status">
@@ -313,17 +316,9 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
   )
 }
 
-function FinishedScreen({ profile, title, display, onContinue }: { profile: CandidateProfile; title: string; display: DisplayOptions; onContinue: () => void }) {
-  return (
-    <div className="exam exam--finished" data-contrast={display.contrast} data-text-size={display.textSize}>
-      <TopBar profile={profile} timeLeft={null} saveStatus="saved" />
-      <main className="finished">
-        <h2>{title}</h2>
-        <p>The test has now finished. Your answers have been saved.</p>
-        <button type="button" className="btn btn--primary" onClick={onContinue}>
-          Continue
-        </button>
-      </main>
-    </div>
-  )
+function FinishWhenSubmitted({ onFinished }: { onFinished: () => void }) {
+  useEffect(() => {
+    onFinished()
+  }, [onFinished])
+  return <div className="screen-message">The test has now finished. Your answers have been saved.</div>
 }

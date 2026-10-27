@@ -134,6 +134,14 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
             return NotFound();
         }
 
+        // Special-arrangement extra time is decided before the test, never once the candidate has started: time lost on
+        // the day is incident extra time, added by the invigilator (Invigilator Training Test User Guide, p. 15).
+        var hasStarted = await db.Attempts.AnyAsync(a => a.CandidateId == candidateId, cancellationToken);
+        if (hasStarted && request.PlannedExtraPercent != candidate.PlannedExtraPercent)
+        {
+            return Problems.Conflict("This candidate has started the test, so the planned extra time can no longer change. Add incident extra time on the monitoring page instead.");
+        }
+
         // The username stays as printed on the slip even when a misspelt name is corrected.
         candidate.FirstName = request.FirstName.Trim();
         candidate.LastName = request.LastName.Trim();
@@ -142,8 +150,6 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
         candidate.SeatNo = string.IsNullOrWhiteSpace(request.SeatNo) ? null : request.SeatNo.Trim();
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Staff {UserId} updated candidate {CandidateId}", User.GetStaffId(), candidateId);
-
-        var hasStarted = await db.Attempts.AnyAsync(a => a.CandidateId == candidateId, cancellationToken);
         return CandidateView.From(candidate, hasStarted);
     }
 

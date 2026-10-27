@@ -62,3 +62,29 @@ export function CheckIcon() {
     </svg>
   )
 }
+
+export function PersonIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+      <circle {...stroke} cx="12" cy="8" r="4" />
+      <path {...stroke} d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  )
+}
+
+export function VolumeIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+      <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
+      <path {...stroke} d="M16 8.5a5 5 0 0 1 0 7M18.8 5.8a9 9 0 0 1 0 12.4" />
+    </svg>
+  )
+}
+
+export function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+    </svg>
+  )
+}
