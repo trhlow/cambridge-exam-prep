@@ -27,7 +27,7 @@ public sealed class SeatedPapersTests(ApiFixture api) : IClassFixture<ApiFixture
         var a = await api.ImportPublishedSampleAsync(SamplePackages.ReadingWriting, $"A {suffix}");
         var b = await api.ImportPublishedSampleAsync(SamplePackages.ReadingWriting, $"B {suffix}");
         using var admin = await api.AdminClientAsync();
-        var mix = (await (await admin.PostAsJsonAsync("/api/admin/paper-mixes", new { sourceAPaperId = a, sourceBPaperId = b }, ct)).Content.ReadFromJsonAsync<JsonObject>(ct))!;
+        var mix = (await (await admin.PostAsJsonAsync("/api/admin/paper-mixes", new { sourcePaperIds = new[] { a, b }, versionCount = 4 }, ct)).Content.ReadFromJsonAsync<JsonObject>(ct))!;
         var versions = mix["versions"]!.AsArray().ToDictionary(v => (int)v!["version"]!, v => (int)v!["paperId"]!);
 
         var exam = await api.CreateCandidateAsync(Password, withSamplePapers: true);
@@ -205,7 +205,7 @@ public sealed class SeatedPapersTests(ApiFixture api) : IClassFixture<ApiFixture
 
         Assert.Equal(2, (int)plan["seatsPerRow"]!);
         Assert.Equal([1, 2, 3, 4], plan["seats"]!.AsArray().Select(seat => (int)seat!["seat"]!));
-        Assert.Equal([1, 2, 3, 4], plan["seats"]!.AsArray().Select(seat => (int)seat!["paperVersion"]!));
+        Assert.Equal([1, 2, 3, 4], plan["seats"]!.AsArray().Select(seat => (int)seat!["paperVersions"]![0]!["version"]!));
         var readingWriting = plan["sections"]!.AsArray().Single(x => (int)x!["sectionId"]! == room.Exam.ReadingWritingSectionId)!;
         Assert.Equal(4, readingWriting["versions"]!.AsArray().Count);
         Assert.Empty(plan["sections"]!.AsArray().Single(x => (int)x!["sectionId"]! == room.Exam.ListeningSectionId)!["versions"]!.AsArray());
@@ -231,7 +231,7 @@ public sealed class SeatedPapersTests(ApiFixture api) : IClassFixture<ApiFixture
         var monitor = (await admin.GetFromJsonAsync<JsonObject>($"/api/staff/exams/{room.Exam.ExamId}/sections/{sectionId}/monitor", ct))!;
         var results = (await admin.GetFromJsonAsync<JsonArray>($"/api/staff/exams/{room.Exam.ExamId}/results", ct))!;
 
-        Assert.Equal(4, (int)candidates.Single(c => (int)c!["id"]! == startedId)!["paperVersion"]!);
+        Assert.Equal(4, (int)candidates.Single(c => (int)c!["id"]! == startedId)!["paperVersions"]![0]!["version"]!);
         Assert.NotNull((string?)monitor["paperMixTitle"]);
         var rows = monitor["candidates"]!.AsArray();
         Assert.Equal(2, (int)rows.Single(r => (int)r!["candidateId"]! == startedId)!["paperVersion"]!);

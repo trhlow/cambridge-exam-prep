@@ -3,7 +3,7 @@ import { useLive } from '../../api/live'
 import { staffApi, type ActionOutcome, type MonitorRow, type MonitorView } from '../api'
 import { actionAvailability, clockText, extraTimeText, rowAt, type ActionButton } from '../monitorLogic'
 import { Link } from '../Link'
-import { Badge, ConfirmButton, ErrorBox, PageHeader } from '../ui'
+import { Badge, ConfirmButton, ErrorBox, PageHeader, VersionBadge } from '../ui'
 import { formatTime } from '../format'
 import { ActionDialog, type DialogKind } from './MonitorDialogs'
 import { WarningsDialog } from './WarningsDialog'
@@ -238,7 +238,7 @@ function Row(props: { row: MonitorRow; hasAudio: boolean; showsVersion: boolean;
           {row.candidateNumber} · {row.username}
         </div>
       </td>
-      {showsVersion && <td>{row.paperVersion ? <span className={`room-version room-version--${row.paperVersion}`}>V{row.paperVersion}</span> : '–'}</td>}
+      {showsVersion && <td>{row.paperVersion ? <VersionBadge version={row.paperVersion} /> : '–'}</td>}
       <td>
         <Badge value={row.status} />
         {row.submitReason === 'InvigilatorEndNow' && <div className="st-faint">Ended by invigilator</div>}

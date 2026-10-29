@@ -1,6 +1,6 @@
 import { staffApi } from '../api'
 import { Link } from '../Link'
-import { Badge, ErrorBox, PageHeader } from '../ui'
+import { Badge, ErrorBox, PageHeader, VersionBadge } from '../ui'
 import { resultsCsv } from '../resultsCsv'
 import { useLoad } from '../useLoad'
 
@@ -66,7 +66,7 @@ export function ResultsPage({ examId, canMark }: { examId: number; canMark: bool
                 {candidate.sections.map((s) => (
                   <td key={s.sectionId}>
                     <Badge value={s.status} />
-                    {s.paperVersion ? <span className={`room-version room-version--${s.paperVersion}`}>V{s.paperVersion}</span> : null}
+                    {s.paperVersion ? <VersionBadge version={s.paperVersion} /> : null}
                     {s.rawScore !== null && (
                       <div className="st-score">
                         {s.rawScore} / {s.maxScore}

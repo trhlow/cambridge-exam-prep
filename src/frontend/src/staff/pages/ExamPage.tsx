@@ -117,7 +117,7 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
               <span>{section.durationMinutes} minutes</span>
               {section.paperMixId ? (
                 <span className="st-faint">
-                  {section.paperMixTitle} · mixed, 4 versions by seat
+                  {section.paperMixTitle} · mixed, {section.paperMixVersions} versions by seat
                 </span>
               ) : (
                 <span className="st-faint">{section.paperTitle}</span>

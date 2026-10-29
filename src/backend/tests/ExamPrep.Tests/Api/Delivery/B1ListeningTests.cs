@@ -44,7 +44,7 @@ public sealed class B1ListeningTests(ApiFixture api) : IClassFixture<ApiFixture>
         var a = await api.ImportPublishedSampleAsync(SamplePackages.B1Listening, "B1 L source A");
         var b = await api.ImportPublishedSampleAsync(SamplePackages.B1Listening, "B1 L source B");
 
-        var mix = await (await client.PostAsJsonAsync("/api/admin/paper-mixes", new { sourceAPaperId = a, sourceBPaperId = b, seed = 11 }, ct)).Content.ReadFromJsonAsync<JsonObject>(ct);
+        var mix = await (await client.PostAsJsonAsync("/api/admin/paper-mixes", new { sourcePaperIds = new[] { a, b }, versionCount = 4, seed = 11 }, ct)).Content.ReadFromJsonAsync<JsonObject>(ct);
 
         foreach (var version in mix!["versions"]!.AsArray())
         {

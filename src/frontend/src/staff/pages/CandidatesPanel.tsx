@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { adminApi, type ApprovalView, type CandidateView, type ExamDetail, type LoginSlip } from '../api'
 import { parseCandidateRows } from '../candidateRows'
-import { ConfirmButton, ErrorBox, Modal, RequestSent } from '../ui'
+import { ConfirmButton, ErrorBox, Modal, RequestSent, VersionBadge } from '../ui'
 import { useLoad } from '../useLoad'
 
 /**
@@ -61,7 +61,7 @@ export function CandidatesPanel({ exam, canEdit, onChanged }: { exam: ExamDetail
               <th>Username</th>
               <th className="st-num">Extra time</th>
               <th>Seat</th>
-              {candidates.some((x) => x.paperVersion) && <th>Paper</th>}
+              {candidates.some((x) => x.paperVersions?.length) && <th>Paper</th>}
               {canEdit && <th />}
             </tr>
           </thead>
@@ -74,7 +74,9 @@ export function CandidatesPanel({ exam, canEdit, onChanged }: { exam: ExamDetail
                 <td className="st-mono">{c.username}</td>
                 <td className="st-num">{c.plannedExtraPercent > 0 ? `${c.plannedExtraPercent} %` : '–'}</td>
                 <td>{c.seatNo ?? '–'}</td>
-                {candidates.some((x) => x.paperVersion) && <td>{c.paperVersion ? <span className={`room-version room-version--${c.paperVersion}`}>V{c.paperVersion}</span> : '–'}</td>}
+                {candidates.some((x) => x.paperVersions?.length) && (
+                  <td className="st-nowrap">{c.paperVersions?.length ? c.paperVersions.map((v) => <VersionBadge key={v.sectionId} version={v.version} label={v.section} />) : '–'}</td>
+                )}
                 {canEdit && (
                   <td className="st-row-actions">
                     <button type="button" className="st-link" onClick={() => setEditing(c)}>

@@ -1,4 +1,5 @@
 using ExamPrep.Domain.Entities;
+using ExamPrep.Domain.Papers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,6 +18,6 @@ internal sealed class TestPaperConfiguration : IEntityTypeConfiguration<TestPape
         builder.HasIndex(p => new { p.PaperMixId, p.MixVersion }).IsUnique();
         builder.ToTable(t => t.HasCheckConstraint(
             "CK_test_papers_mix_version",
-            "(paper_mix_id IS NULL AND mix_version IS NULL AND mix_pattern IS NULL) OR (paper_mix_id IS NOT NULL AND mix_version BETWEEN 1 AND 4 AND mix_pattern IS NOT NULL)"));
+            $"(paper_mix_id IS NULL AND mix_version IS NULL AND mix_pattern IS NULL) OR (paper_mix_id IS NOT NULL AND mix_version BETWEEN 1 AND {PaperMixPlan.VersionsPerSource * PaperMixPlan.MaxSources} AND mix_pattern IS NOT NULL)"));
     }
 }

@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExamPrep.Api.Exams;
 
-/// <param name="PaperMixId">Set when the section gives the four papers of a mix by seat (VE-66); TestPaperId is then version 1.</param>
-public sealed record ExamSectionView(int Id, int SectionTemplateId, int OrderNo, string Title, int DurationMinutes, int TestPaperId, string PaperTitle, int? PaperMixId = null, string? PaperMixTitle = null);
+/// <param name="PaperMixId">Set when the section gives the papers of a mix by seat (VE-66); TestPaperId is then version 1.</param>
+/// <param name="PaperMixVersions">How many papers the mix gives (VE-70).</param>
+public sealed record ExamSectionView(int Id, int SectionTemplateId, int OrderNo, string Title, int DurationMinutes, int TestPaperId, string PaperTitle, int? PaperMixId = null, string? PaperMixTitle = null, int? PaperMixVersions = null);
 
 /// <summary>An invigilator or examiner assigned to a session.</summary>
 public sealed record AssignedStaffView(int Id, string Username, string FullName);
@@ -113,8 +114,8 @@ public static class ExamViews
         var mixIds = sections.Where(s => s.View.PaperMixId != null).Select(s => s.View.PaperMixId!.Value).Distinct().ToList();
         if (mixIds.Count > 0)
         {
-            var titles = await db.PaperMixes.AsNoTracking().Where(m => mixIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.Title, cancellationToken);
-            sections = sections.Select(s => s.View.PaperMixId is { } id ? new { s.ExamId, View = s.View with { PaperMixTitle = titles[id] } } : s).ToList();
+            var titles = await db.PaperMixes.AsNoTracking().Where(m => mixIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => new { m.Title, m.VersionCount }, cancellationToken);
+            sections = sections.Select(s => s.View.PaperMixId is { } id ? new { s.ExamId, View = s.View with { PaperMixTitle = titles[id].Title, PaperMixVersions = titles[id].VersionCount } } : s).ToList();
         }
 
         return sections.GroupBy(s => s.ExamId).ToDictionary(g => g.Key, g => (IReadOnlyList<ExamSectionView>)g.Select(s => s.View).ToList());

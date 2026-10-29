@@ -109,7 +109,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
         {
             // The started attempt's version; before that, the one the candidate's seat will get.
             mixTitle = await db.PaperMixes.Where(x => x.Id == mixId).Select(x => x.Title).SingleAsync(cancellationToken);
-            var bySeat = PaperAssignment.VersionsOf(candidates, section.Exam!.SeatsPerRow);
+            var bySeat = PaperAssignment.VersionsOf(candidates, section.Exam!.SeatsPerRow, await PaperAssignment.ShapeOfAsync(db, mixId, cancellationToken));
             var started = await PaperAssignment.MixVersionsAsync(db, attempts.Values.Select(a => a.TestPaperId), cancellationToken);
             rows = rows.Select(r => r with
             {

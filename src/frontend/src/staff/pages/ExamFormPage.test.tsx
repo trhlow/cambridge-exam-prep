@@ -22,8 +22,11 @@ const mix: PaperMixView = {
   examType: 'A2 Key for Schools',
   sectionTemplateId: 1,
   section: 'Reading & Writing',
-  sourceA: { id: 1, title: 'RW A' },
-  sourceB: { id: 2, title: 'RW B' },
+  sources: [
+    { letter: 'A', id: 1, title: 'RW A' },
+    { letter: 'B', id: 2, title: 'RW B' },
+  ],
+  versionCount: 4,
   seed: 1,
   createdAt: '2026-10-21T00:00:00Z',
   versions: [1, 2, 3, 4].map((version) => ({ version, paperId: 10 + version, title: `Mock 1 mix – Version ${version}`, pattern: 'ABABABA' })),
@@ -36,7 +39,7 @@ describe('ExamFormPage with mixed papers (VE-67)', () => {
     vi.spyOn(adminApi, 'examTypes').mockResolvedValue([
       { id: 1, code: 'A2_KEY_FS', name: 'A2 Key for Schools', sections: [{ id: 1, orderNo: 1, title: 'Reading & Writing', durationMinutes: 60 }, { id: 2, orderNo: 2, title: 'Listening', durationMinutes: 35 }] },
     ])
-    // The four mixed papers are chosen through their mix, never one by one.
+    // The mixed papers are chosen through their mix, never one by one.
     vi.spyOn(adminApi, 'examPapers').mockResolvedValue([paper(1, 1, 'RW A'), paper(11, 1, 'Mock 1 mix – Version 1', { paperMixId: 7, mixVersion: 1 }), paper(3, 2, 'Listening A')])
     vi.spyOn(adminApi, 'examPaperMixes').mockResolvedValue([mix])
     const create = vi.spyOn(adminApi, 'createExam').mockResolvedValue({ id: 99 } as ExamDetail)
@@ -44,7 +47,7 @@ describe('ExamFormPage with mixed papers (VE-67)', () => {
 
     fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Mock exam' } })
     const readingWriting = screen.getByLabelText(/Reading & Writing/) as HTMLSelectElement
-    expect([...readingWriting.options].map((o) => o.textContent)).toEqual(['Choose a published paper…', 'RW A', 'Mock 1 mix'])
+    expect([...readingWriting.options].map((o) => o.textContent)).toEqual(['Choose a published paper…', 'RW A', 'Mock 1 mix (4 versions)'])
     fireEvent.change(readingWriting, { target: { value: 'm:7' } })
     fireEvent.change(screen.getByLabelText(/Listening/), { target: { value: 'p:3' } })
     fireEvent.change(screen.getByLabelText(/Computers per row/), { target: { value: '4' } })

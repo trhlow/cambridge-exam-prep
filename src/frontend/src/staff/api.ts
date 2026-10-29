@@ -48,9 +48,11 @@ export interface ExamSectionView {
   durationMinutes: number
   testPaperId: number
   paperTitle: string
-  /** Set when the section gives the four papers of a mix by seat (VE-66); testPaperId is then version 1. */
+  /** Set when the section gives the papers of a mix by seat (VE-66); testPaperId is then version 1. */
   paperMixId?: number | null
   paperMixTitle?: string | null
+  /** How many papers the mix gives (VE-70). */
+  paperMixVersions?: number | null
 }
 
 /** An invigilator or examiner assigned to a session. */
@@ -110,7 +112,7 @@ export interface SaveExamRequest {
   examTypeId: number
   scheduledDate: string
   room: string | null
-  /** A section gets one paper for everyone, or (paperMixId) the four papers of a mix by seat. */
+  /** A section gets one paper for everyone, or (paperMixId) the papers of a mix by seat. */
   papers: { sectionTemplateId: number; testPaperId: number; paperMixId?: number | null }[]
   sessionPin?: string | null
   invigilatorPassword?: string | null
@@ -153,8 +155,9 @@ export interface PaperMixView {
   examType: string
   sectionTemplateId: number
   section: string
-  sourceA: { id: number; title: string }
-  sourceB: { id: number; title: string }
+  /** The source papers in letter order: A, B, C, … */
+  sources: { letter: string; id: number; title: string }[]
+  versionCount: number
   seed: number
   createdAt: string
   versions: PaperMixVersion[]
@@ -168,7 +171,15 @@ export interface RoomSeat {
   fullName: string
   /** False when no seat number was entered and the place in the list was used. */
   seatTyped: boolean
-  paperVersion?: number | null
+  /** The version this computer gets in each mixed section; empty when no section is mixed. */
+  paperVersions: SectionVersion[]
+}
+
+/** VE-70: mixes may differ in size per section, so a seat has one version per mixed section. */
+export interface SectionVersion {
+  sectionId: number
+  section: string
+  version: number
 }
 
 export interface RoomPlanSection {
@@ -313,8 +324,8 @@ export interface CandidateView {
   plannedExtraPercent: number
   seatNo: string | null
   hasStarted: boolean
-  /** The mixed-paper version this candidate's seat gets; null when no section of the exam is mixed. */
-  paperVersion?: number | null
+  /** The version this candidate's seat gets in each mixed section; null when no section of the exam is mixed. */
+  paperVersions?: SectionVersion[] | null
 }
 
 export interface LoginSlip {
@@ -585,7 +596,7 @@ export const adminApi = {
   },
   deletePaper: (id: number) => requestDeletion(`/api/admin/papers/${id}`),
   paperMixes: () => request<PaperMixView[]>('/api/admin/paper-mixes'),
-  mixPapers: (sourceAPaperId: number, sourceBPaperId: number, title: string | null) => post<PaperMixView>('/api/admin/paper-mixes', { sourceAPaperId, sourceBPaperId, title }),
+  mixPapers: (sourcePaperIds: number[], versionCount: number, title: string | null) => post<PaperMixView>('/api/admin/paper-mixes', { sourcePaperIds, versionCount, title }),
 
   marking: (attemptId: number) => request<AttemptMarking>(`/api/staff/attempts/${attemptId}/marking`),
   markWriting: (attemptId: number, questionNumber: number, score: number, comment: string) =>

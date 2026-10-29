@@ -258,7 +258,7 @@ public static class DemoSeeder
         db.Exams.Remove(exam);
         await db.SaveChangesAsync(cancellationToken);
 
-        // Mixes no other session uses go with their four papers; their sources are then removed below if unused.
+        // Mixes no other session uses go with their papers; their sources are then removed below if unused.
         foreach (var mixId in mixIds)
         {
             if (await db.ExamSections.AnyAsync(s => s.PaperMixId == mixId, cancellationToken))
@@ -266,15 +266,15 @@ public static class DemoSeeder
                 continue;
             }
 
-            var mix = await db.PaperMixes.Include(m => m.Versions).SingleAsync(m => m.Id == mixId, cancellationToken);
-            paperIds.AddRange([mix.SourceAPaperId, mix.SourceBPaperId]);
+            var mix = await db.PaperMixes.Include(m => m.Versions).Include(m => m.Sources).SingleAsync(m => m.Id == mixId, cancellationToken);
+            paperIds.AddRange(mix.Sources.Select(s => s.TestPaperId));
             db.TestPapers.RemoveRange(mix.Versions);
             await db.SaveChangesAsync(cancellationToken);
             db.PaperMixes.Remove(mix);
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        var stillMixed = await db.PaperMixes.Select(m => m.SourceAPaperId).Concat(db.PaperMixes.Select(m => m.SourceBPaperId)).ToListAsync(cancellationToken);
+        var stillMixed = await db.PaperMixSources.Select(s => s.TestPaperId).ToListAsync(cancellationToken);
         paperIds = paperIds.Except(stillMixed).Distinct().ToList();
         var unusedPapers = await db.TestPapers
             .Where(p => paperIds.Contains(p.Id) && !db.ExamSections.Any(s => s.TestPaperId == p.Id))
@@ -328,7 +328,7 @@ public static class DemoSeeder
             return Section(template, paper);
         }
 
-        var result = await mixer.CreateAsync(paper.Id, second.Id, $"Demo mix – {template.Title}", seed: 2026, adminId, cancellationToken);
+        var result = await mixer.CreateAsync([paper.Id, second.Id], versionCount: 4, $"Demo mix – {template.Title}", seed: 2026, adminId, canUse: null, cancellationToken);
         var mix = result.Mix ?? throw new InvalidOperationException($"Demo papers cannot be mixed:{Environment.NewLine}{string.Join(Environment.NewLine, result.Errors)}");
         var section = Section(template, mix.Versions.Single(v => v.MixVersion == 1));
         section.PaperMixId = mix.Id;
