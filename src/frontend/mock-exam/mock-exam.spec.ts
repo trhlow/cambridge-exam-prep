@@ -56,7 +56,7 @@ type MonitorRow = {
   warnings: number
 }
 type SectionResult = { sectionId: number; title: string; status: string; rawScore: number | null; maxScore: number | null; gradingStatus: string; attemptId: number | null }
-type CandidateResult = { candidateId: number; fullName: string; sections: SectionResult[] }
+type CandidateResult = { candidateId: number; fullName: string; sections: SectionResult[]; markingCode?: string | null }
 
 type Situation = { no: number; title: string; passed: boolean; notes: string[]; error?: string; screenshots: string[] }
 const situations: Situation[] = []
@@ -817,18 +817,23 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
     await shot(s, portal, 'het-gio')
   })
 
-  await situation(15, 'Giám khảo chấm Writing, xem kết quả, xuất CSV', async (s) => {
+  await situation(15, 'Giám khảo chấm Writing ẩn danh, admin xem kết quả, xuất CSV', async (s) => {
     const examinerContext = await browser.newContext()
     const marking = await examinerContext.newPage()
     await staffSignsIn(marking, examiner)
-    const results = () => getJson<CandidateResult[]>(marking, `/api/staff/exams/${a2.examId}/results`)
+    // VE-73: scores with names are for administrators; the examiner marks the script dealt to them by its code.
+    const results = () => getJson<CandidateResult[]>(adminPage, `/api/staff/exams/${a2.examId}/results`)
     const rwOf = (all: CandidateResult[], name: string) => all.find((r) => r.fullName === name)!.sections.find((x) => x.sectionId === rw)!
     const before = rwOf(await results(), an.name)
     expect(before.gradingStatus).toBe('NeedsManualMarking')
     expect(before.rawScore).toBe(6)
+    expect((await marking.request.get(`/api/staff/exams/${a2.examId}/results`)).status()).toBe(403)
 
-    await marking.goto(`/staff/exams/${a2.examId}/results`)
-    await marking.getByRole('row', { name: new RegExp(an.name) }).getByRole('link', { name: 'Mark Writing' }).click()
+    await marking.goto('/staff/marking')
+    const code = (await results()).find((r) => r.fullName === an.name)!.markingCode!
+    expect(code).toMatch(/^[A-HJ-NP-Z2-9]{6}$/)
+    await marking.getByRole('row', { name: new RegExp(code) }).getByRole('link', { name: 'Mark Writing' }).click()
+    await expect(marking.getByText(an.name)).toHaveCount(0)
     const marks: Record<number, number> = { 31: 3, 32: 4 }
     for (const number of [31, 32]) {
       const writing = marking.locator('section', { has: marking.getByRole('heading', { name: new RegExp(`Question ${number} ·`) }) })
@@ -841,12 +846,12 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
     const after = rwOf(await results(), an.name)
     expect(after.gradingStatus).toBe('Final')
     expect(after.rawScore).toBe((before.rawScore ?? 0) + 7)
-    s.notes.push(`${an.name}: chấm tự động ${before.rawScore} (đúng 6 câu Part 1 đã trả lời theo đáp án) + Writing 7 = ${after.rawScore}/${after.maxScore}, trạng thái Final`)
+    s.notes.push(`${an.name} (bài mã ${code}, giám khảo không thấy tên): chấm tự động ${before.rawScore} (đúng 6 câu Part 1 đã trả lời theo đáp án) + Writing 7 = ${after.rawScore}/${after.maxScore}, trạng thái Final`)
 
-    await marking.goto(`/staff/exams/${a2.examId}/results`)
-    await expect(marking.getByRole('row', { name: new RegExp(an.name) }).getByText('Final')).toBeVisible()
-    await shot(s, marking, 'bang-ket-qua')
-    const [download] = await Promise.all([marking.waitForEvent('download'), marking.getByRole('button', { name: 'Download for Excel (.csv)' }).click()])
+    await adminPage.goto(`/staff/exams/${a2.examId}/results`)
+    await expect(adminPage.getByRole('row', { name: new RegExp(an.name) }).getByText('Final')).toBeVisible()
+    await shot(s, adminPage, 'bang-ket-qua')
+    const [download] = await Promise.all([adminPage.waitForEvent('download'), adminPage.getByRole('button', { name: 'Download for Excel (.csv)' }).click()])
     const file = path.join(OUT, 'ket-qua-thi-thu-A2.csv')
     await download.saveAs(file)
     const bytes = fs.readFileSync(file)

@@ -411,6 +411,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("exam_id");
 
+                    b.Property<int?>("ExaminerUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("examiner_user_id");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -422,6 +426,12 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)")
                         .HasColumnName("last_name");
+
+                    b.Property<string>("MarkingCode")
+                        .HasMaxLength(6)
+                        .HasColumnType("char(6)")
+                        .HasColumnName("marking_code")
+                        .IsFixedLength();
 
                     b.Property<DateTime?>("ParentEndOverrideAt")
                         .HasColumnType("datetime(6)")
@@ -466,15 +476,22 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ExaminerUserId");
+
                     b.HasIndex("Username")
                         .IsUnique();
 
                     b.HasIndex("ExamId", "CandidateNumber")
                         .IsUnique();
 
+                    b.HasIndex("ExamId", "MarkingCode")
+                        .IsUnique();
+
                     b.ToTable("candidates", t =>
                         {
                             t.HasCheckConstraint("CK_candidates_contrast_values", "contrast IN ('BlackOnWhite', 'WhiteOnBlack', 'YellowOnBlack')");
+
+                            t.HasCheckConstraint("CK_candidates_marking_code", "marking_code IS NULL OR REGEXP_LIKE(marking_code, '^[A-HJ-NP-Z2-9]{6}$', 'c')");
 
                             t.HasCheckConstraint("CK_candidates_planned_extra", "planned_extra_percent BETWEEN 0 AND 100");
 
@@ -1619,6 +1636,11 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ExamId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("ExamPrep.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ExaminerUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Exam");
                 });

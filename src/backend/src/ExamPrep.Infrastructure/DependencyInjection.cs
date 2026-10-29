@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<PaperPackageImporter>();
         services.AddScoped<PaperMixer>();
         services.AddScoped<AttemptMarker>();
+        services.AddScoped<MarkingAllocator>();
         return services;
     }
 
