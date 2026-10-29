@@ -1,13 +1,13 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { adminApi, type ApprovalView, type PaperConversionResult, type PaperImportSummary, type PaperListItem, type PaperMixView } from '../api'
+import { adminApi, type ApprovalView, type PaperConversionResult, type PaperImportSummary, type PaperListItem, type PaperMixView, type PaperSection } from '../api'
 import { navigate } from '../router'
 import { Link } from '../Link'
 import { Badge, ConfirmButton, ErrorBox, Modal, PageHeader, RequestSent, VersionBadge } from '../ui'
 import { useLoad } from '../useLoad'
 import { patternText } from '../format'
 import { MAX_SOURCES, MIN_SOURCES, MIN_VERSIONS, maxVersions, sourceLetter } from '../mixing'
+import { filterPapers, importNeeds, levelOf, NO_FILTER, type PaperFilter } from '../paperFilters'
 
-const PARTS = [1, 2, 3, 4, 5]
 
 /**
  * The paper library. A paper comes in from Victory's PDFs (converted on the server) or as a ready package (.zip);
@@ -19,6 +19,8 @@ const PARTS = [1, 2, 3, 4, 5]
 export function PapersPage() {
   const { data: papers, error, reload: reloadPapers } = useLoad(adminApi.papers, 'papers')
   const { data: mixes, error: mixesError, reload: reloadMixes } = useLoad(adminApi.paperMixes, 'paper-mixes')
+  const { data: sections } = useLoad(adminApi.paperSections, 'paper-sections')
+  const [filter, setFilter] = useState<PaperFilter>(NO_FILTER)
   const reload = () => {
     reloadPapers()
     reloadMixes()
@@ -117,8 +119,9 @@ export function PapersPage() {
           </button>
         </div>
       )}
-      {isConverting && (
+      {isConverting && sections && (
         <ConvertDialog
+          sections={sections}
           onClose={() => setIsConverting(false)}
           onConverted={(result) => {
             setIsConverting(false)
@@ -161,8 +164,15 @@ export function PapersPage() {
       <ErrorBox error={importError ?? error ?? mixesError} />
       {sent && <RequestSent request={sent} onDismiss={() => setSent(null)} />}
       {papers && papers.length === 0 && <p className="st-empty">No papers yet. Import an exam package to begin.</p>}
-      {papers && papers.length > 0 && <PaperTable papers={papers.filter((p) => !p.paperMixId)} onPublish={(p) => void act(() => adminApi.publishPaper(p.id))} onDelete={(p) => void act(async () => setSent(await adminApi.deletePaper(p.id)))} />}
-      {mixes && mixes.length > 0 && <MixTable mixes={mixes} />}
+      {papers && papers.length > 0 && sections && <FilterBar sections={sections} filter={filter} onChange={setFilter} />}
+      {papers && papers.length > 0 && (
+        <PaperTable
+          papers={filterPapers(papers.filter((p) => !p.paperMixId), filter)}
+          onPublish={(p) => void act(() => adminApi.publishPaper(p.id))}
+          onDelete={(p) => void act(async () => setSent(await adminApi.deletePaper(p.id)))}
+        />
+      )}
+      {mixes && mixes.length > 0 && filter.status !== 'Draft' && <MixTable mixes={filterPapers(mixes, filter)} />}
     </>
   )
 }
@@ -373,24 +383,35 @@ function PaperTable({ papers, onPublish, onDelete }: { papers: PaperListItem[]; 
 }
 
 /** The PDFs go to the server, which converts and imports them; nothing is created when it finds errors. */
-function ConvertDialog({ onClose, onConverted }: { onClose: () => void; onConverted: (result: PaperConversionResult) => void }) {
+/**
+ * VE-71: the level and section come first (A2 Key Reading & Writing is one paper, B1 Preliminary Reading and Writing are
+ * two), then only what that paper needs: no answer key for Writing, one recording per part for Listening. The server
+ * checks the cover of the PDF against the choice and imports the paper as a draft.
+ */
+function ConvertDialog({ sections, onClose, onConverted }: { sections: PaperSection[]; onClose: () => void; onConverted: (result: PaperConversionResult) => void }) {
+  const levels = [...new Set(sections.map((s) => levelOf(s.examType)))]
+  const [level, setLevel] = useState(levels.length === 1 ? levels[0] : '')
+  const [sectionId, setSectionId] = useState<number | null>(null)
   const [title, setTitle] = useState('')
   const [questions, setQuestions] = useState<File | null>(null)
   const [answerKey, setAnswerKey] = useState<File | null>(null)
-  const [audio, setAudio] = useState<(File | null)[]>(PARTS.map(() => null))
+  const [audio, setAudio] = useState<(File | null)[]>([])
   const [error, setError] = useState<unknown>(null)
   const [isBusy, setIsBusy] = useState(false)
+  const ofLevel = sections.filter((s) => levelOf(s.examType) === level)
+  const section = sections.find((s) => s.sectionTemplateId === sectionId) ?? null
+  const needs = section ? importNeeds(section) : null
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (!questions) {
+    if (!questions || !section || !needs) {
       return
     }
 
     setIsBusy(true)
     setError(null)
     try {
-      onConverted(await adminApi.convertPaper({ title: title.trim(), questions, answerKey, audio }))
+      onConverted(await adminApi.convertPaper({ title: title.trim(), sectionTemplateId: section.sectionTemplateId, questions, answerKey: needs.answerKey ? answerKey : null, audio: audio.slice(0, needs.tracks) }))
     } catch (e) {
       setError(e)
     } finally {
@@ -401,44 +422,92 @@ function ConvertDialog({ onClose, onConverted }: { onClose: () => void; onConver
   return (
     <Modal title="Import a paper from PDF" onClose={onClose}>
       <form className="st-form" onSubmit={submit}>
-        <label className="st-field">
-          Paper title
-          <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={256} placeholder="A2 Key for Schools – Test 2 – Listening" />
-        </label>
         <div className="st-grid-2">
           <label className="st-field">
-            Question paper (PDF)
-            <input type="file" accept=".pdf,application/pdf" required onChange={(e) => setQuestions(e.target.files?.[0] ?? null)} />
+            Level
+            <select
+              value={level}
+              onChange={(e) => {
+                setLevel(e.target.value)
+                setSectionId(null)
+              }}
+              required
+            >
+              <option value="">Choose A2 or B1…</option>
+              {levels.map((l) => (
+                <option key={l} value={l}>
+                  {sections.find((s) => levelOf(s.examType) === l)?.examType}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="st-field">
-            Answer key (PDF, none for B1 Writing)
-            <input type="file" accept=".pdf,application/pdf" onChange={(e) => setAnswerKey(e.target.files?.[0] ?? null)} />
+            Paper
+            <select
+              value={sectionId ?? ''}
+              onChange={(e) => {
+                setSectionId(e.target.value ? Number(e.target.value) : null)
+                setAudio([])
+              }}
+              disabled={!level}
+              required
+            >
+              <option value="">Choose the paper…</option>
+              {ofLevel.map((s) => (
+                <option key={s.sectionTemplateId} value={s.sectionTemplateId}>
+                  {s.section}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
-        <fieldset className="st-fieldset">
-          <legend>Listening only: one recording per part (A2 Key 5, B1 Preliminary 4)</legend>
-          <div className="st-grid-2">
-            {PARTS.map((part, index) => (
-              <label key={part} className="st-field">
-                Part {part}
-                <input
-                  type="file"
-                  accept=".mp3,.m4a,.ogg,.wav,audio/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null
-                    setAudio((current) => current.map((old, i) => (i === index ? file : old)))
-                  }}
-                />
+        {section && needs && (
+          <>
+            <label className="st-field">
+              Paper title
+              <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={256} placeholder={`${section.examType} – Test 2 – ${section.section}`} />
+            </label>
+            <div className="st-grid-2">
+              <label className="st-field">
+                Question paper (PDF)
+                <input type="file" accept=".pdf,application/pdf" required onChange={(e) => setQuestions(e.target.files?.[0] ?? null)} />
               </label>
-            ))}
-          </div>
-        </fieldset>
-        <p className="st-faint">
-          The level (A2 Key or B1 Preliminary) and the paper (Reading, Writing, Listening) are read from the cover page. The paper is imported as a draft for you to check; nothing is saved if the PDF cannot be read.
-        </p>
+              {needs.answerKey ? (
+                <label className="st-field">
+                  Answer key (PDF)
+                  <input type="file" accept=".pdf,application/pdf" required onChange={(e) => setAnswerKey(e.target.files?.[0] ?? null)} />
+                </label>
+              ) : (
+                <p className="st-faint">No answer key: examiners mark Writing.</p>
+              )}
+            </div>
+            {needs.tracks > 0 && (
+              <fieldset className="st-fieldset">
+                <legend>One recording per part ({needs.tracks} parts)</legend>
+                <div className="st-grid-2">
+                  {Array.from({ length: needs.tracks }, (_, index) => (
+                    <label key={index} className="st-field">
+                      Part {index + 1}
+                      <input
+                        type="file"
+                        accept=".mp3,.m4a,.ogg,.wav,audio/*"
+                        required
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null
+                          setAudio((current) => Array.from({ length: needs.tracks }, (_, i) => (i === index ? file : (current[i] ?? null))))
+                        }}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+            <p className="st-faint">The cover page must be the {section.examType} {section.section} paper. It is imported as a draft for you to check; nothing is saved if the PDF cannot be read.</p>
+          </>
+        )}
         <ErrorBox error={error} />
         <div className="st-form-actions">
-          <button type="submit" className={isBusy ? 'st-btn st-btn--primary is-busy' : 'st-btn st-btn--primary'} disabled={isBusy}>
+          <button type="submit" className={isBusy ? 'st-btn st-btn--primary is-busy' : 'st-btn st-btn--primary'} disabled={isBusy || !section}>
             {isBusy ? 'Converting… (up to a minute)' : 'Convert and import'}
           </button>
         </div>
@@ -447,10 +516,56 @@ function ConvertDialog({ onClose, onConverted }: { onClose: () => void; onConver
   )
 }
 
-/**
- * VE-25: a paper written entirely on the web. The draft has the exam's parts, question types and numbering; every
- * text, picture and recording still to write is marked, and publishing refuses the paper until none is left.
- */
+/** VE-71: level, section, status and title; the section list follows the level. */
+function FilterBar({ sections, filter, onChange }: { sections: PaperSection[]; filter: PaperFilter; onChange: (filter: PaperFilter) => void }) {
+  const levels = [...new Set(sections.map((s) => levelOf(s.examType)))]
+  return (
+    <div className="st-filters" role="search" aria-label="Filter papers">
+      <label className="st-field">
+        Level
+        <select value={filter.level} onChange={(e) => onChange({ ...filter, level: e.target.value, sectionId: null })}>
+          <option value="">All levels</option>
+          {levels.map((l) => (
+            <option key={l} value={l}>
+              {sections.find((s) => levelOf(s.examType) === l)?.examType}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="st-field">
+        Section
+        <select value={filter.sectionId ?? ''} onChange={(e) => onChange({ ...filter, sectionId: e.target.value ? Number(e.target.value) : null })}>
+          <option value="">All sections</option>
+          {sections
+            .filter((s) => !filter.level || levelOf(s.examType) === filter.level)
+            .map((s) => (
+              <option key={s.sectionTemplateId} value={s.sectionTemplateId}>
+                {filter.level ? s.section : `${levelOf(s.examType)} ${s.section}`}
+              </option>
+            ))}
+        </select>
+      </label>
+      <label className="st-field">
+        Status
+        <select value={filter.status} onChange={(e) => onChange({ ...filter, status: e.target.value as PaperFilter['status'] })}>
+          <option value="">All</option>
+          <option value="Draft">Draft</option>
+          <option value="Published">Published</option>
+        </select>
+      </label>
+      <label className="st-field st-filters-text">
+        Title
+        <input type="search" value={filter.text} onChange={(e) => onChange({ ...filter, text: e.target.value })} placeholder="Words in the title" />
+      </label>
+      {filter !== NO_FILTER && (
+        <button type="button" className="st-link" onClick={() => onChange(NO_FILTER)}>
+          Clear
+        </button>
+      )}
+    </div>
+  )
+}
+
 function BlankPaperDialog({ onClose }: { onClose: () => void }) {
   const { data: layouts, error: loadError } = useLoad(adminApi.blankLayouts, 'blank-layouts')
   const [sectionTemplateId, setSectionTemplateId] = useState<number | null>(null)

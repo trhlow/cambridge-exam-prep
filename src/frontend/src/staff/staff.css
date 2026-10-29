@@ -1161,3 +1161,21 @@ ul.st-error {
   font-weight: 700;
   text-align: center;
 }
+
+/* VE-71: the paper library's filters */
+.st-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.st-filters .st-field {
+  min-width: 140px;
+}
+
+.st-filters-text {
+  flex: 1;
+  min-width: 200px;
+}

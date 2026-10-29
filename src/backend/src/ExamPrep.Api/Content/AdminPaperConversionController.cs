@@ -10,6 +10,9 @@ namespace ExamPrep.Api.Content;
 public sealed class PaperConversionForm
 {
     public string? Title { get; set; }
+
+    /// <summary>VE-71: the level and section chosen in the form; the cover of the PDF must say the same.</summary>
+    public int? SectionTemplateId { get; set; }
     public IFormFile? Questions { get; set; }
     public IFormFile? AnswerKey { get; set; }
     public IFormFile? Audio1 { get; set; }
@@ -94,7 +97,7 @@ public sealed class AdminPaperConversionController(IPaperConverter converter, Pa
                 return WithChecks(Problems.Invalid("The PDF could not be converted.", report.Errors.Count > 0 ? report.Errors : ["The converter wrote no paper."]), report.Checks);
             }
 
-            var result = await importer.ImportAsync(new MemoryStream(PackageFolder.Zip(input.OutputFolder, fillMissing: false)), User.GetStaffId(), cancellationToken);
+            var result = await importer.ImportAsync(new MemoryStream(PackageFolder.Zip(input.OutputFolder, fillMissing: false)), User.GetStaffId(), cancellationToken, form.SectionTemplateId);
             if (result.Errors.Count > 0)
             {
                 return WithChecks(Problems.Invalid("The converted paper is invalid.", result.Errors), report.Checks);

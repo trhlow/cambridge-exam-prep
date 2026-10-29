@@ -24,7 +24,10 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
 
     private sealed record StoredOption(string Key, string? Text, int? ImageAssetId, string? Title = null);
 
-    public async Task<PaperImportResult> ImportAsync(Stream zip, int userId, CancellationToken cancellationToken)
+    /// <param name="expectedSectionTemplateId">
+    /// VE-71: the level and section the person chose before uploading; a package for any other section is refused.
+    /// </param>
+    public async Task<PaperImportResult> ImportAsync(Stream zip, int userId, CancellationToken cancellationToken, int? expectedSectionTemplateId = null)
     {
         var read = PaperPackageReader.Read(zip);
         if (read.Package is null)
@@ -44,6 +47,14 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
         if (template is null)
         {
             return Failed([$"{examType.Name} has no section {paper.Section}."]);
+        }
+
+        if (expectedSectionTemplateId is { } expectedId && expectedId != template.Id)
+        {
+            var expected = await db.SectionTemplates.AsNoTracking().Include(s => s.ExamType).SingleOrDefaultAsync(s => s.Id == expectedId, cancellationToken);
+            return Failed([expected is null
+                ? "Choose the level and section of the paper."
+                : $"This paper is {examType.Name} {template.Title}, but you chose {expected.ExamType!.Name} {expected.Title}."]);
         }
 
         var errors = PaperPackageValidator.Validate(read.Package, template);

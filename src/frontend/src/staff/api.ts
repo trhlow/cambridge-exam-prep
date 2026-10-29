@@ -217,6 +217,8 @@ export interface PaperConversionResult extends PaperImportSummary {
 
 export interface PaperConversionUpload {
   title: string
+  /** VE-71: the level and section chosen; the server refuses a PDF whose cover says otherwise. */
+  sectionTemplateId: number
   questions: File
   answerKey: File | null
   /** Listening: one track per part, index 0 = Part 1; empty slots are left out. */
@@ -279,6 +281,18 @@ export interface PaperDetail {
 }
 
 /** A section a blank paper can be started for (VE-25). */
+/** VE-71: a level and section a paper can be for, with what its import needs. */
+export interface PaperSection {
+  sectionTemplateId: number
+  /** A2_KEY_FS or B1_PRELIM_FS. */
+  examTypeCode: string
+  examType: string
+  section: string
+  /** Reading, Writing, ReadingWriting or Listening. */
+  skill: string
+  parts: number
+}
+
 export interface BlankLayout {
   sectionTemplateId: number
   examType: string
@@ -559,6 +573,7 @@ export const adminApi = {
   convertPaper: (upload: PaperConversionUpload) => {
     const form = new FormData()
     form.append('title', upload.title)
+    form.append('sectionTemplateId', String(upload.sectionTemplateId))
     form.append('questions', upload.questions)
     if (upload.answerKey) {
       form.append('answerKey', upload.answerKey)
@@ -577,6 +592,7 @@ export const adminApi = {
   editPart: (id: number, partNo: number, body: { title: string | null; stimulusHtml: string | null }) => put<PaperDetail>(`/api/admin/papers/${id}/parts/${partNo}`, body),
   editGroup: (id: number, partNo: number, orderNo: number, body: GroupEdit) => put<PaperDetail>(`/api/admin/papers/${id}/parts/${partNo}/groups/${orderNo}`, body),
   editQuestion: (id: number, number: number, body: QuestionEdit) => put<PaperDetail>(`/api/admin/papers/${id}/questions/${number}`, body),
+  paperSections: () => request<PaperSection[]>('/api/admin/papers/sections'),
   blankLayouts: () => request<BlankLayout[]>('/api/admin/papers/blank-layouts'),
   createBlankPaper: (sectionTemplateId: number, title: string) => post<PaperImportSummary>('/api/admin/papers/blank', { sectionTemplateId, title }),
   uploadPaperImage: (id: number, file: File) => {

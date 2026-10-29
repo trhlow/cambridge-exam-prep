@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -34,17 +34,26 @@ public static class PaperSkeletons
     private static string Html(string what) => $"<p>{Text(what)}</p>";
 
     /// <summary>Whether a blank layout exists for this section of this exam type.</summary>
-    public static bool Has(string examTypeCode, int sectionOrder) => examTypeCode == "A2_KEY_FS" && sectionOrder is 1 or 2;
+    public static bool Has(string examTypeCode, int sectionOrder) => Parts(examTypeCode, sectionOrder) is not null;
 
-    /// <summary>A package (.zip) with the blank layout of the section, or null when none is known yet (e.g. B1).</summary>
+    /// <summary>
+    /// The parts of the blank layout: A2 Key for Schools Reading &amp; Writing and Listening, and B1 Preliminary for Schools
+    /// Reading, Writing and Listening (VE-71, laid out like the self-written B1 samples); null for any other section.
+    /// </summary>
+    private static List<JsonObject>? Parts(string examTypeCode, int sectionOrder) => (examTypeCode, sectionOrder) switch
+    {
+        ("A2_KEY_FS", 1) => A2ReadingWriting(),
+        ("A2_KEY_FS", 2) => A2Listening(),
+        ("B1_PRELIM_FS", 1) => B1Reading(),
+        ("B1_PRELIM_FS", 2) => B1Writing(),
+        ("B1_PRELIM_FS", 3) => B1Listening(),
+        _ => null,
+    };
+
+    /// <summary>A package (.zip) with the blank layout of the section, or null when none is known.</summary>
     public static byte[]? Zip(string examTypeCode, int sectionOrder, string title)
     {
-        var parts = (examTypeCode, sectionOrder) switch
-        {
-            ("A2_KEY_FS", 1) => A2ReadingWriting(),
-            ("A2_KEY_FS", 2) => A2Listening(),
-            _ => null,
-        };
+        var parts = Parts(examTypeCode, sectionOrder);
         if (parts is null)
         {
             return null;
@@ -64,12 +73,9 @@ public static class PaperSkeletons
         {
             Add(zip, "paper.json", Encoding.UTF8.GetBytes(paper.ToJsonString()));
             Add(zip, ImagePath, PlaceholderImage);
-            if (sectionOrder == 2)
+            foreach (var audio in parts.Select(p => (string?)p["audio"]).OfType<string>())
             {
-                for (var part = 1; part <= parts.Count; part++)
-                {
-                    Add(zip, $"audio/part{part}.wav", PlaceholderAudio);
-                }
+                Add(zip, audio, PlaceholderAudio);
             }
         }
 
@@ -122,6 +128,88 @@ public static class PaperSkeletons
         parts.Add(Part(5, "Single", null, null, drag, audio: 5));
         return parts;
     }
+
+    private static List<JsonObject> B1Reading()
+    {
+        var number = 1;
+        const string choose = "For each question, choose the correct answer.";
+        var parts = new List<JsonObject>
+        {
+            Part(1, "Single", null, null, Group("SingleChoice", choose, Questions(ref number, 5, n => Choice(n, prompt: null, stimulus: Html($"notice or message for question {n}"))))),
+        };
+
+        // Part 2: five people (picture and description) matched with eight texts; Part 4: five sentences dragged into
+        // the gaps of a text, three extra. Each placeholder answer is a different card.
+        var firstPerson = number;
+        var people = Group("DragDropMatch", Text("instructions: what the people want and what the texts are"), Questions(ref number, 5, n => Card(n, Html($"person for question {n}"), n - firstPerson, Html($"picture of person {n}"))));
+        people["itemsHeading"] = Text("heading for the people");
+        people["poolHeading"] = Text("heading for the texts");
+        people["optionPool"] = Pool(8, titled: true);
+        parts.Add(Part(2, "Single", null, null, people));
+        parts.Add(Part(3, "Split", Text("title"), Html("text"), Group("SingleChoice", choose, Questions(ref number, 5, n => Choice(n, Html($"question {n}"), options: 4)))));
+
+        var firstGap = number;
+        var sentences = Gapped("DragDropMatch", "Five sentences have been removed from the text below. For each question, choose the correct answer. There are three extra sentences which you do not need to use.", ref number, 5, n => Card(n, null, n - firstGap));
+        sentences["optionPool"] = Pool(8, titled: false);
+        parts.Add(Part(4, "Single", Text("title"), null, sentences));
+        parts.Add(Part(5, "Single", Text("title"), null, Gapped("InlineChoice", choose, ref number, 6, n => Choice(n, prompt: null, options: 4))));
+        parts.Add(Part(6, "Single", Text("title"), null, Gapped("InlineText", "For each question, write the correct answer. Write one word for each gap.", ref number, 6, Typed), maxWords: 1));
+        return parts;
+    }
+
+    private static List<JsonObject> B1Writing()
+    {
+        var number = 1;
+        var email = Group("Essay", "You must answer this question. Write your answer in about 100 words.", Questions(ref number, 1, n => Essay(n, 100, 20, Html("email from a friend, with your notes"))));
+        var choice = Group("Essay", "Choose one of these questions. Write your answer in about 100 words.", Questions(ref number, 2, n => Essay(n, 100, 20, Html(n == 2 ? "article task" : "story task"))));
+        choice["chooseCount"] = 1;
+        var second = Part(2, "Split", null, null, choice);
+        second["questionPerPage"] = true;
+        return [Part(1, "Split", null, null, email), second];
+    }
+
+    private static List<JsonObject> B1Listening()
+    {
+        var number = 1;
+        const string choose = "For each question, choose the correct answer.";
+        var pictures = Part(1, "Single", null, null, Group("ImageChoice", choose, Questions(ref number, 7, n => Choice(n, Html($"question {n}"), pictures: true))), audio: 1);
+        var interviews = Part(2, "Single", null, null, Group("SingleChoice", choose, Questions(ref number, 6, n => Choice(n, Html($"situation and question {n}")))), audio: 2);
+        interviews["questionPerPage"] = true;
+        var notes = Part(3, "Single", Text("title"), null, Gapped("InlineText", "For each question, write the correct answer in the gap. Write one or two words or a number or a date or a time.", ref number, 6, Typed), maxWords: 2, audio: 3);
+        var interview = Part(4, "Single", null, null, Group("SingleChoice", choose, Questions(ref number, 6, n => Choice(n, Html($"question {n}")))), audio: 4);
+        return [pictures, interviews, notes, interview];
+    }
+
+    /// <summary>A drag-and-drop question whose answer is card A, B, C… by its place in the group.</summary>
+    private static JsonObject Card(int number, string? prompt, int index, string? stimulus = null)
+    {
+        var question = new JsonObject { ["number"] = number };
+        if (stimulus is not null)
+        {
+            question["stimulusHtml"] = stimulus;
+        }
+
+        if (prompt is not null)
+        {
+            question["promptHtml"] = prompt;
+        }
+
+        question["answers"] = new JsonArray(((char)('A' + index)).ToString());
+        return question;
+    }
+
+    private static JsonArray Pool(int count, bool titled) =>
+        new(Enumerable.Range(0, count).Select(i =>
+        {
+            var key = ((char)('A' + i)).ToString();
+            var option = Option(key, titled ? $"text {key}" : $"sentence {key}");
+            if (titled)
+            {
+                option["title"] = Text($"title of text {key}");
+            }
+
+            return (JsonNode)option;
+        }).ToArray());
 
     private static JsonObject Part(int partNo, string layout, string? title, string? stimulus, JsonObject group, int? maxWords = null, int? audio = null)
     {
@@ -185,7 +273,7 @@ public static class PaperSkeletons
         return question;
     }
 
-    private static JsonObject Choice(int number, string? prompt, string? stimulus = null, bool pictures = false)
+    private static JsonObject Choice(int number, string? prompt, string? stimulus = null, bool pictures = false, int options = 3)
     {
         var question = Base(number, prompt);
         if (stimulus is not null)
@@ -193,7 +281,7 @@ public static class PaperSkeletons
             question["stimulusHtml"] = stimulus;
         }
 
-        question["options"] = new JsonArray(new[] { "A", "B", "C" }
+        question["options"] = new JsonArray(new[] { "A", "B", "C", "D" }.Take(options)
             .Select(key => (JsonNode)Option(key, $"option {key}", pictures ? ImagePath : null))
             .ToArray());
         question["answers"] = new JsonArray("A");
@@ -207,10 +295,15 @@ public static class PaperSkeletons
         return question;
     }
 
-    private static JsonObject Essay(int number, int minWords)
+    private static JsonObject Essay(int number, int minWords, int points = 15, string? task = null)
     {
         var question = Base(number, null);
-        question["points"] = 15;
+        if (task is not null)
+        {
+            question["stimulusHtml"] = task;
+        }
+
+        question["points"] = points;
         question["minWords"] = minWords;
         return question;
     }
