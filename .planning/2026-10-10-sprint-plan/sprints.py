@@ -24,6 +24,7 @@ EPICS = {
     "E13": "IELTS (để dành cho đồ án tốt nghiệp / báo cáo thực tập)",
     "E14": "Phân quyền nhiều tác nhân và duyệt chéo hai admin",
     "E15": "Trộn đề: 2 đề gốc thành 4 đề, hai máy kế nhau khác đề",
+    "E16": "Victory 29/10: trộn N đề, lọc A2/B1, mỗi người chỉ thấy phần mình làm, chấm ẩn danh",
 }
 
 # (sprint, start, end, goal, stories); story = (key, epic, points, summary, acceptance)
@@ -34,6 +35,9 @@ EPICS = {
 # 21/10: the user asked for a B1 PDF converter (VE-69, Sprint 5) next to the A2 one.
 # 21/10: IELTS (E13, VE-48, VE-49) leaves this capstone: its format is loose, so it waits until A2 and B1 (or this
 # report) are finished and becomes the graduation project or internship report. Sprint 9 is a reserve week.
+# 29/10: Victory asked for more (E16, VE-70…73, Sprint 9 reserve week, done ahead): N source papers mixed into a
+# number of papers the papers manager chooses (at most 3N); papers filtered by A2/B1 and imported for a chosen
+# section; each person sees only their own work; Writing dealt at random to the examiners and marked by code.
 # On Jira, Sprint 0 and Sprint 1 run as one sprint, "SCRUM Sprint 1" (10/10 – 18/10).
 SPRINTS = [
     ("Sprint 0", "2026-10-10", "2026-10-11", "Khởi động: CSDL và khảo sát giao diện", [
@@ -115,7 +119,11 @@ SPRINTS = [
     ("Sprint 8", "2026-11-30", "2026-12-06", "Viết quyển báo cáo Mở đầu, Chương 1–3 — tuần gặp GV 3", [
         ("VE-47", "E12", 5, "Viết quyển báo cáo: Mở đầu, Chương 1–3", "Bản nháp theo mẫu của Khoa"),
     ]),
-    ("Sprint 9", "2026-12-07", "2026-12-13", "Dự phòng (IELTS tách khỏi đồ án chuyên ngành)", [
+    ("Sprint 9", "2026-12-07", "2026-12-13", "Dự phòng: yêu cầu mới của Victory 29/10 (IELTS tách khỏi đồ án chuyên ngành)", [
+        ("VE-70", "E16", 5, "Trộn N đề gốc (2–6) thành K đề do người quản lý đề chọn, 4 ≤ K ≤ 3N; xếp chỗ theo nhóm đề", "Hai đề cùng nhóm không trùng Part nào; 8 máy quanh một máy khác đề với mọi K; 2 đề gốc ra 4 đề như cũ"),
+        ("VE-71", "E16", 3, "Lọc đề theo cấp độ A2/B1, phần thi, trạng thái; nhập PDF theo cấp độ và phần thi đã chọn; đề trắng B1", "Server từ chối PDF/gói có bìa khác lựa chọn; B1 Writing không hỏi đáp án; Listening hỏi đúng số track"),
+        ("VE-72", "E16", 5, "Mỗi người chỉ thấy phần mình làm: đề theo người tạo, phiên theo người tạo, quản lý thí sinh theo phân công", "Người cùng vai trò không thấy đề, phiên, hình và âm thanh của nhau (404); cảnh báo 1 giám thị / 25 thí sinh"),
+        ("VE-73", "E16", 5, "Chia bài Writing ngẫu nhiên, đều cho giám khảo; chấm ẩn danh theo mã bài, chỉ phần Writing", "20 bài, 4 giám khảo → 5 bài mỗi người; giám khảo không thấy tên, Reading, bảng điểm"),
         ("VE-50", "E12", 1, "Báo cáo tiến độ tuần 9", "File báo cáo có trong progress-report/"),
     ]),
     ("Sprint 10", "2026-12-14", "2026-12-20", "Viết báo cáo: kết quả và kết luận", [
@@ -137,7 +145,8 @@ LATER = [
 
 DONE = {"VE-1", "VE-2", "VE-3", "VE-4", "VE-5", "VE-6", "VE-7", "VE-8", "VE-9", "VE-10", "VE-11", "VE-12", "VE-14", "VE-15", "VE-16", "VE-17", "VE-18", "VE-19", "VE-21", "VE-22", "VE-23", "VE-26", "VE-30", "VE-56", "VE-57",
         "VE-13", "VE-20", "VE-24", "VE-25", "VE-28", "VE-29", "VE-31", "VE-45", "VE-46", "VE-58", "VE-59", "VE-60", "VE-61", "VE-62", "VE-63",
-        "VE-64", "VE-65", "VE-66", "VE-27", "VE-67", "VE-33", "VE-34", "VE-32", "VE-69", "VE-37", "VE-35", "VE-36", "VE-68", "VE-38", "VE-39", "VE-40", "VE-41", "VE-42", "VE-43", "VE-44"}
+        "VE-64", "VE-65", "VE-66", "VE-27", "VE-67", "VE-33", "VE-34", "VE-32", "VE-69", "VE-37", "VE-35", "VE-36", "VE-68", "VE-38", "VE-39", "VE-40", "VE-41", "VE-42", "VE-43", "VE-44",
+        "VE-70", "VE-71", "VE-72", "VE-73"}
 
 
 def render_markdown() -> str:

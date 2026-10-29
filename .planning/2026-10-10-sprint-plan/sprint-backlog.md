@@ -95,8 +95,12 @@ Tổng: 1 story, 5 điểm.
 - [ ] VE-47 [E12] (5đ) Viết quyển báo cáo: Mở đầu, Chương 1–3
 - **Status:** pending
 
-### Phase 9: Sprint 9 (07/12 – 13/12) — Dự phòng (IELTS tách khỏi đồ án chuyên ngành)
-Tổng: 1 story, 1 điểm.
+### Phase 9: Sprint 9 (07/12 – 13/12) — Dự phòng: yêu cầu mới của Victory 29/10 (IELTS tách khỏi đồ án chuyên ngành)
+Tổng: 5 story, 19 điểm.
+- [x] VE-70 [E16] (5đ) Trộn N đề gốc (2–6) thành K đề do người quản lý đề chọn, 4 ≤ K ≤ 3N; xếp chỗ theo nhóm đề
+- [x] VE-71 [E16] (3đ) Lọc đề theo cấp độ A2/B1, phần thi, trạng thái; nhập PDF theo cấp độ và phần thi đã chọn; đề trắng B1
+- [x] VE-72 [E16] (5đ) Mỗi người chỉ thấy phần mình làm: đề theo người tạo, phiên theo người tạo, quản lý thí sinh theo phân công
+- [x] VE-73 [E16] (5đ) Chia bài Writing ngẫu nhiên, đều cho giám khảo; chấm ẩn danh theo mã bài, chỉ phần Writing
 - [ ] VE-50 [E12] (1đ) Báo cáo tiến độ tuần 9
 - **Status:** pending
 
