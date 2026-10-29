@@ -126,6 +126,28 @@ public sealed class AnonymousMarkingTests(ApiFixture api) : IClassFixture<ApiFix
     }
 
     [Fact]
+    public async Task AScript_IsDealtOnlyOnceItsSectionWasMarkedAutomatically()
+    {
+        api.SkipIfUnavailable();
+        var exam = await api.CreateCandidateAsync(Password, withSamplePapers: true);
+        await api.StartAttemptAsync(exam.CandidateId, exam.ReadingWritingSectionId);
+        await api.SubmitStartedAttemptAsync(exam.CandidateId, exam.ReadingWritingSectionId);
+        var examiners = await ExaminersAsync(exam.ExamId, 1);
+
+        // Ended but not yet marked automatically (the marker runs every 5 s): the Writing cannot be marked yet.
+        var before = (await ScriptsAsync(examiners[0])).Count(s => (int)s!["examId"]! == exam.ExamId);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<AttemptMarker>().MarkPendingAsync(ct);
+        }
+
+        var after = (await ScriptsAsync(examiners[0])).Count(s => (int)s!["examId"]! == exam.ExamId);
+
+        Assert.Equal((0, 1), (before, after));
+        examiners.ForEach(e => e.Dispose());
+    }
+
+    [Fact]
     public async Task WhenAnExaminerLeaves_TheirUnmarkedScriptsAreDealtAgain()
     {
         api.SkipIfUnavailable();

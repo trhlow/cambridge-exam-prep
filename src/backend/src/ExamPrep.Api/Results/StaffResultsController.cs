@@ -100,7 +100,7 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
         }
 
         return await db.Attempts.AsNoTracking()
-            .Where(a => a.Candidate!.ExaminerUserId == userId && a.Status == AttemptStatus.Submitted
+            .Where(a => a.Candidate!.ExaminerUserId == userId && a.Status == AttemptStatus.Submitted && a.GradingStatus != GradingStatus.NotGraded
                 && a.ExamSection!.Exam!.Examiners.Any(x => x.UserId == userId)
                 && db.QuestionGroups.Any(g => g.PaperPart!.TestPaperId == a.TestPaperId && g.InteractionType == InteractionType.Essay))
             .OrderByDescending(a => a.ExamSection!.Exam!.ScheduledDate).ThenBy(a => a.Candidate!.MarkingCode)

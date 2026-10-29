@@ -554,7 +554,7 @@ function FilterBar({ sections, filter, onChange }: { sections: PaperSection[]; f
         </select>
       </label>
       <label className="st-field st-filters-text">
-        Title
+        Search
         <input type="search" value={filter.text} onChange={(e) => onChange({ ...filter, text: e.target.value })} placeholder="Words in the title" />
       </label>
       {filter !== NO_FILTER && (
