@@ -604,6 +604,27 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ExamPrep.Domain.Entities.ExamCandidateManager", b =>
+                {
+                    b.Property<int>("ExamId")
+                        .HasColumnType("int")
+                        .HasColumnName("exam_id");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("assigned_at");
+
+                    b.HasKey("ExamId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("exam_candidate_managers");
+                });
+
             modelBuilder.Entity("ExamPrep.Domain.Entities.ExamExaminer", b =>
                 {
                     b.Property<int>("ExamId")
@@ -1643,6 +1664,25 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.Navigation("ExamType");
                 });
 
+            modelBuilder.Entity("ExamPrep.Domain.Entities.ExamCandidateManager", b =>
+                {
+                    b.HasOne("ExamPrep.Domain.Entities.Exam", "Exam")
+                        .WithMany("CandidateManagers")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ExamPrep.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ExamPrep.Domain.Entities.ExamExaminer", b =>
                 {
                     b.HasOne("ExamPrep.Domain.Entities.Exam", "Exam")
@@ -1944,6 +1984,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.Exam", b =>
                 {
+                    b.Navigation("CandidateManagers");
+
                     b.Navigation("Candidates");
 
                     b.Navigation("Examiners");

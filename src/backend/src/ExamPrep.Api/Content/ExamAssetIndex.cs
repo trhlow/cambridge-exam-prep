@@ -27,6 +27,31 @@ public sealed partial class ExamAssetIndex(ExamPrepDbContext db, IMemoryCache ca
         return assets!.Contains(assetId);
     }
 
+    /// <summary>
+    /// VE-72: administrators read every file; other staff the files of the papers they made, and examiners those of the
+    /// sessions they mark (the Writing tasks they mark against). Cached per person for a minute.
+    /// </summary>
+    public async Task<bool> StaffMayReadAsync(System.Security.Claims.ClaimsPrincipal user, int assetId, CancellationToken cancellationToken)
+    {
+        if (user.IsInRole(nameof(Domain.Enums.UserRole.Admin)))
+        {
+            return true;
+        }
+
+        var userId = Auth.StaffAuthenticationSetup.GetStaffId(user);
+        var assets = await cache.GetOrCreateAsync($"staff-assets:{userId}", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
+            var markedExams = db.Exams.Where(e => e.Examiners.Any(x => x.UserId == userId)).Select(e => e.Id);
+            var paperIds = await db.TestPapers.Where(p => p.CreatedByUserId == userId).Select(p => p.Id)
+                .Concat(db.Attempts.Where(a => markedExams.Contains(a.ExamSection!.ExamId)).Select(a => a.TestPaperId))
+                .Distinct()
+                .ToListAsync(cancellationToken);
+            return await AssetsOfAsync(paperIds, cancellationToken);
+        });
+        return assets!.Contains(assetId);
+    }
+
     private async Task<HashSet<int>> LoadAsync(int examId, CancellationToken cancellationToken)
     {
         var sections = await db.ExamSections.Where(s => s.ExamId == examId).Select(s => new { s.TestPaperId, s.PaperMixId }).ToListAsync(cancellationToken);
@@ -37,6 +62,13 @@ public sealed partial class ExamAssetIndex(ExamPrepDbContext db, IMemoryCache ca
         {
             paperIds.AddRange(await db.TestPapers.Where(p => p.PaperMixId != null && mixIds.Contains(p.PaperMixId.Value)).Select(p => p.Id).ToListAsync(cancellationToken));
         }
+
+        return await AssetsOfAsync(paperIds, cancellationToken);
+    }
+
+    /// <summary>Every stored file these papers use.</summary>
+    private async Task<HashSet<int>> AssetsOfAsync(List<int> paperIds, CancellationToken cancellationToken)
+    {
 
         var parts = await db.PaperParts.AsNoTracking()
             .Where(p => paperIds.Contains(p.TestPaperId))

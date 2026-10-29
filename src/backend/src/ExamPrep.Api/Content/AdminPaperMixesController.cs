@@ -45,17 +45,17 @@ public sealed class AdminPaperMixesController(ExamPrepDbContext db, PaperMixer m
 {
     [HttpGet]
     public async Task<IReadOnlyList<PaperMixView>> List(CancellationToken cancellationToken) =>
-        (await ViewsAsync(db, null, cancellationToken)).OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id).ToList();
+        (await ViewsAsync(db, null, cancellationToken, db.PaperMixes.VisibleTo(User))).OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id).ToList();
 
     [HttpGet("{mixId:int}")]
     public async Task<ActionResult<PaperMixView>> Get(int mixId, CancellationToken cancellationToken) =>
-        (await ViewsAsync(db, mixId, cancellationToken)).SingleOrDefault() is { } view ? view : NotFound();
+        (await ViewsAsync(db, mixId, cancellationToken, db.PaperMixes.VisibleTo(User))).SingleOrDefault() is { } view ? view : NotFound();
 
     /// <summary>201 with the mixed papers; 400 listing every reason the papers cannot be mixed.</summary>
     [HttpPost]
     public async Task<ActionResult<PaperMixView>> Create(NewPaperMix request, CancellationToken cancellationToken)
     {
-        var result = await mixer.CreateAsync(request.SourcePaperIds, request.VersionCount, request.Title, request.Seed, User.GetStaffId(), null, cancellationToken);
+        var result = await mixer.CreateAsync(request.SourcePaperIds, request.VersionCount, request.Title, request.Seed, User.GetStaffId(), User.Owns, cancellationToken);
         if (result.Mix is not { } mix)
         {
             return Problems.Invalid("These papers cannot be mixed.", result.Errors);
@@ -66,9 +66,10 @@ public sealed class AdminPaperMixesController(ExamPrepDbContext db, PaperMixer m
         return CreatedAtAction(nameof(Get), new { mixId = mix.Id }, view);
     }
 
-    internal static async Task<List<PaperMixView>> ViewsAsync(ExamPrepDbContext db, int? mixId, CancellationToken cancellationToken)
+    /// <param name="source">The mixes to read from (VE-72: a papers manager's own); every mix when null.</param>
+    internal static async Task<List<PaperMixView>> ViewsAsync(ExamPrepDbContext db, int? mixId, CancellationToken cancellationToken, IQueryable<Domain.Entities.PaperMix>? source = null)
     {
-        var mixes = await db.PaperMixes.AsNoTracking()
+        var mixes = await (source ?? db.PaperMixes).AsNoTracking()
             .Where(m => mixId == null || m.Id == mixId)
             .Select(m => new
             {

@@ -91,6 +91,14 @@ export interface ExamDetail extends Omit<ExamListItem, 'candidates'> {
   sebConfigKey: string | null
   /** Computers per row, for giving mixed papers by seat; null means one row. */
   seatsPerRow?: number | null
+  /** VE-72: managers of candidates assigned to enter this session's candidates. */
+  candidateManagers?: AssignedStaffView[] | null
+  /** Cambridge: at least one invigilator for every 25 candidates in the room. */
+  invigilatorsNeeded?: number
+  /** VE-72: what the signed-in person may do with this session. */
+  canOrganise?: boolean
+  canEnterCandidates?: boolean
+  canMonitor?: boolean
 }
 
 export interface SectionTemplateView {
@@ -557,6 +565,7 @@ export const adminApi = {
   assignableStaff: () => request<AssignableStaff[]>('/api/admin/assignable-staff'),
   assignInvigilators: (id: number, userIds: number[]) => put<AssignedStaffView[]>(`/api/admin/exams/${id}/invigilators`, { userIds }),
   assignExaminers: (id: number, userIds: number[]) => put<AssignedStaffView[]>(`/api/admin/exams/${id}/examiners`, { userIds }),
+  assignCandidateManagers: (id: number, userIds: number[]) => put<AssignedStaffView[]>(`/api/admin/exams/${id}/candidate-managers`, { userIds }),
 
   candidates: (examId: number) => request<CandidateView[]>(`/api/admin/exams/${examId}/candidates`),
   addCandidates: (examId: number, candidates: NewCandidate[]) => post<CandidateView[]>(`/api/admin/exams/${examId}/candidates`, { candidates }),

@@ -45,4 +45,7 @@ public class Exam
     public ICollection<ExamInvigilator> Invigilators { get; set; } = [];
 
     public ICollection<ExamExaminer> Examiners { get; set; } = [];
+
+    /// <summary>VE-72: managers of candidates who enter this session's candidates.</summary>
+    public ICollection<ExamCandidateManager> CandidateManagers { get; set; } = [];
 }

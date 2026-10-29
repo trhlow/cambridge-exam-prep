@@ -2,26 +2,40 @@ import { useState } from 'react'
 import { adminApi, type AssignableStaff, type AssignedStaffView, type ExamDetail } from '../api'
 import { ErrorBox } from '../ui'
 
-const TEXT = {
+export type AssignedRole = 'Invigilator' | 'Examiner' | 'CandidatesManager'
+
+const TEXT: Record<AssignedRole, { title: string; help: string; none: string }> = {
   Invigilator: { title: 'Invigilators', help: 'They open this session, print the slips and monitor its sections.', none: 'No invigilator accounts yet.' },
   Examiner: { title: 'Examiners', help: 'They review the finished work, mark Writing and see the results.', none: 'No examiner accounts yet.' },
+  CandidatesManager: { title: 'Candidates managers', help: 'They enter and correct the candidates of this session and print their slips.', none: 'No manager works on candidates yet.' },
+}
+
+/** The accounts a panel offers: candidates managers are managers working on candidates (the server sends only those). */
+const roleOf: Record<AssignedRole, string> = { Invigilator: 'Invigilator', Examiner: 'Examiner', CandidatesManager: 'Manager' }
+
+function assignedOf(exam: ExamDetail, role: AssignedRole): AssignedStaffView[] {
+  return role === 'Invigilator' ? exam.invigilators : role === 'Examiner' ? exam.examiners : (exam.candidateManagers ?? [])
+}
+
+function save(examId: number, role: AssignedRole, userIds: number[]) {
+  return role === 'Invigilator' ? adminApi.assignInvigilators(examId, userIds) : role === 'Examiner' ? adminApi.assignExaminers(examId, userIds) : adminApi.assignCandidateManagers(examId, userIds)
 }
 
 /**
- * VE-23, VE-61: who works on this session. Invigilators and examiners see only the sessions they are assigned to;
- * accounts are created by an administrator under Staff.
+ * VE-23, VE-61, VE-72: who works on this session. Invigilators, examiners and managers of candidates see only the
+ * sessions they are assigned to; accounts are created by an administrator under Staff.
  */
-export function StaffAssignmentPanel(props: { exam: ExamDetail; role: 'Invigilator' | 'Examiner'; staff: AssignableStaff[] | null; onChanged: (assigned: AssignedStaffView[]) => void }) {
+export function StaffAssignmentPanel(props: { exam: ExamDetail; role: AssignedRole; staff: AssignableStaff[] | null; onChanged: (assigned: AssignedStaffView[]) => void }) {
   const { exam, role, staff, onChanged } = props
   const [error, setError] = useState<unknown>(null)
-  const assigned = new Set((role === 'Invigilator' ? exam.invigilators : exam.examiners).map((i) => i.id))
-  const accounts = (staff ?? []).filter((u) => u.role === role && (u.isActive || assigned.has(u.id)))
+  const assigned = new Set(assignedOf(exam, role).map((i) => i.id))
+  const accounts = (staff ?? []).filter((u) => u.role === roleOf[role] && (u.isActive || assigned.has(u.id)))
 
   const toggle = async (userId: number) => {
     const next = assigned.has(userId) ? [...assigned].filter((id) => id !== userId) : [...assigned, userId]
     setError(null)
     try {
-      onChanged(await (role === 'Invigilator' ? adminApi.assignInvigilators(exam.id, next) : adminApi.assignExaminers(exam.id, next)))
+      onChanged(await save(exam.id, role, next))
     } catch (e) {
       setError(e)
     }

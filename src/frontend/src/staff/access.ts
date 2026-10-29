@@ -2,15 +2,16 @@ import type { ManagerArea, StaffProfile } from './api'
 
 /**
  * What the portal offers a staff member, mirroring the API's rules (StaffAuthenticationSetup policies, ExamAccess):
- * administrators work in every area; managers only in theirs and never delete on their own; invigilators run the
- * room; examiners review finished work and mark Writing. The API enforces all of it — this only hides what a role
- * cannot use.
+ * administrators work in every area; managers only in theirs, on their own work (VE-72: the papers they made, the
+ * sessions they created or were assigned to), and never delete on their own; invigilators run the room; examiners
+ * review finished work and mark Writing. The API enforces all of it — this only hides what a role cannot use; a
+ * session's page also reads canOrganise / canEnterCandidates / canMonitor from the server.
  */
 export interface Access {
   userId: number
   isAdmin: boolean
   worksIn: (area: ManagerArea) => boolean
-  /** Every session (managers of exams or candidates) or the assigned ones (invigilators, examiners). */
+  /** Sessions they created or were assigned to (managers), or the assigned ones (invigilators, examiners). */
   seesSessions: boolean
   seesCandidates: boolean
   printsSlips: boolean

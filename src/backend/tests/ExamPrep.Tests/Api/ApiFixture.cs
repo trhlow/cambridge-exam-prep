@@ -61,11 +61,12 @@ public sealed class ApiFixture : IAsyncLifetime
     public Task<HttpClient> AdminClientAsync() => StaffClientAsync(AdminUsername, AdminPassword);
 
     /// <summary>Two published A2 papers without content (Reading &amp; Writing, Listening), enough to schedule an exam.</summary>
-    public async Task<(int ReadingWritingId, int ListeningId)> CreatePublishedPapersAsync()
+    /// <param name="authorId">Who made them (VE-72); the first admin by default.</param>
+    public async Task<(int ReadingWritingId, int ListeningId)> CreatePublishedPapersAsync(int? authorId = null)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
-        var adminId = db.Users.Where(u => u.Username == AdminUsername).Select(u => u.Id).Single();
+        var adminId = authorId ?? db.Users.Where(u => u.Username == AdminUsername).Select(u => u.Id).Single();
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var now = DateTime.UtcNow;
         var readingWriting = new TestPaper { SectionTemplateId = 1, Title = $"RW {suffix}", Status = PaperStatus.Published, PublishedAt = now, CreatedByUserId = adminId, CreatedAt = now };
@@ -79,11 +80,12 @@ public sealed class ApiFixture : IAsyncLifetime
     /// Imports a sample package as a published paper with its own title; every part title is prefixed with the paper title,
     /// so a mixed paper shows which source each part came from.
     /// </summary>
-    public async Task<int> ImportPublishedSampleAsync(string sample, string title)
+    /// <param name="authorId">Who made the paper (VE-72: a papers manager works only on their own); the first admin by default.</param>
+    public async Task<int> ImportPublishedSampleAsync(string sample, string title, int? authorId = null)
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
-        var adminId = db.Users.Where(u => u.Username == AdminUsername).Select(u => u.Id).Single();
+        var adminId = authorId ?? db.Users.Where(u => u.Username == AdminUsername).Select(u => u.Id).Single();
         var importer = scope.ServiceProvider.GetRequiredService<PaperPackageImporter>();
         var imported = (await importer.ImportAsync(new MemoryStream(SamplePackages.Zip(sample)), adminId, default)).Paper!;
         var paper = await db.TestPapers.Include(p => p.Parts).SingleAsync(p => p.Id == imported.Id);
@@ -183,6 +185,25 @@ public sealed class ApiFixture : IAsyncLifetime
         {
             throw new InvalidOperationException($"Request {requestId} ended as {(string)body["status"]!}: {(string?)body["outcome"]}");
         }
+    }
+
+    /// <summary>VE-72: makes a manager of exams the organiser of a session, as if they had created it.</summary>
+    public async Task SetExamCreatorAsync(int examId, int userId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var exam = await db.Exams.SingleAsync(e => e.Id == examId);
+        exam.CreatedByUserId = userId;
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>VE-72: assigns a manager of candidates to a session, as its organiser would.</summary>
+    public async Task AssignCandidateManagerAsync(int examId, int userId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        db.ExamCandidateManagers.Add(new ExamCandidateManager { ExamId = examId, UserId = userId, AssignedAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
     }
 
     /// <summary>Assigns an examiner to a session, as an administrator would.</summary>

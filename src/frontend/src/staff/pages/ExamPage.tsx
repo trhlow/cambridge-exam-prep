@@ -22,7 +22,8 @@ const STATUS_HELP: Record<ExamStatus, string> = {
  */
 export function ExamPage({ examId, access }: { examId: number; access: Access }) {
   const { data: exam, error, reload, setData } = useLoad(() => staffApi.exam(examId), examId)
-  const manages = access.worksIn('Exams')
+  // VE-72: only the session's creator (or an administrator) organises it; the server says so per session.
+  const manages = access.worksIn('Exams') && exam?.canOrganise !== false
   const { data: staff } = useLoad(() => (manages ? adminApi.assignableStaff() : Promise.resolve(null)), `staff-${manages}`)
   const [actionError, setActionError] = useState<unknown>(null)
   const [sent, setSent] = useState<ApprovalView | null>(null)
@@ -107,7 +108,7 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
       </div>
 
       <h2 className="st-h2">Sections</h2>
-      {access.monitors && <p className="st-faint">Monitor each section on its own page, as in Inspera: candidates are paused, given time or ended there.</p>}
+      {access.monitors && exam.canMonitor !== false && <p className="st-faint">Monitor each section on its own page, as in Inspera: candidates are paused, given time or ended there.</p>}
       <div className="st-sections">
         {exam.sections.map((section) => {
           const body = (
@@ -124,7 +125,7 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
               )}
             </>
           )
-          return access.monitors ? (
+          return access.monitors && exam.canMonitor !== false ? (
             <Link key={section.id} to={`/staff/exams/${exam.id}/sections/${section.id}`} className="st-card st-section-card">
               {body}
               <span className="st-section-go">Monitor →</span>
@@ -137,8 +138,14 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
         })}
       </div>
 
-      {access.seesCandidates && <CandidatesPanel exam={exam} canEdit={access.worksIn('Candidates')} onChanged={reload} />}
+      {access.seesCandidates && <CandidatesPanel exam={exam} canEdit={access.worksIn('Candidates') && exam.canEnterCandidates !== false} onChanged={reload} />}
+      {exam.invigilatorsNeeded !== undefined && exam.invigilators.length < exam.invigilatorsNeeded && (manages || access.isAdmin) && (
+        <p className="st-note" role="status">
+          Cambridge asks for at least one invigilator for every 25 candidates in the room: {exam.candidates} candidates need {exam.invigilatorsNeeded}, and {exam.invigilators.length} {exam.invigilators.length === 1 ? 'is' : 'are'} assigned.
+        </p>
+      )}
       {manages && <StaffAssignmentPanel exam={exam} role="Invigilator" staff={staff} onChanged={(invigilators) => setData({ ...exam, invigilators } satisfies ExamDetail)} />}
+      {manages && <StaffAssignmentPanel exam={exam} role="CandidatesManager" staff={staff} onChanged={(candidateManagers) => setData({ ...exam, candidateManagers } satisfies ExamDetail)} />}
       {manages && <StaffAssignmentPanel exam={exam} role="Examiner" staff={staff} onChanged={(examiners) => setData({ ...exam, examiners } satisfies ExamDetail)} />}
       {manages && !exam.hasStarted && (
         <div className="st-danger-zone">

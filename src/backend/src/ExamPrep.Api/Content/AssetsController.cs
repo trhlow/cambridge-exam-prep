@@ -49,12 +49,15 @@ public sealed class AssetsController(ExamPrepDbContext db, IAssetStorage storage
         return PhysicalFile(storage.ResolvePath(asset.StoredPath), asset.ContentType, enableRangeProcessing: true);
     }
 
-    /// <summary>Staff may read any file; a candidate only the files of their own exam, and only after the PIN.</summary>
+    /// <summary>
+    /// Administrators may read any file; other staff the files of the papers they made (VE-72) or of the sessions they
+    /// mark; a candidate only the files of their own exam, and only after the PIN.
+    /// </summary>
     private async Task<bool> MayReadAsync(int assetId, CancellationToken cancellationToken)
     {
         if (User.Identities.Any(i => i.IsAuthenticated && i.AuthenticationType == StaffAuthDefaults.Scheme))
         {
-            return true;
+            return await examAssets.StaffMayReadAsync(User, assetId, cancellationToken);
         }
 
         return User.IsPinVerified() && await examAssets.ExamUsesAsync(User.GetExamId(), assetId, cancellationToken);

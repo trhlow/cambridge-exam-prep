@@ -185,12 +185,13 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
     [HttpGet]
     public async Task<IReadOnlyList<PaperListItem>> List(CancellationToken cancellationToken)
     {
-        var papers = await PaperRows(db, db.TestPapers).ToListAsync(cancellationToken);
+        var papers = await PaperRows(db, db.TestPapers.VisibleTo(User)).ToListAsync(cancellationToken);
         return papers.OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id).ToList();
     }
 
     /// <summary>Every part and question with its answer key, pictures and audio, for review before publishing.</summary>
     [HttpGet("{paperId:int}")]
+    [TypeFilter<OwnPaperFilter>]
     public async Task<ActionResult<PaperDetail>> Detail(int paperId, CancellationToken cancellationToken)
     {
         var paper = await db.TestPapers.AsNoTracking()
@@ -204,6 +205,7 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
 
     /// <summary>A reviewed draft becomes available for scheduling. Publishing twice changes nothing.</summary>
     [HttpPost("{paperId:int}/publish")]
+    [TypeFilter<OwnPaperFilter>]
     public async Task<ActionResult<PaperListItem>> Publish(int paperId, CancellationToken cancellationToken)
     {
         var paper = await db.TestPapers.SingleOrDefaultAsync(p => p.Id == paperId, cancellationToken);
@@ -234,6 +236,7 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
     /// requester approves it. Refused at once while a session uses the paper.
     /// </summary>
     [HttpDelete("{paperId:int}")]
+    [TypeFilter<OwnPaperFilter>]
     public async Task<ActionResult<ApprovalView>> Delete(int paperId, [FromServices] ApprovalService approvals, CancellationToken cancellationToken)
     {
         var paper = await db.TestPapers.AsNoTracking().SingleOrDefaultAsync(p => p.Id == paperId, cancellationToken);

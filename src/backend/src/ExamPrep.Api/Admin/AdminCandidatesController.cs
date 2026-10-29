@@ -50,7 +50,7 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     [Authorize(Policy = StaffAuthDefaults.CandidateListPolicy)]
     public async Task<ActionResult<IReadOnlyList<CandidateView>>> List(int examId, CancellationToken cancellationToken)
     {
-        if (!await db.Exams.AnyAsync(e => e.Id == examId, cancellationToken))
+        if (!await db.Exams.CandidatesListedFor(User).AnyAsync(e => e.Id == examId, cancellationToken))
         {
             return NotFound();
         }
@@ -73,7 +73,7 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     [Authorize(Policy = StaffAuthDefaults.CandidatesPolicy)]
     public async Task<ActionResult<IReadOnlyList<CandidateView>>> Add(int examId, AddCandidatesRequest request, CancellationToken cancellationToken)
     {
-        if (!await db.Exams.AnyAsync(e => e.Id == examId, cancellationToken))
+        if (!await db.Exams.CandidatesManagedBy(User).AnyAsync(e => e.Id == examId, cancellationToken))
         {
             return NotFound();
         }
@@ -129,7 +129,8 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     [Authorize(Policy = StaffAuthDefaults.CandidatesPolicy)]
     public async Task<ActionResult<CandidateView>> Update(int candidateId, UpdateCandidateRequest request, CancellationToken cancellationToken)
     {
-        var candidate = await db.Candidates.SingleOrDefaultAsync(c => c.Id == candidateId, cancellationToken);
+        var managed = db.Exams.CandidatesManagedBy(User).Select(e => e.Id);
+        var candidate = await db.Candidates.SingleOrDefaultAsync(c => c.Id == candidateId && managed.Contains(c.ExamId), cancellationToken);
         if (candidate is null)
         {
             return NotFound();
@@ -162,7 +163,8 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     [Authorize(Policy = StaffAuthDefaults.CandidatesPolicy)]
     public async Task<ActionResult<LoginSlip>> ResetPassword(int candidateId, CancellationToken cancellationToken)
     {
-        var candidate = await db.Candidates.Include(c => c.Exam).SingleOrDefaultAsync(c => c.Id == candidateId, cancellationToken);
+        var managed = db.Exams.CandidatesManagedBy(User).Select(e => e.Id);
+        var candidate = await db.Candidates.Include(c => c.Exam).SingleOrDefaultAsync(c => c.Id == candidateId && managed.Contains(c.ExamId), cancellationToken);
         if (candidate is null)
         {
             return NotFound();
@@ -183,8 +185,9 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     [Authorize(Policy = StaffAuthDefaults.CandidatesPolicy)]
     public async Task<ActionResult<ApprovalView>> Delete(int candidateId, [FromServices] ApprovalService approvals, CancellationToken cancellationToken)
     {
+        var managed = db.Exams.CandidatesManagedBy(User).Select(e => e.Id);
         var candidate = await db.Candidates.AsNoTracking()
-            .Where(c => c.Id == candidateId)
+            .Where(c => c.Id == candidateId && managed.Contains(c.ExamId))
             .Select(c => new { c.CandidateNumber, c.FirstName, c.LastName, ExamName = c.Exam!.Name })
             .SingleOrDefaultAsync(cancellationToken);
         if (candidate is null)
