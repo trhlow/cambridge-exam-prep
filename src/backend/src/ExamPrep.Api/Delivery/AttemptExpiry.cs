@@ -80,6 +80,7 @@ public sealed class AttemptExpiryWorker(IServiceScopeFactory scopes, ILogger<Att
                 using var scope = scopes.CreateScope();
                 await scope.ServiceProvider.GetRequiredService<AttemptExpiry>().SubmitExpiredAsync(stoppingToken);
                 await scope.ServiceProvider.GetRequiredService<AttemptMarker>().MarkPendingAsync(stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<Infrastructure.Marking.MarkingAllocator>().EnsureAllAsync(stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

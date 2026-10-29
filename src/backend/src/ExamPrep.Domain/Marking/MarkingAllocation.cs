@@ -2,8 +2,10 @@ namespace ExamPrep.Domain.Marking;
 
 /// <summary>
 /// VE-73 (Victory 29/10): who marks whose Writing. The candidates still to be dealt are shuffled and each goes to the
-/// examiner of the session with the fewest scripts so far (ties broken at random), so the shares never differ by more
-/// than one — 20 candidates and 4 examiners give 5 each. Examiners see a script by its code, never by name.
+/// examiner of the session with the fewest scripts so far (ties broken at random), so a fresh deal never leaves shares
+/// more than one apart — 20 candidates and 4 examiners give 5 each. Scripts kept because their marking has started
+/// count towards the shares, which then even out as far as the new scripts allow. Examiners see a script by its code,
+/// never by name.
 /// </summary>
 public static class MarkingAllocation
 {

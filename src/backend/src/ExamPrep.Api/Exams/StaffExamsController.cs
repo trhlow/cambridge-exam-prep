@@ -44,7 +44,8 @@ public sealed class StaffExamsController(ExamPrepDbContext db, CandidateCredenti
         }
 
         // The PIN and the invigilator password are for the people who run the room, not for examiners.
-        var runsTheRoom = await db.Exams.SlipsVisibleTo(User).AnyAsync(e => e.Id == examId, cancellationToken);
+        // VE-72: the organiser and the invigilators; managers of candidates print slips but do not run the room.
+        var runsTheRoom = await db.Exams.MonitorableBy(User).AnyAsync(e => e.Id == examId, cancellationToken);
         exam = await ExamViews.WithRightsAsync(db, exam, User, cancellationToken);
         return runsTheRoom ? exam : exam with { SessionPin = string.Empty, InvigilatorPassword = string.Empty, SebConfigKey = null };
     }

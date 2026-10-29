@@ -250,8 +250,9 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             return NotFound();
         }
 
+        var before = exam.Examiners.Select(x => x.UserId).ToHashSet();
         var result = await AssignAsync(exam, exam.Examiners, UserRole.Examiner, "examiner", request.UserIds, id => new ExamExaminer { UserId = id, AssignedAt = DateTime.UtcNow }, x => x.UserId, cancellationToken);
-        if (result.Value is not null)
+        if (result.Value is not null && !before.SetEquals(request.UserIds))
         {
             // VE-73: the scripts nobody has started marking are dealt again among the examiners now on the session.
             await allocator.RebalanceAsync(examId, cancellationToken);

@@ -108,6 +108,11 @@ public sealed class OwnershipTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal(HttpStatusCode.OK, (await first.GetAsync(audio, ct)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await admin.GetAsync(audio, ct)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await second.GetAsync(audio, ct)).StatusCode);
+
+        // The author's file list is cached: a second paper imported right after shows its files at once.
+        var next = await ImportAsync(first, SamplePackages.Listening);
+        var nextAudio = (string)(await first.GetFromJsonAsync<JsonObject>($"/api/admin/papers/{next}", ct))!["parts"]![1]!["audioUrl"]!;
+        Assert.Equal(HttpStatusCode.OK, (await first.GetAsync(nextAudio, ct)).StatusCode);
     }
 
     [Fact]

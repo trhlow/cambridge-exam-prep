@@ -11,11 +11,28 @@ namespace ExamPrep.Infrastructure.Marking;
 /// candidate is dealt once a section with Writing has ended and been marked automatically (only then can its Writing
 /// be marked); their script keeps its examiner while that
 /// examiner stays on the session. When the examiners change, scripts nobody has started marking are dealt again, so
-/// the shares stay even. One deal at a time across the server.
+/// the shares stay even. One deal at a time in this process (the centre runs one API server; the unique code index
+/// still holds with more). The background sweep deals after automatic marking (<see cref="EnsureAllAsync"/>).
 /// </summary>
 public sealed class MarkingAllocator(ExamPrepDbContext db)
 {
     private static readonly SemaphoreSlim OneAtATime = new(1, 1);
+
+    /// <summary>Deals the scripts of every session that has an examiner and a marked Writing section of an undealt candidate.</summary>
+    public async Task EnsureAllAsync(CancellationToken cancellationToken)
+    {
+        var examIds = await db.Attempts
+            .Where(a => a.Status == AttemptStatus.Submitted && a.GradingStatus != GradingStatus.NotGraded && a.Candidate!.ExaminerUserId == null
+                && a.ExamSection!.Exam!.Examiners.Any()
+                && db.QuestionGroups.Any(g => g.PaperPart!.TestPaperId == a.TestPaperId && g.InteractionType == InteractionType.Essay))
+            .Select(a => a.ExamSection!.ExamId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        foreach (var examId in examIds)
+        {
+            await EnsureAsync(examId, cancellationToken);
+        }
+    }
 
     /// <summary>Deals every finished script of the session that has no examiner (or one no longer on the session).</summary>
     public Task EnsureAsync(int examId, CancellationToken cancellationToken) => DealAsync(examId, reshuffleUnmarked: false, cancellationToken);
