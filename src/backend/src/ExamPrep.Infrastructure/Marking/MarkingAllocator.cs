@@ -8,7 +8,8 @@ namespace ExamPrep.Infrastructure.Marking;
 
 /// <summary>
 /// VE-73 (Victory 29/10): deals the session's Writing scripts to its examiners (<see cref="MarkingAllocation"/>). A
-/// candidate is dealt once they have finished a section with Writing; their script keeps its examiner while that
+/// candidate is dealt once a section with Writing has ended and been marked automatically (only then can its Writing
+/// be marked); their script keeps its examiner while that
 /// examiner stays on the session. When the examiners change, scripts nobody has started marking are dealt again, so
 /// the shares stay even. One deal at a time across the server.
 /// </summary>
@@ -33,9 +34,9 @@ public sealed class MarkingAllocator(ExamPrepDbContext db)
                 .OrderBy(id => id)
                 .ToListAsync(cancellationToken);
 
-            // Candidates with a finished section whose paper has Writing to mark.
+            // Candidates with a finished, automatically marked section whose paper has Writing to mark.
             var withWriting = await db.Attempts
-                .Where(a => a.ExamSection!.ExamId == examId && a.Status == AttemptStatus.Submitted
+                .Where(a => a.ExamSection!.ExamId == examId && a.Status == AttemptStatus.Submitted && a.GradingStatus != GradingStatus.NotGraded
                     && db.QuestionGroups.Any(g => g.PaperPart!.TestPaperId == a.TestPaperId && g.InteractionType == InteractionType.Essay))
                 .Select(a => a.CandidateId)
                 .Distinct()
