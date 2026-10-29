@@ -32,8 +32,10 @@ Thi máy khó ở khâu vận hành: giám thị phải tạm dừng đúng thí
 - **Cổng giám thị thời gian thực (SignalR):** bảng theo dõi cả phòng, chọn nhiều thí sinh thao tác cùng lúc; tạm dừng / làm tiếp, cộng giờ bù, sửa giờ kết thúc (*End now / End at / End in*), tua lại phần nghe.
 - **Màn hình thí sinh:** vào thi bằng mã PIN, làm bài, ghi chú, đánh dấu câu, đổi cỡ chữ và độ tương phản.
 - **Safe Exam Browser:** server kiểm tra cấu hình SEB (Browser Exam Key) mới cho vào thi; vi phạm hiển thị cảnh báo cho giám thị.
-- **Năm vai trò** (theo yêu cầu Victory 16/10/2026): **admin** tạo mọi tài khoản nhân sự; **quản trị viên** phụ trách từng mảng (đề thi, kỳ thi, thí sinh, trung tâm) — được tạo và sửa, không được xoá; **giám khảo** xem lại bài làm, chấm Writing và xem kết quả của kỳ thi được phân công (chỉ giám khảo mở được bài làm); **giám thị**; **thí sinh**.
-- **Trộn đề** (theo yêu cầu Victory 20/10/2026): hai đề gốc cùng khuôn được trộn theo từng part thành 4 đề; đề chia theo vị trí máy (khối 2×2) nên hai máy kề nhau — ngang, dọc, chéo — không bao giờ cùng đề; thí sinh đổi máy giữa giờ vẫn giữ đề đã làm.
+- **Năm vai trò** (theo yêu cầu Victory 16/10/2026): **admin** tạo mọi tài khoản nhân sự; **quản trị viên** phụ trách từng mảng (đề thi, kỳ thi, thí sinh, trung tâm) — được tạo và sửa, không được xoá; **giám khảo** chấm Writing của những bài được chia cho mình; **giám thị**; **thí sinh**. Mỗi vai trò có thể có nhiều người và **mỗi người chỉ thấy phần mình làm** (Victory 29/10): quản lý đề chỉ thấy đề và đề trộn mình tạo (kể cả hình, file nghe), quản lý kỳ thi chỉ thấy phiên mình tạo, quản lý thí sinh chỉ thấy phiên được gán, giám thị chỉ thấy phiên được gán; admin thấy tất cả. Phiên thi cảnh báo khi thiếu giám thị (Cambridge: ít nhất 1 giám thị cho 25 thí sinh mỗi phòng).
+- **Chấm Writing ẩn danh** (Victory 29/10): bài Writing được chia ngẫu nhiên và đều cho các giám khảo của phiên (20 bài, 4 giám khảo → mỗi người 5 bài); giám khảo chỉ thấy mã bài 6 ký tự và phần Writing, không thấy tên thí sinh, Reading hay bảng điểm; bảng điểm có tên chỉ admin xem, kèm mã bài và giám khảo chấm.
+- **Trộn đề** (theo yêu cầu Victory 20/10, mở rộng 29/10/2026): 2–6 đề gốc cùng khuôn được trộn theo từng part thành số đề người quản lý đề chọn, từ 4 đến 3 × số đề gốc; các đề cùng nhóm không trùng part nào và ngồi cạnh nhau trong cùng dãy; hai máy kề nhau — ngang, dọc, chéo — không bao giờ cùng đề; thí sinh đổi máy giữa giờ vẫn giữ đề đã làm.
+- **Nhập đề A2/B1**: trang Papers lọc theo cấp độ, phần thi, trạng thái, tên; Import from PDF chọn cấp độ và phần thi trước rồi chỉ hỏi những file cần (B1 Writing không có đáp án, Listening một file nghe mỗi part), server từ chối PDF có trang bìa khác lựa chọn; đề trắng soạn trên web có cho cả 5 phần thi A2 và B1.
 - **Hai admin duyệt chéo:** mọi thao tác xoá (đề, kỳ thi, thí sinh) và thay đổi tài khoản (khoá/mở, đổi vai trò, đặt lại mật khẩu, thêm admin) thành yêu cầu chờ một admin *khác* duyệt; ai yêu cầu không tự duyệt được, mọi yêu cầu được lưu làm nhật ký.
 
 **Ngoài phạm vi:** các cấp B2 First, C1 Advanced, C2 Proficiency; phần Speaking (thi trực tiếp); máy Mac/Chromebook; chạy nhiều server.
@@ -93,11 +95,11 @@ Sơ đồ nguồn `.drawio` mở bằng [draw.io](https://www.drawio.com/); file
 
 ### Sơ đồ thực thể – quan hệ (ERD)
 
-25 bảng chia bốn nhóm. Sơ đồ tổng quan cho thấy các nhóm tham chiếu nhau ra sao; mỗi nhóm có một ERD chi tiết, chỉ vẽ khoá ngoại trong nhóm, khoá ngoại sang nhóm khác ghi ngay sau cột (“→ exams”).
+27 bảng chia bốn nhóm. Sơ đồ tổng quan cho thấy các nhóm tham chiếu nhau ra sao; mỗi nhóm có một ERD chi tiết, chỉ vẽ khoá ngoại trong nhóm, khoá ngoại sang nhóm khác ghi ngay sau cột (“→ exams”).
 
 ![ERD tổng quan](thesis/diagrams/erd.drawio.png)
 
-- **[ERD toàn bộ](thesis/diagrams/erd-full.drawio.png)**: đủ 25 bảng với mọi cột và mọi quan hệ trên một sơ đồ (chỉ các khoá ngoại ghi người tạo, duyệt, chấm, gửi về `users` được ghi bằng chữ “→ users”).
+- **[ERD toàn bộ](thesis/diagrams/erd-full.drawio.png)**: đủ 27 bảng với mọi cột và mọi quan hệ trên một sơ đồ (chỉ các khoá ngoại ghi người tạo, duyệt, chấm, gửi về `users` được ghi bằng chữ “→ users”).
 - [Nội dung đề thi](thesis/diagrams/erd-content.drawio.png) · [Kỳ thi và thí sinh](thesis/diagrams/erd-exams.drawio.png) · [Làm bài, chấm điểm và giám sát](thesis/diagrams/erd-delivery.drawio.png) · [Tài khoản nhân sự và cấu hình](thesis/diagrams/erd-accounts.drawio.png)
 
 Mọi cột trạng thái chỉ nhận đúng các giá trị của enum (ràng buộc CHECK sinh từ code); trạng thái lượt làm bài và các mốc thời gian phải khớp nhau; bài làm không bao giờ bị xoá dây chuyền khi xoá thí sinh, phần thi hay kỳ thi.
@@ -211,4 +213,5 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Test đầu-cuối Playwright (`npm run e2e`, stack Docker riêng cổng 8090): thí sinh đăng nhập + PIN + làm bài + tải lại trang; giám thị tạm dừng/cho làm tiếp và máy thí sinh nhận ngay; quản trị viên tạo đề trắng, gửi yêu cầu xoá, admin khác duyệt; giám thị End now → chấm tự động → giám khảo chấm Writing → điểm Final (chạy lại thì `down -v` stack trước)
 - [x] Kiểm thử tải: 100 và 200 thí sinh đồng thời không lỗi (`setup/loadtest/`, kết quả trong `setup/loadtest/results/TONG_KET.md`); sửa kết nối SignalR bị cắt mỗi 12 giây và pool kết nối CSDL
 - [x] Buổi thi thử 16 tình huống theo `setup/mock-exam/KICH_BAN_THI_THU.md`, chạy tự động bằng trình duyệt (`npm run mock-exam`): mỗi vai một trình duyệt (2 quản trị viên, giám thị, giám khảo, 6 thí sinh A2 và 1 thí sinh B1), Listening chạy hết giờ thật. Tìm ra và đã sửa 4 lỗi: máy cũ không bị đăng xuất khi thí sinh đổi máy; End now đôi khi ghi lý do "hết giờ"; thông báo đã đọc bật lại khi sang phần thi sau; cột Audio vẫn đếm sau khi nộp bài. Lần chạy cuối đạt 16/16; biên bản, ảnh chụp và CSV trong `setup/mock-exam/results/`
+- [x] Yêu cầu mới của Victory 29/10 (VE-70…73): trộn N đề gốc thành số đề tuỳ chọn (tối đa 3N), lọc và nhập đề theo A2/B1, đề trắng B1, mỗi người chỉ thấy phần mình làm, chia bài Writing ngẫu nhiên cho giám khảo và chấm ẩn danh theo mã bài
 - [ ] Quyển báo cáo: đã có phần đầu (cam đoan, cảm ơn, mục lục, danh mục, tóm tắt), Mở đầu, Chương 1 Tổng quan, Chương 2 Cơ sở lý thuyết và 52 tài liệu tham khảo; còn Chương 3–5

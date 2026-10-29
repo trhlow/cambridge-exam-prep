@@ -42,12 +42,12 @@ QUERIES = {
 GROUPS = {
     "content": ("Nội dung đề thi", ("#dae8fc", "#6c8ebf"), [
         ["exam_types", "section_templates"],
-        ["test_papers", "paper_mixes"],
+        ["test_papers", "paper_mixes", "paper_mix_sources"],
         ["paper_parts", "assets"],
         ["question_groups", "questions", "answer_keys"],
     ]),
     "exams": ("Kỳ thi và thí sinh", ("#e1d5e7", "#9673a6"), [
-        ["exam_sections", "exam_invigilators", "exam_examiners"],
+        ["exam_sections", "exam_invigilators", "exam_examiners", "exam_candidate_managers"],
         ["exams"],
         ["candidates", "candidate_messages"],
     ]),
@@ -352,18 +352,20 @@ def group_diagram(key):
 
 # The whole schema on one page: the columns follow the flow staff → session → delivery → content, so most keys join
 # neighbouring columns. Only the audit keys to users (who created, uploaded, decided, marked, sent, acted) are written
-# as "→ users" instead of drawn; the room's staff (exam_invigilators, exam_examiners) and user_areas are drawn.
+# as "→ users" instead of drawn, as is the examiner a candidate's Writing is dealt to; the session's staff
+# (exam_invigilators, exam_examiners, exam_candidate_managers) and user_areas are drawn.
 FULL_COLUMNS = [
     ["users", "user_areas", "approval_requests", "site_settings"],
-    ["exam_invigilators", "exam_examiners", "candidate_messages"],
+    ["exam_invigilators", "exam_examiners", "exam_candidate_managers", "candidate_messages"],
     ["exams", "candidates", "invigilator_actions"],
     ["exam_types", "exam_sections", "attempts", "security_events"],
-    ["section_templates", "test_papers", "paper_mixes"],
+    ["section_templates", "test_papers", "paper_mixes", "paper_mix_sources"],
     ["paper_parts", "assets", "responses", "annotations"],
     ["question_groups", "questions", "answer_keys", "manual_marks"],
 ]
 AUDIT_TO_USERS = {"created_by_user_id", "uploaded_by_user_id", "updated_by_user_id", "sent_by_user_id",
-                  "resolved_by_user_id", "marker_user_id", "requested_by_user_id", "decided_by_user_id"}
+                  "resolved_by_user_id", "marker_user_id", "requested_by_user_id", "decided_by_user_id",
+                  "examiner_user_id"}
 ACTIONS_USER = {("invigilator_actions", "user_id")}
 
 
@@ -374,7 +376,7 @@ def all_but_audit(t, c, ref):
 def full_diagram():
     assert {t for col in FULL_COLUMNS for t in col} == set(cols)
     colour_of = {t: GROUPS[group_of[t]][1] for t in cols}
-    return draw_erd("ERD toàn bộ: 25 bảng của hệ thống thi", "erd-full.drawio", FULL_COLUMNS, colour_of, all_but_audit,
+    return draw_erd(f"ERD toàn bộ: {len(cols)} bảng của hệ thống thi", "erd-full.drawio", FULL_COLUMNS, colour_of, all_but_audit,
                     {("answer_keys", "question_id"), ("security_events", "attempt_id")},
                     " · “→ users”: khoá ngoại ghi người tạo, duyệt, chấm, gửi, thao tác (không vẽ đường) · màu theo nhóm như ERD tổng quan")
 
@@ -384,7 +386,7 @@ def overview():
     left, sessions and delivery on the right, accounts as a band underneath, so every arrow is straight or turns once
     outside the boxes and none crosses another."""
     d = Doc()
-    d.vertex("Lược đồ cơ sở dữ liệu: 25 bảng trong 4 nhóm", f"text;html=1;align=left;verticalAlign=middle;{FONT}fontSize=16;fontStyle=1;", 40, 0, 700, 30)
+    d.vertex(f"Lược đồ cơ sở dữ liệu: {len(cols)} bảng trong 4 nhóm", f"text;html=1;align=left;verticalAlign=middle;{FONT}fontSize=16;fontStyle=1;", 40, 0, 700, 30)
     LINE, W = 26, 380
 
     def box(key, x, y, w=W, across=False):
