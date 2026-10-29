@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
@@ -145,6 +145,29 @@ public sealed class PaperEditorTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Contains("Question 1: the wording, options or answer are still to write.", errors);
     }
 
+    [Theory]
+    [InlineData(3, 6, 32, "Question 6: the wording, options or answer are still to write.")]
+    [InlineData(4, 2, 3, "Question 2: the wording, options or answer are still to write.")]
+    [InlineData(5, 4, 25, "Part 1: the recording is still the placeholder.")]
+    public async Task B1Sections_HaveBlankLayoutsToo(int sectionTemplateId, int parts, int questions, string unwritten)
+    {
+        api.SkipIfUnavailable();
+        using var client = await api.AdminClientAsync();
+        var layouts = await client.GetFromJsonAsync<JsonArray>("/api/admin/papers/blank-layouts", ct);
+        var paperId = await BlankAsync(client, sectionTemplateId, $"B1 — written on the web {sectionTemplateId}");
+
+        var paper = (await client.GetFromJsonAsync<JsonObject>($"/api/admin/papers/{paperId}", ct))!;
+        var publish = await client.PostAsync($"/api/admin/papers/{paperId}/publish", null, ct);
+        var errors = (await publish.Content.ReadFromJsonAsync<JsonObject>(ct))!["errors"]!.AsArray().Select(e => (string)e!).ToList();
+
+        Assert.Equal([1, 2, 3, 4, 5], layouts!.Select(l => (int)l!["sectionTemplateId"]!));
+        Assert.Equal("B1 Preliminary for Schools", (string)paper["examType"]!);
+        Assert.Equal(parts, paper["parts"]!.AsArray().Count);
+        Assert.Equal(questions, paper["parts"]!.AsArray().SelectMany(p => p!["groups"]!.AsArray()).Sum(g => g!["questions"]!.AsArray().Count));
+        Assert.Equal(HttpStatusCode.BadRequest, publish.StatusCode);
+        Assert.Contains(unwritten, errors);
+    }
+
     [Fact]
     public async Task WritingAQuestionAndItsPictures_TakesItOffThePublishList()
     {
@@ -185,7 +208,7 @@ public sealed class PaperEditorTests(ApiFixture api) : IClassFixture<ApiFixture>
         var url = (string)(await uploaded.Content.ReadFromJsonAsync<JsonObject>(ct))!["url"]!;
         var svg = await client.PostAsync($"/api/admin/papers/{paperId}/images", Picture("<svg onload=alert(1)>"u8.ToArray(), "notice.svg"), ct);
         var fakePng = await client.PostAsync($"/api/admin/papers/{paperId}/images", Picture("<html></html>"u8.ToArray(), "notice.png"), ct);
-        var noLayout = await client.PostAsJsonAsync("/api/admin/papers/blank", new { sectionTemplateId = 3, title = "B1 Reading" }, ct);
+        var noLayout = await client.PostAsJsonAsync("/api/admin/papers/blank", new { sectionTemplateId = 999, title = "No such section" }, ct);
 
         Assert.Equal(HttpStatusCode.OK, uploaded.StatusCode);
         Assert.StartsWith("/api/assets/", url);

@@ -21,6 +21,15 @@ public sealed record BlankPaperRequest(int SectionTemplateId, [System.ComponentM
 /// <summary>A section a blank paper can be started for.</summary>
 public sealed record BlankLayoutView(int SectionTemplateId, string ExamType, string Section);
 
+/// <summary>
+/// VE-71: a level and section a paper can be for, so the import form asks for what that paper needs: A2 Key Reading
+/// &amp; Writing is one paper, B1 Preliminary has Reading and Writing apart; Writing has no answer key; Listening has one
+/// recording per part.
+/// </summary>
+/// <param name="ExamTypeCode">A2_KEY_FS or B1_PRELIM_FS.</param>
+/// <param name="Skill">Reading, Writing, ReadingWriting or Listening.</param>
+public sealed record PaperSectionView(int SectionTemplateId, string ExamTypeCode, string ExamType, string Section, string Skill, int Parts);
+
 /// <param name="PaperMixId">Set on the four papers of a mix (VE-65), with their <c>MixVersion</c>.</param>
 public sealed record PaperListItem(int Id, string Title, string ExamType, int SectionTemplateId, string Section, string Status, int Parts, int Questions, DateTime CreatedAt, int UsedByExams, int? PaperMixId = null, int? MixVersion = null);
 
@@ -34,12 +43,13 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
 
     /// <summary>
     /// Imports an exam package (.zip with paper.json, pictures and audio) as a draft paper. An invalid package
-    /// creates nothing and returns every problem found in <c>errors</c>.
+    /// creates nothing and returns every problem found in <c>errors</c>. With <paramref name="sectionTemplateId"/>
+    /// (VE-71) a package of another level or section is refused.
     /// </summary>
     [HttpPost("import")]
     [RequestSizeLimit(MaxPackageBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxPackageBytes)]
-    public async Task<ActionResult<PaperImportSummary>> Import(IFormFile? package, CancellationToken cancellationToken)
+    public async Task<ActionResult<PaperImportSummary>> Import(IFormFile? package, [FromForm] int? sectionTemplateId, CancellationToken cancellationToken)
     {
         if (package is null || package.Length == 0)
         {
@@ -47,7 +57,7 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
         }
 
         await using var stream = package.OpenReadStream();
-        var result = await importer.ImportAsync(stream, User.GetStaffId(), cancellationToken);
+        var result = await importer.ImportAsync(stream, User.GetStaffId(), cancellationToken, sectionTemplateId);
         if (result.Errors.Count > 0)
         {
             logger.LogInformation("Exam package {FileName} rejected with {ErrorCount} errors", package.FileName, result.Errors.Count);
@@ -63,6 +73,12 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
     /// VE-25: writing a paper without a package. The draft has the exam's parts, question types and numbering, with
     /// placeholder texts, pictures and recordings to replace in the editor; publishing refuses it until they are gone.
     /// </summary>
+    [HttpGet("sections")]
+    public async Task<IReadOnlyList<PaperSectionView>> Sections(CancellationToken cancellationToken) =>
+        (await db.SectionTemplates.AsNoTracking().Include(t => t.ExamType).OrderBy(t => t.ExamTypeId).ThenBy(t => t.OrderNo).ToListAsync(cancellationToken))
+            .Select(t => new PaperSectionView(t.Id, t.ExamType!.Code, t.ExamType.Name, t.Title, t.Skill.ToString(), t.PartCount))
+            .ToList();
+
     [HttpGet("blank-layouts")]
     public async Task<IReadOnlyList<BlankLayoutView>> BlankLayouts(CancellationToken cancellationToken)
     {

@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -29,9 +29,14 @@ public sealed class AdminPaperImportTests(ApiFixture api) : IClassFixture<ApiFix
         return client;
     }
 
-    private Task<HttpResponseMessage> ImportAsync(HttpClient client, byte[] zip)
+    private Task<HttpResponseMessage> ImportAsync(HttpClient client, byte[] zip, int? sectionTemplateId = null)
     {
         var content = new MultipartFormDataContent();
+        if (sectionTemplateId is { } id)
+        {
+            content.Add(new StringContent(id.ToString(System.Globalization.CultureInfo.InvariantCulture)), "sectionTemplateId");
+        }
+
         var file = new ByteArrayContent(zip);
         file.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
         content.Add(file, "package", "paper.zip");
@@ -42,6 +47,38 @@ public sealed class AdminPaperImportTests(ApiFixture api) : IClassFixture<ApiFix
     {
         scope = api.Factory.Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+    }
+
+    [Fact]
+    public async Task TheSections_TellTheImportFormWhatEachPaperNeeds()
+    {
+        api.SkipIfUnavailable();
+        using var client = await AdminClientAsync();
+
+        var sections = (await client.GetFromJsonAsync<JsonArray>("/api/admin/papers/sections", ct))!;
+
+        Assert.Equal(
+            ["A2_KEY_FS Reading & Writing ReadingWriting 7", "A2_KEY_FS Listening Listening 5", "B1_PRELIM_FS Reading Reading 6", "B1_PRELIM_FS Writing Writing 2", "B1_PRELIM_FS Listening Listening 4"],
+            sections.Select(s => $"{s!["examTypeCode"]} {s["section"]} {s["skill"]} {s["parts"]}"));
+    }
+
+    [Fact]
+    public async Task Import_RefusesAPackageOfAnotherSection_ThanTheOneChosen()
+    {
+        api.SkipIfUnavailable();
+        using var client = await AdminClientAsync();
+
+        // VE-71: the A2 Reading & Writing sample, uploaded as A2 Listening and then as B1 Writing.
+        var listening = await ImportAsync(client, SamplePackages.Zip(SamplePackages.ReadingWriting), 2);
+        var b1Writing = await ImportAsync(client, SamplePackages.Zip(SamplePackages.ReadingWriting), 4);
+        var chosenRight = await ImportAsync(client, SamplePackages.Zip(SamplePackages.ReadingWriting), 1);
+
+        Assert.Equal(HttpStatusCode.BadRequest, listening.StatusCode);
+        async Task<List<string>> ErrorsAsync(HttpResponseMessage response) =>
+            (await response.Content.ReadFromJsonAsync<JsonObject>(ct))!["errors"]!.AsArray().Select(e => (string)e!).ToList();
+        Assert.Contains("This paper is A2 Key for Schools Reading & Writing, but you chose A2 Key for Schools Listening.", await ErrorsAsync(listening));
+        Assert.Contains(await ErrorsAsync(b1Writing), e => e.EndsWith("but you chose B1 Preliminary for Schools Writing.", StringComparison.Ordinal));
+        Assert.Equal(HttpStatusCode.Created, chosenRight.StatusCode);
     }
 
     [Fact]

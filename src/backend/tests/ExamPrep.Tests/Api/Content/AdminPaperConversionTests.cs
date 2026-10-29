@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -53,9 +53,17 @@ public sealed class AdminPaperConversionTests(ApiFixture api) : IClassFixture<Ap
         return client;
     }
 
-    private Task<HttpResponseMessage> ConvertAsync(HttpClient client, byte[]? questions = null, bool withKey = true, params (int Part, string Name)[] audio)
+    private Task<HttpResponseMessage> ConvertAsync(HttpClient client, byte[]? questions = null, bool withKey = true, params (int Part, string Name)[] audio) =>
+        ConvertAsync(client, null, questions, withKey, audio);
+
+    private Task<HttpResponseMessage> ConvertAsync(HttpClient client, int? sectionTemplateId, byte[]? questions = null, bool withKey = true, params (int Part, string Name)[] audio)
     {
         var form = new MultipartFormDataContent { { new StringContent("Converted test paper"), "title" } };
+        if (sectionTemplateId is { } id)
+        {
+            form.Add(new StringContent(id.ToString(System.Globalization.CultureInfo.InvariantCulture)), "sectionTemplateId");
+        }
+
         AddFile(form, "questions", "questions.pdf", questions ?? Pdf, "application/pdf");
         if (withKey)
         {
@@ -107,6 +115,26 @@ public sealed class AdminPaperConversionTests(ApiFixture api) : IClassFixture<Ap
         Assert.Equal("%PDF-", converter.QuestionsStart);
         Assert.Equal(["part1.mp3", "part3.m4a"], converter.AudioFiles);
         Assert.EndsWith("answer-key.pdf", converter.Input.AnswerKeyPdf);
+    }
+
+    [Fact]
+    public async Task Convert_RefusesAPaperOfAnotherLevelOrSection_ThanTheOneChosen_AndCreatesNothing()
+    {
+        api.SkipIfUnavailable();
+        var converter = new FakeConverter(input => WriteSample(input, SamplePackages.Load(SamplePackages.Listening)));
+        using var factory = WithConverter(converter);
+        using var client = await AdminClientAsync(factory);
+        var before = await PaperCountAsync();
+
+        // VE-71: the A2 Listening sample, uploaded as B1 Reading (section template 3).
+        var wrong = await ConvertAsync(client, 3);
+        var right = await ConvertAsync(client, 2);
+
+        Assert.Equal(HttpStatusCode.BadRequest, wrong.StatusCode);
+        var problem = (await wrong.Content.ReadFromJsonAsync<JsonObject>(ct))!;
+        Assert.Contains("This paper is A2 Key for Schools Listening, but you chose B1 Preliminary for Schools Reading.", problem["errors"]!.AsArray().Select(e => (string)e!));
+        Assert.Equal(HttpStatusCode.Created, right.StatusCode);
+        Assert.Equal(before + 1, await PaperCountAsync());
     }
 
     [Fact]
