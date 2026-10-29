@@ -88,6 +88,8 @@ public sealed class StaffRolesTests(ApiFixture api) : IClassFixture<ApiFixture>
         var candidate = await api.CreateCandidateAsync(Password);
         var papersManager = await api.CreateManagerAsync(Password, ManagerArea.Papers);
         var examsManager = await api.CreateManagerAsync(Password, ManagerArea.Exams);
+        // VE-72: the manager of exams organises this session (they created it).
+        await api.SetExamCreatorAsync(candidate.ExamId, examsManager.Id);
         using var papers = await api.StaffClientAsync(papersManager.Username, Password);
         using var exams = await api.StaffClientAsync(examsManager.Username, Password);
 
@@ -122,7 +124,8 @@ public sealed class StaffRolesTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Contains(choices!, p => (int)p["id"]! == readingWriting && (string)p["status"]! == "Published");
         Assert.Contains(staff!, u => (int)u["id"]! == invigilator.Id && (string)u["role"]! == "Invigilator");
         Assert.Contains(staff!, u => (int)u["id"]! == examiner.Id && (string)u["role"]! == "Examiner");
-        Assert.DoesNotContain(staff!, u => (string)u["role"]! is "Admin" or "Manager");
+        // VE-72: managers are offered only when they work on candidates, to enter a session's candidates.
+        Assert.DoesNotContain(staff!, u => (string)u["role"]! == "Admin" || (int)u["id"]! == papersManager.Id);
         Assert.Equal(HttpStatusCode.Forbidden, (await papers.GetAsync("/api/admin/assignable-staff", ct)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await papers.GetAsync("/api/admin/exam-papers", ct)).StatusCode);
     }
@@ -144,8 +147,8 @@ public sealed class StaffRolesTests(ApiFixture api) : IClassFixture<ApiFixture>
     {
         api.SkipIfUnavailable();
         var candidate = await api.CreateCandidateAsync(Password);
-        var (paperId, _) = await api.CreatePublishedPapersAsync();
         var account = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        var (paperId, _) = await api.CreatePublishedPapersAsync(account.Id);
         using var manager = await api.StaffClientAsync(account.Username, Password);
 
         Assert.Equal(HttpStatusCode.Accepted, (await manager.DeleteAsync($"/api/admin/papers/{paperId}", ct)).StatusCode);

@@ -8,7 +8,7 @@ namespace ExamPrep.Api.Exams;
 /// <param name="PaperMixVersions">How many papers the mix gives (VE-70).</param>
 public sealed record ExamSectionView(int Id, int SectionTemplateId, int OrderNo, string Title, int DurationMinutes, int TestPaperId, string PaperTitle, int? PaperMixId = null, string? PaperMixTitle = null, int? PaperMixVersions = null);
 
-/// <summary>An invigilator or examiner assigned to a session.</summary>
+/// <summary>An invigilator, examiner or manager of candidates assigned to a session.</summary>
 public sealed record AssignedStaffView(int Id, string Username, string FullName);
 
 /// <summary>A session as the staff portal lists it.</summary>
@@ -34,7 +34,12 @@ public sealed record ExamDetail(
     IReadOnlyList<AssignedStaffView> Invigilators,
     IReadOnlyList<AssignedStaffView> Examiners,
     string? SebConfigKey,
-    int? SeatsPerRow = null);
+    int? SeatsPerRow = null,
+    IReadOnlyList<AssignedStaffView>? CandidateManagers = null,
+    int InvigilatorsNeeded = 1,
+    bool CanOrganise = false,
+    bool CanEnterCandidates = false,
+    bool CanMonitor = false);
 
 /// <param name="Password">Null when it can no longer be read back (data-protection keys replaced); reset it then.</param>
 public sealed record LoginSlip(int CandidateId, string CandidateNumber, string FullName, string Username, string? Password, string ExamName, DateOnly ScheduledDate, string? Room);
@@ -93,11 +98,29 @@ public static class ExamViews
             .OrderBy(x => x.User!.FullName)
             .Select(x => new AssignedStaffView(x.UserId, x.User!.Username, x.User.FullName))
             .ToListAsync(cancellationToken);
+        var candidateManagers = await db.ExamCandidateManagers.AsNoTracking()
+            .Where(m => m.ExamId == examId)
+            .OrderBy(m => m.User!.FullName)
+            .Select(m => new AssignedStaffView(m.UserId, m.User!.Username, m.User.FullName))
+            .ToListAsync(cancellationToken);
         var hasStarted = await HasStartedAsync(db, examId, cancellationToken);
         return new ExamDetail(
             exam.Id, exam.Name, exam.ExamTypeId, exam.ExamType, exam.ScheduledDate, exam.Room, exam.Status.ToString(), exam.SessionPin,
-            exam.InvigilatorPassword, exam.Candidates, hasStarted, sections.GetValueOrDefault(examId, []), invigilators, examiners, exam.SebConfigKeyHash, exam.SeatsPerRow);
+            exam.InvigilatorPassword, exam.Candidates, hasStarted, sections.GetValueOrDefault(examId, []), invigilators, examiners, exam.SebConfigKeyHash, exam.SeatsPerRow,
+            candidateManagers, Domain.Exams.Invigilation.Needed(exam.Candidates));
     }
+
+    /// <summary>
+    /// VE-72: what the signed-in person may do with the session (<see cref="ExamAccess"/>), so the portal shows only
+    /// the controls that will work: organise it, enter its candidates, monitor its sections.
+    /// </summary>
+    public static async Task<ExamDetail> WithRightsAsync(ExamPrepDbContext db, ExamDetail detail, System.Security.Claims.ClaimsPrincipal user, CancellationToken cancellationToken) =>
+        detail with
+        {
+            CanOrganise = await db.Exams.OrganisedBy(user).AnyAsync(e => e.Id == detail.Id, cancellationToken),
+            CanEnterCandidates = await db.Exams.CandidatesManagedBy(user).AnyAsync(e => e.Id == detail.Id, cancellationToken),
+            CanMonitor = await db.Exams.MonitorableBy(user).AnyAsync(e => e.Id == detail.Id, cancellationToken),
+        };
 
     /// <summary>True once any candidate has an attempt at any section of the session.</summary>
     public static Task<bool> HasStartedAsync(ExamPrepDbContext db, int examId, CancellationToken cancellationToken) =>

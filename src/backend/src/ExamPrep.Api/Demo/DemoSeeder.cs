@@ -188,13 +188,20 @@ public static class DemoSeeder
             return;
         }
 
+        // VE-72: each person sees only their own papers and sessions, so the demo manager makes them (administrators see
+        // everything); without a demo manager the first administrator does.
+        var authorId = await db.Users
+            .Where(u => u.Username == options.ManagerUsername && u.Role == UserRole.Manager)
+            .Select(u => (int?)u.Id)
+            .FirstOrDefaultAsync(cancellationToken) ?? adminId.Value;
+
         var importer = provider.GetRequiredService<PaperPackageImporter>();
         var papers = new List<(TestPaper First, TestPaper? Second)>();
         foreach (var plan in plans)
         {
             var folder = ChooseFolder(plan.Source.Folder, Path.Combine(options.SamplesRoot, plan.Sample), plan.Title, logger);
-            var first = await ImportAsync(importer, folder, adminId.Value, cancellationToken);
-            var second = await ImportIfPresentAsync(importer, plan.Source.SecondFolder, plan.Title, adminId.Value, logger, cancellationToken);
+            var first = await ImportAsync(importer, folder, authorId, cancellationToken);
+            var second = await ImportIfPresentAsync(importer, plan.Source.SecondFolder, plan.Title, authorId, logger, cancellationToken);
             papers.Add((first, second));
         }
 
@@ -209,7 +216,7 @@ public static class DemoSeeder
         var sections = new List<ExamSection>();
         foreach (var (first, second) in papers)
         {
-            sections.Add(await SectionAsync(mixer, templates[first.SectionTemplateId], first, second, adminId.Value, cancellationToken));
+            sections.Add(await SectionAsync(mixer, templates[first.SectionTemplateId], first, second, authorId, cancellationToken));
         }
 
         var candidate = CreateCandidate(provider, options, candidateUsername);
@@ -225,7 +232,7 @@ public static class DemoSeeder
             SessionPin = options.SessionPin,
             InvigilatorPassword = Guid.NewGuid().ToString("N")[..10],
             SeatsPerRow = options.SeatsPerRow,
-            CreatedByUserId = adminId.Value,
+            CreatedByUserId = authorId,
             CreatedAt = DateTime.UtcNow,
             Sections = sections,
             Candidates = [candidate],
@@ -295,9 +302,9 @@ public static class DemoSeeder
         return sample;
     }
 
-    private static async Task<TestPaper> ImportAsync(PaperPackageImporter importer, string folder, int adminId, CancellationToken cancellationToken)
+    private static async Task<TestPaper> ImportAsync(PaperPackageImporter importer, string folder, int authorId, CancellationToken cancellationToken)
     {
-        var result = await importer.ImportAsync(new MemoryStream(PackageFolder.Zip(folder, fillMissing: true)), adminId, cancellationToken);
+        var result = await importer.ImportAsync(new MemoryStream(PackageFolder.Zip(folder, fillMissing: true)), authorId, cancellationToken);
         var paper = result.Paper ?? throw new InvalidOperationException($"Demo sample {folder} is invalid:{Environment.NewLine}{string.Join(Environment.NewLine, result.Errors)}");
 
         // Published, so the admin portal can schedule further demo sessions with it.
@@ -308,7 +315,7 @@ public static class DemoSeeder
 
     /// <summary>A second source paper when its folder holds a paper.json; null otherwise.</summary>
     private static async Task<TestPaper?> ImportIfPresentAsync(
-        PaperPackageImporter importer, string? folder, string section, int adminId, ILogger logger, CancellationToken cancellationToken)
+        PaperPackageImporter importer, string? folder, string section, int authorId, ILogger logger, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(folder) || !File.Exists(Path.Combine(folder, "paper.json")))
         {
@@ -316,19 +323,19 @@ public static class DemoSeeder
         }
 
         logger.LogInformation("Second demo {Section} source paper comes from {Folder}.", section, folder);
-        return await ImportAsync(importer, folder, adminId, cancellationToken);
+        return await ImportAsync(importer, folder, authorId, cancellationToken);
     }
 
     /// <summary>The section with one paper, or with the mix of both papers when there is a second one.</summary>
     private static async Task<ExamSection> SectionAsync(
-        PaperMixer mixer, SectionTemplate template, TestPaper paper, TestPaper? second, int adminId, CancellationToken cancellationToken)
+        PaperMixer mixer, SectionTemplate template, TestPaper paper, TestPaper? second, int authorId, CancellationToken cancellationToken)
     {
         if (second is null)
         {
             return Section(template, paper);
         }
 
-        var result = await mixer.CreateAsync([paper.Id, second.Id], versionCount: 4, $"Demo mix – {template.Title}", seed: 2026, adminId, canUse: null, cancellationToken);
+        var result = await mixer.CreateAsync([paper.Id, second.Id], versionCount: 4, $"Demo mix – {template.Title}", seed: 2026, authorId, canUse: null, cancellationToken);
         var mix = result.Mix ?? throw new InvalidOperationException($"Demo papers cannot be mixed:{Environment.NewLine}{string.Join(Environment.NewLine, result.Errors)}");
         var section = Section(template, mix.Versions.Single(v => v.MixVersion == 1));
         section.PaperMixId = mix.Id;

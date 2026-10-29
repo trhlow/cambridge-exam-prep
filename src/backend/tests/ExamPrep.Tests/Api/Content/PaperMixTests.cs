@@ -183,11 +183,13 @@ public sealed class PaperMixTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task OnlyStaffWorkingOnPapers_MixThem_AndEveryoneThereSeesTheList()
+    public async Task OnlyStaffWorkingOnPapers_MixThem_AndTheyListTheirOwnMixes()
     {
         api.SkipIfUnavailable();
-        var (a, b) = await SourcesAsync(SamplePackages.ReadingWriting);
         var papersManager = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        var suffix = Guid.NewGuid().ToString("N")[..6];
+        var a = await api.ImportPublishedSampleAsync(SamplePackages.ReadingWriting, $"Own A {suffix}", papersManager.Id);
+        var b = await api.ImportPublishedSampleAsync(SamplePackages.ReadingWriting, $"Own B {suffix}", papersManager.Id);
         var examsManager = await api.CreateManagerAsync(Password, ManagerArea.Exams);
         using var allowed = await api.StaffClientAsync(papersManager.Username, Password);
         using var refused = await api.StaffClientAsync(examsManager.Username, Password);

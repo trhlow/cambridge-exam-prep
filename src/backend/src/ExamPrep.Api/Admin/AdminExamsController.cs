@@ -88,11 +88,12 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
     public async Task<IReadOnlyList<PaperMixView>> PaperMixes(CancellationToken cancellationToken) =>
         (await AdminPaperMixesController.ViewsAsync(db, null, cancellationToken)).OrderBy(m => m.Title).ToList();
 
-    /// <summary>Invigilator and examiner accounts, for the assignment panels of a session.</summary>
+    /// <summary>Invigilator, examiner and candidates-manager accounts, for the assignment panels of a session.</summary>
     [HttpGet("assignable-staff")]
     public async Task<IReadOnlyList<AssignableStaffView>> AssignableStaff(CancellationToken cancellationToken) =>
         await db.Users.AsNoTracking()
-            .Where(u => u.Role == UserRole.Invigilator || u.Role == UserRole.Examiner)
+            .Where(u => u.Role == UserRole.Invigilator || u.Role == UserRole.Examiner
+                || (u.Role == UserRole.Manager && db.UserAreas.Any(a => a.UserId == u.Id && a.Area == ManagerArea.Candidates)))
             .OrderBy(u => u.FullName)
             .Select(u => new AssignableStaffView(u.Id, u.Username, u.FullName, u.Role.ToString(), u.IsActive))
             .ToListAsync(cancellationToken);
@@ -124,14 +125,14 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Staff {UserId} created exam {ExamId}", exam.CreatedByUserId, exam.Id);
 
-        var detail = await ExamViews.DetailAsync(db, db.Exams, exam.Id, cancellationToken);
+        var detail = await ExamViews.WithRightsAsync(db, (await ExamViews.DetailAsync(db, db.Exams, exam.Id, cancellationToken))!, User, cancellationToken);
         return Created($"/api/staff/exams/{exam.Id}", detail);
     }
 
     [HttpPut("exams/{examId:int}")]
     public async Task<ActionResult<ExamDetail>> Update(int examId, SaveExamRequest request, CancellationToken cancellationToken)
     {
-        var exam = await db.Exams.Include(e => e.Sections).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
+        var exam = await db.Exams.OrganisedBy(User).Include(e => e.Sections).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         if (exam is null)
         {
             return NotFound();
@@ -182,7 +183,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         logger.LogInformation("Staff {UserId} updated exam {ExamId}", User.GetStaffId(), examId);
-        return (await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken))!;
+        return await ExamViews.WithRightsAsync(db, (await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken))!, User, cancellationToken);
     }
 
     /// <summary>Draft → Scheduled → Active (candidates can sign in) → Closed.</summary>
@@ -194,7 +195,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             return Problems.Invalid($"Status must be one of {string.Join(", ", Enum.GetNames<ExamStatus>())}.");
         }
 
-        var exam = await db.Exams.SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
+        var exam = await db.Exams.OrganisedBy(User).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         if (exam is null)
         {
             return NotFound();
@@ -203,14 +204,14 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
         exam.Status = Enum.Parse<ExamStatus>(request.Status);
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Staff {UserId} set exam {ExamId} to {Status}", User.GetStaffId(), examId, exam.Status);
-        return (await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken))!;
+        return await ExamViews.WithRightsAsync(db, (await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken))!, User, cancellationToken);
     }
 
     /// <summary>VE-60: asks for an unused session to be deleted; an administrator other than the requester approves it.</summary>
     [HttpDelete("exams/{examId:int}")]
     public async Task<ActionResult<ApprovalView>> Delete(int examId, [FromServices] ApprovalService approvals, CancellationToken cancellationToken)
     {
-        var exam = await db.Exams.AsNoTracking().SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
+        var exam = await db.Exams.OrganisedBy(User).AsNoTracking().SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         if (exam is null)
         {
             return NotFound();
@@ -229,7 +230,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
     [HttpPut("exams/{examId:int}/invigilators")]
     public async Task<ActionResult<IReadOnlyList<AssignedStaffView>>> AssignInvigilators(int examId, AssignInvigilatorsRequest request, CancellationToken cancellationToken)
     {
-        var exam = await db.Exams.Include(e => e.Invigilators).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
+        var exam = await db.Exams.OrganisedBy(User).Include(e => e.Invigilators).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         return exam is null
             ? NotFound()
             : await AssignAsync(exam, exam.Invigilators, UserRole.Invigilator, "invigilator", request.UserIds, id => new ExamInvigilator { UserId = id, AssignedAt = DateTime.UtcNow }, i => i.UserId, cancellationToken);
@@ -242,19 +243,44 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
     [HttpPut("exams/{examId:int}/examiners")]
     public async Task<ActionResult<IReadOnlyList<AssignedStaffView>>> AssignExaminers(int examId, AssignInvigilatorsRequest request, CancellationToken cancellationToken)
     {
-        var exam = await db.Exams.Include(e => e.Examiners).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
+        var exam = await db.Exams.OrganisedBy(User).Include(e => e.Examiners).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         return exam is null
             ? NotFound()
             : await AssignAsync(exam, exam.Examiners, UserRole.Examiner, "examiner", request.UserIds, id => new ExamExaminer { UserId = id, AssignedAt = DateTime.UtcNow }, x => x.UserId, cancellationToken);
     }
 
+    /// <summary>
+    /// VE-72: replaces the session's managers of candidates, who enter and change its candidates; only active managers
+    /// working on candidates can be assigned.
+    /// </summary>
+    [HttpPut("exams/{examId:int}/candidate-managers")]
+    public async Task<ActionResult<IReadOnlyList<AssignedStaffView>>> AssignCandidateManagers(int examId, AssignInvigilatorsRequest request, CancellationToken cancellationToken)
+    {
+        var exam = await db.Exams.OrganisedBy(User).Include(e => e.CandidateManagers).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
+        if (exam is null)
+        {
+            return NotFound();
+        }
+
+        var ids = request.UserIds.Distinct().ToList();
+        var managers = await db.Users.AsNoTracking()
+            .Where(u => ids.Contains(u.Id) && u.Role == UserRole.Manager && u.IsActive && db.UserAreas.Any(a => a.UserId == u.Id && a.Area == ManagerArea.Candidates))
+            .Select(u => u.Id)
+            .ToListAsync(cancellationToken);
+        return await AssignAsync(
+            exam, exam.CandidateManagers, UserRole.Manager, "manager of candidates", ids.Where(managers.Contains).ToList(),
+            id => new ExamCandidateManager { UserId = id, AssignedAt = DateTime.UtcNow }, m => m.UserId, cancellationToken, refused: ids.Except(managers).ToList());
+    }
+
+    /// <param name="refused">Accounts already found unfit by the caller (managers working in another area).</param>
     private async Task<ActionResult<IReadOnlyList<AssignedStaffView>>> AssignAsync<T>(
-        Exam exam, ICollection<T> assigned, UserRole role, string roleName, IEnumerable<int> userIds, Func<int, T> create, Func<T, int> userIdOf, CancellationToken cancellationToken)
+        Exam exam, ICollection<T> assigned, UserRole role, string roleName, IEnumerable<int> userIds, Func<int, T> create, Func<T, int> userIdOf, CancellationToken cancellationToken, IReadOnlyList<int>? refused = null)
     {
         var ids = userIds.Distinct().ToList();
-        var users = await db.Users.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, cancellationToken);
-        var errors = ids
-            .Where(id => !users.TryGetValue(id, out var user) || user.Role != role || !user.IsActive)
+        var all = ids.Concat(refused ?? []).ToList();
+        var users = await db.Users.AsNoTracking().Where(u => all.Contains(u.Id)).ToDictionaryAsync(u => u.Id, cancellationToken);
+        var errors = all
+            .Where(id => (refused?.Contains(id) ?? false) || !users.TryGetValue(id, out var user) || user.Role != role || !user.IsActive)
             .Select(id => users.TryGetValue(id, out var user)
                 ? $"{user.FullName} is not an active {roleName} account."
                 : $"Staff account {id} does not exist.")

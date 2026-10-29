@@ -54,6 +54,8 @@ public sealed class ApprovalTests(ApiFixture api) : IClassFixture<ApiFixture>
         var candidate = await api.CreateCandidateAsync(Password);
         var requester = await api.CreateManagerAsync(Password, ManagerArea.Candidates);
         var colleague = await api.CreateManagerAsync(Password, ManagerArea.Candidates, ManagerArea.Exams);
+        await api.AssignCandidateManagerAsync(candidate.ExamId, requester.Id);
+        await api.AssignCandidateManagerAsync(candidate.ExamId, colleague.Id);
         using var manager = await api.StaffClientAsync(requester.Username, Password);
         using var otherManager = await api.StaffClientAsync(colleague.Username, Password);
         using var admin = await api.AdminClientAsync();
@@ -95,8 +97,8 @@ public sealed class ApprovalTests(ApiFixture api) : IClassFixture<ApiFixture>
     public async Task OnlyTheRequesterCancels()
     {
         api.SkipIfUnavailable();
-        var (paperId, _) = await api.CreatePublishedPapersAsync();
         var account = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        var (paperId, _) = await api.CreatePublishedPapersAsync(account.Id);
         using var manager = await api.StaffClientAsync(account.Username, Password);
         using var admin = await api.AdminClientAsync();
         var id = await ApiFixture.RequestIdOfAsync(await manager.DeleteAsync($"/api/admin/papers/{paperId}", ct));
@@ -231,8 +233,8 @@ public sealed class ApprovalTests(ApiFixture api) : IClassFixture<ApiFixture>
     public async Task TheLog_ShowsAdministratorsEveryRequest_AndOthersOnlyTheirOwn()
     {
         api.SkipIfUnavailable();
-        var (paperA, paperB) = await api.CreatePublishedPapersAsync();
         var account = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        var (paperA, paperB) = await api.CreatePublishedPapersAsync(account.Id);
         using var manager = await api.StaffClientAsync(account.Username, Password);
         using var admin = await api.AdminClientAsync();
         var managersRequest = await ApiFixture.RequestIdOfAsync(await manager.DeleteAsync($"/api/admin/papers/{paperA}", ct));

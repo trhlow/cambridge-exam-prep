@@ -49,6 +49,7 @@ public sealed record EditQuestionRequest(
 [ApiController]
 [Route("api/admin/papers/{paperId:int}")]
 [Authorize(Policy = StaffAuthDefaults.PapersPolicy)]
+[TypeFilter<OwnPaperFilter>]
 public sealed class AdminPaperEditorController(ExamPrepDbContext db, IAssetStorage storage, TimeProvider clock, ILogger<AdminPaperEditorController> logger) : ControllerBase
 {
     public const long MaxAudioBytes = 60L * 1024 * 1024;
