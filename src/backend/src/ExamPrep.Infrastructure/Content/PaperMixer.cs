@@ -9,8 +9,8 @@ namespace ExamPrep.Infrastructure.Content;
 public sealed record PaperMixResult(PaperMix? Mix, IReadOnlyList<string> Errors);
 
 /// <summary>
-/// Mixes two published source papers of the same layout into four published papers (Victory 20/10). Each version copies
-/// whole parts — passage, pictures, recording, questions and answer keys — from source A or B as
+/// Mixes 2–6 published source papers of the same layout into 4–3N published papers (Victory 20/10, widened 29/10).
+/// Each version copies whole parts — passage, pictures, recording, questions and answer keys — from the source
 /// <see cref="PaperMixPlan"/> chooses, so marking, Writing marks and the paper review work on them like on any paper.
 /// Pictures and recordings are shared, not copied: assets are stored once by content.
 /// </summary>
@@ -18,17 +18,34 @@ public sealed class PaperMixer(ExamPrepDbContext db, TimeProvider clock)
 {
     public const int MaxTitleLength = 200;
 
-    public async Task<PaperMixResult> CreateAsync(int sourceAPaperId, int sourceBPaperId, string? title, int? seed, int userId, CancellationToken cancellationToken)
+    /// <param name="sourcePaperIds">The sources in letter order (A first).</param>
+    /// <param name="canUse">Whether the person mixing may use this paper (VE-72: their own papers); false reads as missing.</param>
+    public async Task<PaperMixResult> CreateAsync(
+        IReadOnlyList<int> sourcePaperIds, int versionCount, string? title, int? seed, int userId, Func<TestPaper, bool>? canUse, CancellationToken cancellationToken)
     {
-        var a = await LoadAsync(sourceAPaperId, cancellationToken);
-        var b = await LoadAsync(sourceBPaperId, cancellationToken);
-        if (a is null || b is null)
+        if (sourcePaperIds.Count is < PaperMixPlan.MinSources or > PaperMixPlan.MaxSources)
         {
-            return Failed("Choose two papers that exist.");
+            return Failed($"Choose between {PaperMixPlan.MinSources} and {PaperMixPlan.MaxSources} source papers.");
+        }
+
+        if (sourcePaperIds.Distinct().Count() != sourcePaperIds.Count)
+        {
+            return Failed("Choose each source paper only once.");
+        }
+
+        var sources = new List<TestPaper>();
+        foreach (var id in sourcePaperIds)
+        {
+            if (await LoadAsync(id, cancellationToken) is not { } paper || (canUse is not null && !canUse(paper)))
+            {
+                return Failed("Choose papers that exist.");
+            }
+
+            sources.Add(paper);
         }
 
         var problems = new List<string>();
-        foreach (var paper in a.Id == b.Id ? [a] : new[] { a, b })
+        foreach (var paper in sources)
         {
             if (paper.Status != PaperStatus.Published)
             {
@@ -37,44 +54,54 @@ public sealed class PaperMixer(ExamPrepDbContext db, TimeProvider clock)
 
             if (paper.PaperMixId is not null)
             {
-                problems.Add($"\"{paper.Title}\" is itself a mixed paper: mix the two source papers instead.");
+                problems.Add($"\"{paper.Title}\" is itself a mixed paper: mix its source papers instead.");
             }
         }
 
-        problems.AddRange(PaperShape.Differences(a, b));
+        foreach (var other in sources.Skip(1))
+        {
+            problems.AddRange(PaperShape.Differences(sources[0], other));
+        }
+
         if (problems.Count > 0)
         {
             return new PaperMixResult(null, problems);
         }
 
-        var name = string.IsNullOrWhiteSpace(title) ? DefaultTitle(a, b) : title.Trim();
+        var name = string.IsNullOrWhiteSpace(title) ? DefaultTitle(sources) : title.Trim();
         if (name.Length > MaxTitleLength)
         {
             return Failed($"The title can have at most {MaxTitleLength} characters.");
         }
 
-        var partCount = a.Parts.Count;
+        var partCount = sources[0].Parts.Count;
         if (partCount < 2 || partCount > PaperMixPlan.MaxParts)
         {
             return Failed($"Papers with {partCount} part(s) cannot be mixed.");
+        }
+
+        var max = PaperMixPlan.MaxVersions(sources.Count, partCount);
+        if (versionCount < PaperMixPlan.MinVersions || versionCount > max)
+        {
+            return Failed($"{sources.Count} papers of {partCount} parts can make between {PaperMixPlan.MinVersions} and {max} mixed papers.");
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
         var mix = new PaperMix
         {
             Title = name,
-            SectionTemplateId = a.SectionTemplateId,
-            SourceAPaperId = a.Id,
-            SourceBPaperId = b.Id,
+            SectionTemplateId = sources[0].SectionTemplateId,
+            VersionCount = versionCount,
             Seed = seed ?? Random.Shared.Next(1, int.MaxValue),
             CreatedByUserId = userId,
             CreatedAt = now,
+            Sources = sources.Select((paper, i) => new PaperMixSource { Position = i + 1, TestPaperId = paper.Id }).ToList(),
         };
 
-        var patterns = PaperMixPlan.Patterns(partCount, mix.Seed);
-        for (var version = 1; version <= PaperMixPlan.Versions; version++)
+        var patterns = PaperMixPlan.Patterns(sources.Count, partCount, versionCount, mix.Seed);
+        for (var version = 1; version <= versionCount; version++)
         {
-            mix.Versions.Add(Version(a, b, mix, version, patterns[version - 1], userId, now));
+            mix.Versions.Add(Version(sources, mix, version, patterns[version - 1], userId, now));
         }
 
         db.PaperMixes.Add(mix);
@@ -82,20 +109,19 @@ public sealed class PaperMixer(ExamPrepDbContext db, TimeProvider clock)
         return new PaperMixResult(mix, []);
     }
 
-    /// <summary>"A2 Key – Test 1 × A2 Key for Schools – Test 2", cut to the column size.</summary>
-    public static string DefaultTitle(TestPaper a, TestPaper b)
+    /// <summary>"A2 Key – Test 1 × A2 Key for Schools – Test 2 × …", cut to the column size.</summary>
+    public static string DefaultTitle(IReadOnlyList<TestPaper> sources)
     {
-        var title = $"{a.Title} × {b.Title}";
+        var title = string.Join(" × ", sources.Select(p => p.Title));
         return title.Length <= MaxTitleLength ? title : title[..(MaxTitleLength - 1)] + "…";
     }
 
-    private static TestPaper Version(TestPaper a, TestPaper b, PaperMix mix, int version, string pattern, int userId, DateTime now)
+    private static TestPaper Version(IReadOnlyList<TestPaper> sources, PaperMix mix, int version, string pattern, int userId, DateTime now)
     {
-        var partsA = a.Parts.OrderBy(p => p.PartNo).ToList();
-        var partsB = b.Parts.OrderBy(p => p.PartNo).ToList();
+        var parts = sources.Select(s => s.Parts.OrderBy(p => p.PartNo).ToList()).ToList();
         var paper = new TestPaper
         {
-            SectionTemplateId = a.SectionTemplateId,
+            SectionTemplateId = mix.SectionTemplateId,
             Title = $"{mix.Title} – Version {version}",
             Status = PaperStatus.Published,
             CreatedByUserId = userId,
@@ -105,10 +131,9 @@ public sealed class PaperMixer(ExamPrepDbContext db, TimeProvider clock)
             MixPattern = pattern,
         };
 
-        for (var i = 0; i < partsA.Count; i++)
+        for (var i = 0; i < parts[0].Count; i++)
         {
-            var source = PaperMixPlan.FromSourceB(pattern, i + 1) ? partsB[i] : partsA[i];
-            paper.Parts.Add(CopyPart(source));
+            paper.Parts.Add(CopyPart(parts[PaperMixPlan.SourceOf(pattern, i + 1)][i]));
         }
 
         return paper;

@@ -1,8 +1,8 @@
 namespace ExamPrep.Domain.Entities;
 
 /// <summary>
-/// Four papers mixed part by part from two source papers of the same layout (Victory 20/10): each version takes every
-/// part whole from source A or source B, so neighbouring computers can be given different papers.
+/// Papers mixed part by part from 2–6 source papers of the same layout (Victory 20/10, widened 29/10): each version
+/// takes every part whole from one of the sources, so neighbouring computers can be given different papers.
 /// </summary>
 public class PaperMix
 {
@@ -14,21 +14,19 @@ public class PaperMix
 
     public SectionTemplate? SectionTemplate { get; set; }
 
-    public int SourceAPaperId { get; set; }
+    /// <summary>The source papers in letter order: A, B, C, …</summary>
+    public ICollection<PaperMixSource> Sources { get; set; } = [];
 
-    public TestPaper? SourceAPaper { get; set; }
+    /// <summary>How many papers were made (4 to 3 × the number of sources).</summary>
+    public int VersionCount { get; set; }
 
-    public int SourceBPaperId { get; set; }
-
-    public TestPaper? SourceBPaper { get; set; }
-
-    /// <summary>Seed of the random choice of parts: the same sources and seed give the same four papers.</summary>
+    /// <summary>Seed of the random choice of parts: the same sources, count and seed give the same papers.</summary>
     public int Seed { get; set; }
 
     public int CreatedByUserId { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
-    /// <summary>The four papers (<see cref="TestPaper.MixVersion"/> 1–4).</summary>
+    /// <summary>The mixed papers (<see cref="TestPaper.MixVersion"/> 1–<see cref="VersionCount"/>).</summary>
     public ICollection<TestPaper> Versions { get; set; } = [];
 }

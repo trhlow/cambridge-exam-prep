@@ -9,9 +9,9 @@ const plan: RoomPlanView = {
   room: 'Room 1',
   seatsPerRow: 2,
   seats: [
-    { seat: 1, candidateId: 1, candidateNumber: '0001', fullName: 'An Nguyễn', seatTyped: true, paperVersion: 1 },
-    { seat: 2, candidateId: 2, candidateNumber: '0002', fullName: 'Bình Trần', seatTyped: true, paperVersion: 2 },
-    { seat: 4, candidateId: 3, candidateNumber: '0003', fullName: 'Chi Lê', seatTyped: false, paperVersion: 4 },
+    { seat: 1, candidateId: 1, candidateNumber: '0001', fullName: 'An Nguyễn', seatTyped: true, paperVersions: [{ sectionId: 9, section: 'Reading & Writing', version: 1 }] },
+    { seat: 2, candidateId: 2, candidateNumber: '0002', fullName: 'Bình Trần', seatTyped: true, paperVersions: [{ sectionId: 9, section: 'Reading & Writing', version: 2 }] },
+    { seat: 4, candidateId: 3, candidateNumber: '0003', fullName: 'Chi Lê', seatTyped: false, paperVersions: [{ sectionId: 9, section: 'Reading & Writing', version: 4 }] },
   ],
   sections: [
     {

@@ -2,17 +2,19 @@ import { useRef, useState, type FormEvent } from 'react'
 import { adminApi, type ApprovalView, type PaperConversionResult, type PaperImportSummary, type PaperListItem, type PaperMixView } from '../api'
 import { navigate } from '../router'
 import { Link } from '../Link'
-import { Badge, ConfirmButton, ErrorBox, Modal, PageHeader, RequestSent } from '../ui'
+import { Badge, ConfirmButton, ErrorBox, Modal, PageHeader, RequestSent, VersionBadge } from '../ui'
 import { useLoad } from '../useLoad'
 import { patternText } from '../format'
+import { MAX_SOURCES, MIN_SOURCES, MIN_VERSIONS, maxVersions, sourceLetter } from '../mixing'
 
 const PARTS = [1, 2, 3, 4, 5]
 
 /**
  * The paper library. A paper comes in from Victory's PDFs (converted on the server) or as a ready package (.zip);
  * either way it arrives as a draft, is checked on its own page, then published so it can be scheduled. A paper used
- * by an exam cannot be deleted; deleting any other waits for a second administrator (VE-60). Two published papers of
- * the same layout can be mixed into four papers, given by seat so neighbours never share one (Victory 20/10, VE-67).
+ * by an exam cannot be deleted; deleting any other waits for a second administrator (VE-60). 2–6 published papers of
+ * the same layout can be mixed into 4–3N papers, given by seat so neighbours never share one (Victory 20/10 and 29/10,
+ * VE-67, VE-70).
  */
 export function PapersPage() {
   const { data: papers, error, reload: reloadPapers } = useLoad(adminApi.papers, 'papers')
@@ -77,7 +79,7 @@ export function PapersPage() {
               New blank paper
             </button>
             <button type="button" className="st-btn" onClick={() => setIsMixing(true)}>
-              Mix two papers
+              Mix papers
             </button>
             <label className={isImporting ? 'st-btn is-busy' : 'st-btn'}>
             {isImporting ? 'Importing…' : 'Import package (.zip)'}
@@ -107,7 +109,7 @@ export function PapersPage() {
       {mixed && (
         <div className="st-outcome" role="status">
           <strong>
-            Mixed “{mixed.sourceA.title}” and “{mixed.sourceB.title}” into four published papers: “{mixed.title}”.
+            Mixed {mixed.sources.length} papers into {mixed.versionCount} published papers: “{mixed.title}”.
           </strong>{' '}
           Choose it for a section when creating an exam.
           <button type="button" className="st-link" onClick={() => setMixed(null)}>
@@ -165,12 +167,12 @@ export function PapersPage() {
   )
 }
 
-/** VE-65: each mix with its two sources and its four papers; a pattern reads part by part (A = first source). */
+/** VE-65, VE-70: each mix with its sources and its papers; a pattern reads part by part (A = first source). */
 function MixTable({ mixes }: { mixes: PaperMixView[] }) {
   return (
     <>
       <h2 className="st-h2">Mixed papers</h2>
-      <p className="st-faint">Each version takes every part whole from source A or B. Versions 1 and 2 (and 3 and 4) share no part and sit side by side in the room.</p>
+      <p className="st-faint">Each version takes every part whole from one source (A, B, C…). Versions of one group share no part and sit side by side in the room.</p>
       <table className="st-table">
         <thead>
           <tr>
@@ -185,22 +187,23 @@ function MixTable({ mixes }: { mixes: PaperMixView[] }) {
             <tr key={mix.id}>
               <td>
                 <strong>{mix.title}</strong>
-                <div className="st-faint">{mix.examType}</div>
+                <div className="st-faint">
+                  {mix.examType} · {mix.versionCount} papers
+                </div>
               </td>
               <td className="st-nowrap">{mix.section}</td>
               <td>
-                <div>
-                  A: <Link to={`/staff/papers/${mix.sourceA.id}`}>{mix.sourceA.title}</Link>
-                </div>
-                <div>
-                  B: <Link to={`/staff/papers/${mix.sourceB.id}`}>{mix.sourceB.title}</Link>
-                </div>
+                {mix.sources.map((source) => (
+                  <div key={source.letter}>
+                    {source.letter}: <Link to={`/staff/papers/${source.id}`}>{source.title}</Link>
+                  </div>
+                ))}
               </td>
               <td>
                 {mix.versions.map((v) => (
                   <div key={v.version}>
                     <Link to={`/staff/papers/${v.paperId}`} aria-label={`Version ${v.version}`}>
-                      <span className={`room-version room-version--${v.version}`}>V{v.version}</span>
+                      <VersionBadge version={v.version} />
                     </Link>{' '}
                     <span className="st-faint st-mono" title={patternText(v.pattern)}>
                       {v.pattern}
@@ -217,29 +220,37 @@ function MixTable({ mixes }: { mixes: PaperMixView[] }) {
 }
 
 /**
- * Two published papers of the same section and layout become four published papers. The server checks the layout
- * part by part and lists every difference when they do not fit.
+ * VE-70 (Victory 29/10): 2–6 published papers of one section and layout become as many papers as the papers manager
+ * asks for, from 4 up to three per source (for example 4 sources, 8 papers for a room of 30). Ticking order gives the
+ * letters A, B, C… The server checks the layout part by part and lists every difference when they do not fit.
  */
 function MixDialog({ papers, onClose, onMixed }: { papers: PaperListItem[]; onClose: () => void; onMixed: (mix: PaperMixView) => void }) {
-  const sources = papers.filter((p) => p.status === 'Published' && !p.paperMixId)
-  const [sourceA, setSourceA] = useState<number | null>(null)
-  const [sourceB, setSourceB] = useState<number | null>(null)
+  const published = papers.filter((p) => p.status === 'Published' && !p.paperMixId)
+  const sections = [...new Map(published.map((p) => [p.sectionTemplateId, `${p.examType} — ${p.section}`])).entries()]
+  const [sectionId, setSectionId] = useState<number | null>(sections.length === 1 ? sections[0][0] : null)
+  const [chosen, setChosen] = useState<number[]>([])
+  const [count, setCount] = useState(MIN_VERSIONS)
   const [title, setTitle] = useState('')
   const [error, setError] = useState<unknown>(null)
   const [isBusy, setIsBusy] = useState(false)
-  const first = sources.find((p) => p.id === sourceA)
-  const seconds = sources.filter((p) => p.id !== sourceA && (!first || p.sectionTemplateId === first.sectionTemplateId))
+  const choices = published.filter((p) => p.sectionTemplateId === sectionId)
+  const parts = Math.min(16, ...choices.filter((p) => chosen.includes(p.id)).map((p) => p.parts))
+  const max = chosen.length >= MIN_SOURCES ? maxVersions(chosen.length, parts) : 0
+  const fits = chosen.length >= MIN_SOURCES && count >= MIN_VERSIONS && count <= max
+
+  const toggle = (paperId: number) =>
+    setChosen((now) => (now.includes(paperId) ? now.filter((id) => id !== paperId) : now.length < MAX_SOURCES ? [...now, paperId] : now))
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (sourceA === null || sourceB === null) {
+    if (!fits) {
       return
     }
 
     setIsBusy(true)
     setError(null)
     try {
-      onMixed(await adminApi.mixPapers(sourceA, sourceB, title.trim() || null))
+      onMixed(await adminApi.mixPapers(chosen, count, title.trim() || null))
     } catch (e) {
       setError(e)
       setIsBusy(false)
@@ -247,51 +258,63 @@ function MixDialog({ papers, onClose, onMixed }: { papers: PaperListItem[]; onCl
   }
 
   return (
-    <Modal title="Mix two papers" onClose={onClose}>
+    <Modal title="Mix papers" onClose={onClose}>
       <form className="st-form" onSubmit={submit}>
         <p className="st-faint">
-          Choose two published papers of the same section with the same parts and questions (for example A2 Key and A2 Key for Schools, Reading &amp; Writing). Four papers are made, each taking every part whole from one of them;
-          an exam section then gives them by seat so neighbouring computers never get the same paper.
+          Choose {MIN_SOURCES} to {MAX_SOURCES} published papers of the same section with the same parts and questions, then how many papers to make: at least {MIN_VERSIONS}, at most three per source paper. Each new paper takes every
+          part whole from one source; an exam section then gives them by seat, so neighbouring computers never get the same paper.
         </p>
         <label className="st-field">
-          Source paper A
+          Section
           <select
-            value={sourceA ?? ''}
+            value={sectionId ?? ''}
             onChange={(e) => {
-              setSourceA(e.target.value ? Number(e.target.value) : null)
-              setSourceB(null)
+              setSectionId(e.target.value ? Number(e.target.value) : null)
+              setChosen([])
             }}
             required
           >
-            <option value="">Choose a published paper…</option>
-            {sources.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title} — {p.section}
+            <option value="">Choose a section…</option>
+            {sections.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
               </option>
             ))}
           </select>
         </label>
+        {sectionId !== null && (
+          <fieldset className="st-field mix-sources">
+            <legend>
+              Source papers <span className="st-faint">(ticking order gives A, B, C…)</span>
+            </legend>
+            {choices.map((p) => {
+              const index = chosen.indexOf(p.id)
+              return (
+                <label key={p.id} className="mix-source">
+                  <input type="checkbox" checked={index >= 0} onChange={() => toggle(p.id)} disabled={index < 0 && chosen.length >= MAX_SOURCES} />
+                  <span className="mix-letter">{index >= 0 ? sourceLetter(index) : ''}</span>
+                  {p.title}
+                </label>
+              )
+            })}
+          </fieldset>
+        )}
         <label className="st-field">
-          Source paper B
-          <select value={sourceB ?? ''} onChange={(e) => setSourceB(e.target.value ? Number(e.target.value) : null)} required disabled={sourceA === null}>
-            <option value="">Choose another paper of the same section…</option>
-            {seconds.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-          </select>
+          <span>
+            Papers to make <span className="st-faint">{max > 0 ? `(${MIN_VERSIONS} to ${max})` : '(choose two papers first)'}</span>
+          </span>
+          <input type="number" min={MIN_VERSIONS} max={Math.max(max, MIN_VERSIONS)} value={count} onChange={(e) => setCount(Number(e.target.value))} disabled={max === 0} required />
         </label>
         <label className="st-field">
           <span>
             Title <span className="st-faint">(optional)</span>
           </span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder="Leave empty for “A × B”" />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder="Leave empty for “A × B × …”" />
         </label>
         <ErrorBox error={error} />
         <div className="st-form-actions">
-          <button type="submit" className="st-btn st-btn--primary" disabled={isBusy || sourceA === null || sourceB === null}>
-            Make four papers
+          <button type="submit" className="st-btn st-btn--primary" disabled={isBusy || !fits}>
+            {fits ? `Make ${count} papers` : 'Make papers'}
           </button>
         </div>
       </form>

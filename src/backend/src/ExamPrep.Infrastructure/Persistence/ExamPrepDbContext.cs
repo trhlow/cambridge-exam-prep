@@ -19,6 +19,8 @@ public class ExamPrepDbContext(DbContextOptions<ExamPrepDbContext> options) : Db
 
     public DbSet<PaperMix> PaperMixes => Set<PaperMix>();
 
+    public DbSet<PaperMixSource> PaperMixSources => Set<PaperMixSource>();
+
     public DbSet<PaperPart> PaperParts => Set<PaperPart>();
 
     public DbSet<QuestionGroup> QuestionGroups => Set<QuestionGroup>();

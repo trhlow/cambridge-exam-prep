@@ -51,6 +51,15 @@ const BADGE_TONE: Record<string, string> = {
 
 const BADGE_TEXT: Record<string, string> = { NotStarted: 'Never started', InProgress: 'In progress', NeedsManualMarking: 'Writing to mark' }
 
+/** A mixed-paper version (V1, V2, …); six colours in turn, so neighbours in the room plan stand apart. */
+export function VersionBadge({ version, label }: { version: number; label?: string }) {
+  return (
+    <span className={`room-version room-version--${((version - 1) % 6) + 1}`} title={label}>
+      V{version}
+    </span>
+  )
+}
+
 export function Badge({ value }: { value: string }) {
   return <span className={`st-badge st-badge--${BADGE_TONE[value] ?? 'grey'}`}>{BADGE_TEXT[value] ?? value}</span>
 }

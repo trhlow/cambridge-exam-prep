@@ -55,10 +55,10 @@ public static class ApprovalActions
 
         if (await db.TestPapers.AnyAsync(p => p.Id == paperId && p.PaperMixId != null, cancellationToken))
         {
-            return "This paper is one of the four papers of a mix and cannot be deleted on its own.";
+            return "This paper is one of the papers of a mix and cannot be deleted on its own.";
         }
 
-        return await db.PaperMixes.AnyAsync(m => m.SourceAPaperId == paperId || m.SourceBPaperId == paperId, cancellationToken)
+        return await db.PaperMixSources.AnyAsync(s => s.TestPaperId == paperId, cancellationToken)
             ? "Papers were mixed from this paper, so it cannot be deleted."
             : null;
     }

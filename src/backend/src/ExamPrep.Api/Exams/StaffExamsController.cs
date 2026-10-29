@@ -11,8 +11,8 @@ namespace ExamPrep.Api.Exams;
 
 /// <param name="Seat">The computer: the seat number staff typed, or the candidate's place in the list.</param>
 /// <param name="SeatTyped">False when the seat comes from the list order because no seat number was entered.</param>
-/// <param name="PaperVersion">The mixed-paper version this computer gets; null when no section is mixed.</param>
-public sealed record RoomSeat(int Seat, int CandidateId, string CandidateNumber, string FullName, bool SeatTyped, int? PaperVersion);
+/// <param name="PaperVersions">The mixed-paper version this computer gets in each mixed section; empty when no section is mixed.</param>
+public sealed record RoomSeat(int Seat, int CandidateId, string CandidateNumber, string FullName, bool SeatTyped, IReadOnlyList<SectionVersion> PaperVersions);
 
 /// <summary>A section of the session and, when it gives mixed papers, its mix with the four versions.</summary>
 public sealed record RoomPlanSection(int SectionId, string Title, string PaperTitle, string? PaperMixTitle, IReadOnlyList<PaperMixVersionView> Versions);
@@ -49,8 +49,8 @@ public sealed class StaffExamsController(ExamPrepDbContext db, CandidateCredenti
     }
 
     /// <summary>
-    /// The seating plan with the paper version of every computer (VE-67): for the people who prepare or run the room.
-    /// Neighbouring computers never share a version (2×2 blocks over the seat numbers).
+    /// The seating plan with the paper version of every computer in each mixed section (VE-67, VE-70): for the people
+    /// who prepare or run the room. Neighbouring computers never share a version (<see cref="Domain.Papers.SeatPattern"/>).
     /// </summary>
     [HttpGet("{examId:int}/room-plan")]
     public async Task<ActionResult<RoomPlanView>> RoomPlan(int examId, CancellationToken cancellationToken)
@@ -68,12 +68,11 @@ public sealed class StaffExamsController(ExamPrepDbContext db, CandidateCredenti
             .Select(s => new { s.Id, s.SectionTemplate!.Title, PaperTitle = s.TestPaper!.Title, s.PaperMixId })
             .ToListAsync(cancellationToken);
         var mixes = await AdminPaperMixesController.ViewsAsync(db, null, cancellationToken);
-        var isMixed = sections.Any(s => s.PaperMixId != null);
         var seats = PaperAssignment.SeatsOf(candidates);
-        var versions = PaperAssignment.VersionsOf(candidates, exam.SeatsPerRow);
+        var versions = PaperAssignment.SectionVersionsOf(candidates, exam.SeatsPerRow, await PaperAssignment.MixedSectionsAsync(db, examId, cancellationToken));
 
         var plan = candidates
-            .Select(c => new RoomSeat(seats[c.Id], c.Id, c.CandidateNumber, $"{c.FirstName} {c.LastName}", Domain.Papers.SeatPattern.Parse(c.SeatNo) is not null, isMixed ? versions[c.Id] : null))
+            .Select(c => new RoomSeat(seats[c.Id], c.Id, c.CandidateNumber, $"{c.FirstName} {c.LastName}", Domain.Papers.SeatPattern.Parse(c.SeatNo) is not null, versions.GetValueOrDefault(c.Id) ?? []))
             .OrderBy(s => s.Seat).ThenBy(s => s.CandidateNumber)
             .ToList();
         var planSections = sections.Select(s =>

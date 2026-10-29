@@ -7,10 +7,13 @@ namespace ExamPrep.Api.Delivery;
 
 /// <summary>
 /// The paper a candidate gets in a section (VE-66). A section with one paper gives it to everyone; a section with a mix
-/// gives the version of the candidate's seat (<see cref="SeatPattern"/>). A candidate without a numeric seat takes the
+/// gives the version of the candidate's seat (<see cref="SeatPattern"/>, by the mix's number of versions and sources). A candidate without a numeric seat takes the
 /// seat of their place in the candidate list (by candidate number), so a room seated in that order still works.
 /// Once the attempt exists its paper is fixed (<see cref="Attempt.TestPaperId"/>).
 /// </summary>
+/// <param name="Section">The section's title, e.g. "Reading &amp; Writing".</param>
+public sealed record SectionVersion(int SectionId, string Section, int Version);
+
 public sealed class PaperAssignment(ExamPrepDbContext db)
 {
     public async Task<int> PaperIdForAsync(ExamSection section, Candidate candidate, CancellationToken cancellationToken)
@@ -20,19 +23,41 @@ public sealed class PaperAssignment(ExamPrepDbContext db)
             return section.TestPaperId;
         }
 
-        var version = await VersionForAsync(candidate, cancellationToken);
+        var shape = await ShapeOfAsync(db, mixId, cancellationToken);
+        var seatsPerRow = await db.Exams.Where(e => e.Id == candidate.ExamId).Select(e => e.SeatsPerRow).SingleAsync(cancellationToken);
+        var version = SeatPattern.VersionFor(await SeatOfAsync(candidate, cancellationToken), seatsPerRow, shape);
         return await db.TestPapers.AsNoTracking()
             .Where(p => p.PaperMixId == mixId && p.MixVersion == version)
             .Select(p => p.Id)
             .SingleAsync(cancellationToken);
     }
 
-    /// <summary>The version (1–4) the candidate's seat gets.</summary>
-    public async Task<int> VersionForAsync(Candidate candidate, CancellationToken cancellationToken)
+    /// <summary>How many versions the mix has, from how many sources.</summary>
+    public static async Task<MixShape> ShapeOfAsync(ExamPrepDbContext db, int mixId, CancellationToken cancellationToken) =>
+        await db.PaperMixes.AsNoTracking()
+            .Where(m => m.Id == mixId)
+            .Select(m => new MixShape(m.VersionCount, m.Sources.Count))
+            .SingleAsync(cancellationToken);
+
+    /// <summary>The mixed sections of an exam in order, each with its mix's shape.</summary>
+    public static async Task<List<(int SectionId, string Title, MixShape Shape)>> MixedSectionsAsync(ExamPrepDbContext db, int examId, CancellationToken cancellationToken)
     {
-        var seatsPerRow = await db.Exams.Where(e => e.Id == candidate.ExamId).Select(e => e.SeatsPerRow).SingleAsync(cancellationToken);
-        return SeatPattern.VersionFor(await SeatOfAsync(candidate, cancellationToken), seatsPerRow);
+        var sections = await db.ExamSections.AsNoTracking()
+            .Where(s => s.ExamId == examId && s.PaperMixId != null)
+            .OrderBy(s => s.OrderNo)
+            .Select(s => new { s.Id, s.SectionTemplate!.Title, s.PaperMix!.VersionCount, Sources = s.PaperMix.Sources.Count })
+            .ToListAsync(cancellationToken);
+        return sections.Select(s => (s.Id, s.Title, new MixShape(s.VersionCount, s.Sources))).ToList();
     }
+
+    /// <summary>For each candidate, the version their seat gets in every mixed section (VE-70: mixes may differ in size).</summary>
+    public static Dictionary<int, IReadOnlyList<SectionVersion>> SectionVersionsOf(
+        IReadOnlyCollection<Candidate> candidates, int? seatsPerRow, IReadOnlyList<(int SectionId, string Title, MixShape Shape)> mixed) =>
+        mixed.Count == 0
+            ? new()
+            : SeatsOf(candidates).ToDictionary(
+                p => p.Key,
+                p => (IReadOnlyList<SectionVersion>)mixed.Select(m => new SectionVersion(m.SectionId, m.Title, SeatPattern.VersionFor(p.Value, seatsPerRow, m.Shape))).ToList());
 
     private async Task<int> SeatOfAsync(Candidate candidate, CancellationToken cancellationToken)
     {
@@ -51,9 +76,9 @@ public sealed class PaperAssignment(ExamPrepDbContext db)
             .Select((c, index) => (c.Id, Seat: SeatPattern.Parse(c.SeatNo) ?? index + 1))
             .ToDictionary(x => x.Id, x => x.Seat);
 
-    /// <summary>The version (1–4) each candidate's seat gets, for the candidate list, the monitor and the room plan.</summary>
-    public static Dictionary<int, int> VersionsOf(IEnumerable<Candidate> candidates, int? seatsPerRow) =>
-        SeatsOf(candidates).ToDictionary(p => p.Key, p => SeatPattern.VersionFor(p.Value, seatsPerRow));
+    /// <summary>The version each candidate's seat gets in a section with this mix, for the monitor.</summary>
+    public static Dictionary<int, int> VersionsOf(IEnumerable<Candidate> candidates, int? seatsPerRow, MixShape shape) =>
+        SeatsOf(candidates).ToDictionary(p => p.Key, p => SeatPattern.VersionFor(p.Value, seatsPerRow, shape));
 
     /// <summary>The mix version of each of these papers (papers that are not mixed are left out).</summary>
     public static async Task<Dictionary<int, int>> MixVersionsAsync(ExamPrepDbContext db, IEnumerable<int> paperIds, CancellationToken cancellationToken)

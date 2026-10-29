@@ -1,5 +1,5 @@
 import { staffApi, type RoomSeat } from '../api'
-import { ErrorBox } from '../ui'
+import { ErrorBox, VersionBadge } from '../ui'
 import { formatDate, patternText } from '../format'
 import { useLoad } from '../useLoad'
 import { VictoryLogo } from '../../ui/VictoryLogo'
@@ -52,7 +52,7 @@ export function RoomPlanPage({ examId }: { examId: number }) {
           <ul>
             {section.versions.map((v) => (
               <li key={v.version}>
-                <span className={`room-version room-version--${v.version}`}>V{v.version}</span> {patternText(v.pattern)}
+                <VersionBadge version={v.version} /> {patternText(v.pattern)}
               </li>
             ))}
           </ul>
@@ -72,7 +72,11 @@ export function RoomPlanPage({ examId }: { examId: number }) {
             <div key={seat} className={seated.length === 0 ? 'room-seat is-empty' : 'room-seat'} role="listitem" aria-label={`Computer ${seat}`}>
               <div className="room-seat-top">
                 <span className="room-seat-no">{seat}</span>
-                {seated[0]?.paperVersion != null && <span className={`room-version room-version--${seated[0].paperVersion}`}>V{seated[0].paperVersion}</span>}
+                <span>
+                  {seated[0]?.paperVersions.map((v) => (
+                    <VersionBadge key={v.sectionId} version={v.version} label={v.section} />
+                  ))}
+                </span>
               </div>
               {seated.length === 0 && <span className="st-faint">empty</span>}
               {seated.map((s) => (

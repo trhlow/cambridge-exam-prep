@@ -847,6 +847,16 @@ ul.st-error {
   color: #8a2f74;
 }
 
+.room-version--5 {
+  background: #e6f4f4;
+  color: #1d6b6b;
+}
+
+.room-version--6 {
+  background: #fbeee4;
+  color: #8a4b1d;
+}
+
 .room-plan .slips-bar {
   max-width: 1100px;
 }
@@ -1130,4 +1140,24 @@ ul.st-error {
 
 .st-option-field input {
   flex: 1;
+}
+
+/* VE-70: the source papers of a mix, ticked in letter order */
+.mix-sources {
+  display: grid;
+  gap: 6px;
+}
+
+.mix-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+}
+
+.mix-letter {
+  display: inline-block;
+  min-width: 1.4em;
+  font-weight: 700;
+  text-align: center;
 }

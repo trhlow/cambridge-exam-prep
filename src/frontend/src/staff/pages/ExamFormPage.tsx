@@ -10,7 +10,7 @@ type Form = {
   examTypeId: number
   scheduledDate: string
   room: string
-  /** Per section template: "p:<paper id>" (one paper for everyone) or "m:<mix id>" (four papers by seat). */
+  /** Per section template: "p:<paper id>" (one paper for everyone) or "m:<mix id>" (the papers of a mix by seat). */
   papers: Record<number, string>
   sessionPin: string
   invigilatorPassword: string
@@ -187,7 +187,7 @@ function PaperChoices(props: {
   return (
     <div className="st-grid-2">
       {type.sections.map((section) => {
-        // The four papers of a mix are chosen through their mix, not one by one.
+        // The papers of a mix are chosen through their mix, not one by one.
         const options = papers.filter((p) => p.sectionTemplateId === section.id && !p.paperMixId && (p.status === 'Published' || `p:${p.id}` === chosen[section.id]))
         const sectionMixes = mixes.filter((m) => m.sectionTemplateId === section.id)
         const isMix = chosen[section.id]?.startsWith('m:')
@@ -206,16 +206,16 @@ function PaperChoices(props: {
                 ))}
               </optgroup>
               {sectionMixes.length > 0 && (
-                <optgroup label="Mixed papers — 4 versions by seat">
+                <optgroup label="Mixed papers — given by seat">
                   {sectionMixes.map((m) => (
                     <option key={m.id} value={`m:${m.id}`}>
-                      {m.title}
+                      {m.title} ({m.versionCount} versions)
                     </option>
                   ))}
                 </optgroup>
               )}
             </select>
-            {isMix && <span className="st-faint">Each computer gets one of four versions by its seat number; neighbours never share one.</span>}
+            {isMix && <span className="st-faint">Each computer gets one of the versions by its seat number; neighbours never share one.</span>}
             {options.length === 0 && sectionMixes.length === 0 && <span className="st-faint">No published {section.title} paper yet — import one under Papers.</span>}
           </label>
         )
