@@ -167,7 +167,6 @@ public sealed class StaffRolesTests(ApiFixture api) : IClassFixture<ApiFixture>
         using var examiner = await api.StaffClientAsync(account.Username, Password);
         using var admin = await api.AdminClientAsync();
 
-        var resultsBefore = await examiner.GetAsync($"/api/staff/exams/{candidate.ExamId}/results", ct);
         var markingBefore = await examiner.GetAsync($"/api/staff/attempts/{attemptId}/marking", ct);
         var assign = await admin.PutAsJsonAsync($"/api/admin/exams/{candidate.ExamId}/examiners", new { userIds = new[] { account.Id } }, ct);
         var results = await examiner.GetAsync($"/api/staff/exams/{candidate.ExamId}/results", ct);
@@ -177,19 +176,19 @@ public sealed class StaffRolesTests(ApiFixture api) : IClassFixture<ApiFixture>
         var exams = await examiner.GetFromJsonAsync<List<JsonObject>>("/api/staff/exams", ct);
         var detail = await admin.GetFromJsonAsync<JsonObject>($"/api/staff/exams/{candidate.ExamId}", ct);
 
-        Assert.Equal(HttpStatusCode.NotFound, resultsBefore.StatusCode);
+        // VE-73: an examiner marks the Writing dealt to them by code; scores with names and the session are not theirs.
         Assert.Equal(HttpStatusCode.NotFound, markingBefore.StatusCode);
         Assert.Equal(HttpStatusCode.OK, assign.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, results.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, results.StatusCode);
         Assert.Equal(HttpStatusCode.OK, marking.StatusCode);
         Assert.Equal(HttpStatusCode.OK, mark.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, monitor.StatusCode);
-        Assert.Contains(exams!, e => (int)e["id"]! == candidate.ExamId);
+        Assert.DoesNotContain(exams!, e => (int)e["id"]! == candidate.ExamId);
         Assert.Contains(detail!["examiners"]!.AsArray(), e => (int)e!["id"]! == account.Id);
     }
 
     [Fact]
-    public async Task Examiner_SeesAttemptsOnlyOnceTheSectionHasEnded()
+    public async Task Examiner_SeesAScriptOnlyOnceTheSectionHasEnded()
     {
         api.SkipIfUnavailable();
         var candidate = await api.CreateCandidateAsync(Password, withSamplePapers: true);
@@ -200,7 +199,8 @@ public sealed class StaffRolesTests(ApiFixture api) : IClassFixture<ApiFixture>
 
         var marking = await examiner.GetAsync($"/api/staff/attempts/{attemptId}/marking", ct);
 
-        Assert.Equal(HttpStatusCode.Conflict, marking.StatusCode);
+        // VE-73: a script is dealt once the section has ended; until then the examiner has nothing to open.
+        Assert.Equal(HttpStatusCode.NotFound, marking.StatusCode);
     }
 
     [Fact]

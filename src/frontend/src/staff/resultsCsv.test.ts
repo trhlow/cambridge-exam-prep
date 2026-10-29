@@ -13,13 +13,14 @@ const result = (candidateNumber: string, fullName: string, rw: [string, number |
 
 describe('resultsCsv', () => {
   it('writes one row per candidate with each section score, for Excel (BOM, quoted text)', () => {
-    const csv = resultsCsv([result('0001', 'An Nguyễn', ['Submitted', 21, 60], ['Submitted', 18, 25]), result('0002', 'Bình "B" Trần', ['NotStarted', null, null], ['NotStarted', null, null])])
+    const marked = { ...result('0001', 'An Nguyễn', ['Submitted', 21, 60], ['Submitted', 18, 25]), markingCode: 'K7P2QX', examiner: 'Ms Hoa' }
+    const csv = resultsCsv([marked, result('0002', 'Bình "B" Trần', ['NotStarted', null, null], ['NotStarted', null, null])])
 
     expect(csv.startsWith(String.fromCharCode(0xfeff))).toBe(true)
     expect(csv.slice(1).split('\r\n')).toEqual([
-      '"Candidate number","Name","Reading & Writing","Reading & Writing max","Listening","Listening max"',
-      '"0001","An Nguyễn",21,60,18,25',
-      '"0002","Bình ""B"" Trần",,,,',
+      '"Candidate number","Name","Writing script","Examiner","Reading & Writing","Reading & Writing max","Listening","Listening max"',
+      '"0001","An Nguyễn","K7P2QX","Ms Hoa",21,60,18,25',
+      '"0002","Bình ""B"" Trần","","",,,,',
     ])
   })
 
@@ -28,8 +29,8 @@ describe('resultsCsv', () => {
     mixed.sections[0].paperVersion = 3
 
     expect(resultsCsv([mixed]).slice(1).split(String.fromCharCode(13, 10))).toEqual([
-      '"Candidate number","Name","Reading & Writing","Reading & Writing max","Reading & Writing version","Listening","Listening max"',
-      '"0004","Chi Lê",30,60,3,20,25',
+      '"Candidate number","Name","Writing script","Examiner","Reading & Writing","Reading & Writing max","Reading & Writing version","Listening","Listening max"',
+      '"0004","Chi Lê","","",30,60,3,20,25',
     ])
   })
 

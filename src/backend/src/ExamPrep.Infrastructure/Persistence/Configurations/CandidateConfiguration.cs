@@ -1,4 +1,5 @@
 using ExamPrep.Domain.Entities;
+using ExamPrep.Domain.Marking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -20,5 +21,10 @@ internal sealed class CandidateConfiguration : IEntityTypeConfiguration<Candidat
         builder.HasOne(c => c.Exam).WithMany(e => e.Candidates).HasForeignKey(c => c.ExamId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(c => c.Username).IsUnique();
         builder.HasIndex(c => new { c.ExamId, c.CandidateNumber }).IsUnique();
+        builder.Property(c => c.MarkingCode).HasMaxLength(MarkingAllocation.CodeLength).IsFixedLength();
+        builder.HasIndex(c => new { c.ExamId, c.MarkingCode }).IsUnique();
+        builder.ToTable(t => t.HasCheckConstraint("CK_candidates_marking_code", "marking_code IS NULL OR REGEXP_LIKE(marking_code, '^[A-HJ-NP-Z2-9]{6}$', 'c')"));
+        // An examiner account is deactivated, never deleted; a deleted one would only leave the script to deal again.
+        builder.HasOne<User>().WithMany().HasForeignKey(c => c.ExaminerUserId).OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -59,10 +59,11 @@ test('a B1 exam runs through Reading, Writing and Listening and ends with a fina
 
   // The examiner marks the email and the chosen question; question 3 was not chosen and is not marked.
   await staffSignsIn(marking, examiner)
-  await marking.getByRole('link', { name: b1ExamName }).click()
-  await marking.getByRole('link', { name: 'Results' }).click()
-  const mark = marking.getByRole('link', { name: 'Mark Writing' }).first()
-  await expect(mark).toBeVisible({ timeout: 20_000 })
+  const mark = marking.getByRole('row', { name: new RegExp(b1ExamName) }).getByRole('link', { name: 'Mark Writing' }).first()
+  await expect(async () => {
+    await marking.reload()
+    await expect(mark).toBeVisible({ timeout: 2_000 })
+  }).toPass({ timeout: 30_000 })
   await mark.click()
   await expect(marking.getByText(/Not chosen by the candidate/)).toBeVisible()
   for (const number of [1, 2]) {
@@ -73,7 +74,6 @@ test('a B1 exam runs through Reading, Writing and Listening and ends with a fina
   }
 
   await expect(marking.getByText('24 / 40')).toBeVisible()
-  await marking.getByRole('link', { name: 'Results' }).click()
   await expect(marking.getByText('Final').first()).toBeVisible()
 
   await candidateContext.close()

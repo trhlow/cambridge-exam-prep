@@ -30,11 +30,12 @@ export function accessOf(user: StaffProfile): Access {
     userId: user.id,
     isAdmin,
     worksIn,
-    seesSessions: organises || user.role === 'Invigilator' || user.role === 'Examiner',
+    // VE-73: examiners mark Writing scripts by code and do not open sessions.
+    seesSessions: organises || user.role === 'Invigilator',
     seesCandidates: organises,
     printsSlips: organises || user.role === 'Invigilator',
     monitors: worksIn('Exams') || user.role === 'Invigilator',
-    seesResults: isAdmin || user.role === 'Examiner',
+    seesResults: isAdmin,
     marks: user.role === 'Examiner',
     requestsApprovals: isAdmin || user.role === 'Manager',
   }

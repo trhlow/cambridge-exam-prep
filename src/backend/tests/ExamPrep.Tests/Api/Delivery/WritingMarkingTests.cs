@@ -72,10 +72,12 @@ public sealed class WritingMarkingTests(ApiFixture api) : IClassFixture<ApiFixtu
         Assert.Equal(12m, afterFirst.Questions.Single(q => q.Number == 31).Score);
         Assert.Equal("Clear, all three points.", afterFirst.Questions.Single(q => q.Number == 31).Comment);
         Assert.Equal("Final", final!.GradingStatus);
-        Assert.Equal(13m, final.RawScore); // 1 automatic mark + 12 + 0
-        Assert.Equal(14m, (await remark.Content.ReadFromJsonAsync<AttemptMarking>(ct))!.RawScore);
+        // VE-73: the examiner sees the Writing marks only (12 + 0); the attempt adds the 1 automatic mark.
+        Assert.Equal(12m, final.RawScore);
+        Assert.Equal(13m, (await remark.Content.ReadFromJsonAsync<AttemptMarking>(ct))!.RawScore);
         var attempt = await api.GetAttemptAsync(candidate.CandidateId, candidate.ReadingWritingSectionId);
         Assert.Equal(GradingStatus.Final, attempt.GradingStatus);
+        Assert.Equal(14m, attempt.RawScore);
     }
 
     [Fact]
@@ -102,7 +104,7 @@ public sealed class WritingMarkingTests(ApiFixture api) : IClassFixture<ApiFixtu
     }
 
     [Fact]
-    public async Task WritingMarks_WaitUntilTheSectionHasEnded()
+    public async Task WritingMarks_WaitUntilTheSectionHasEnded_AndTheScriptIsDealt()
     {
         api.SkipIfUnavailable();
         var candidate = await api.CreateCandidateAsync(Password, withSamplePapers: true);
@@ -111,6 +113,7 @@ public sealed class WritingMarkingTests(ApiFixture api) : IClassFixture<ApiFixtu
 
         var response = await MarkAsync(examiner, attemptId, 31, 10);
 
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        // VE-73: a script is dealt to an examiner once the section has ended; until then there is nothing to mark.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

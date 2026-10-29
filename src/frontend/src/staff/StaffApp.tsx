@@ -9,6 +9,7 @@ import { ExamPage } from './pages/ExamPage'
 import { ExamsPage } from './pages/ExamsPage'
 import { LoginSlipsPage } from './pages/LoginSlipsPage'
 import { MarkingPage } from './pages/MarkingPage'
+import { ScriptsPage } from './pages/ScriptsPage'
 import { MonitorPage } from './pages/MonitorPage'
 import { PaperPage } from './pages/PaperPage'
 import { PapersPage } from './pages/PapersPage'
@@ -73,7 +74,14 @@ export default function StaffApp() {
 function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void }) {
   const route = useRoute()
   const access = accessOf(user)
-  const section = route.page === 'papers' || route.page === 'paper' ? 'papers' : route.page === 'users' || route.page === 'approvals' || route.page === 'centre' ? route.page : 'exams'
+  const section =
+    route.page === 'papers' || route.page === 'paper'
+      ? 'papers'
+      : route.page === 'users' || route.page === 'approvals' || route.page === 'centre'
+        ? route.page
+        : route.page === 'scripts' || (route.page === 'marking' && access.marks)
+          ? 'scripts'
+          : 'exams'
   // Login slips print on their own, without the portal around them.
   if (route.page === 'slips') {
     return <LoginSlipsPage examId={route.examId} />
@@ -91,6 +99,11 @@ function Shell({ user, onSignOut }: { user: StaffProfile; onSignOut: () => void 
           {access.seesSessions && (
             <Link to="/staff" className={section === 'exams' ? 'is-current' : undefined}>
               Exams
+            </Link>
+          )}
+          {access.marks && (
+            <Link to="/staff/marking" className={section === 'scripts' ? 'is-current' : undefined}>
+              Marking
             </Link>
           )}
           {access.worksIn('Papers') && (
@@ -137,8 +150,8 @@ function Page({ route, access }: { route: Route; access: Access }) {
         return <ExamsPage access={access} />
       }
 
-      // A manager without sessions starts on their own area.
-      return access.worksIn('Papers') ? <PapersPage /> : access.worksIn('Centre') ? <CentrePage /> : <NotAllowed />
+      // A manager without sessions starts on their own area; an examiner on the scripts to mark.
+      return access.marks ? <ScriptsPage /> : access.worksIn('Papers') ? <PapersPage /> : access.worksIn('Centre') ? <CentrePage /> : <NotAllowed />
     case 'new-exam':
       return access.worksIn('Exams') ? <ExamFormPage /> : <NotAllowed />
     case 'edit-exam':
@@ -148,9 +161,11 @@ function Page({ route, access }: { route: Route; access: Access }) {
     case 'monitor':
       return access.monitors ? <MonitorPage examId={route.examId} sectionId={route.sectionId} /> : <NotAllowed />
     case 'results':
-      return access.seesResults ? <ResultsPage examId={route.examId} canMark={access.marks} /> : <NotAllowed />
+      return access.seesResults ? <ResultsPage examId={route.examId} /> : <NotAllowed />
     case 'marking':
-      return access.marks ? <MarkingPage examId={route.examId} attemptId={route.attemptId} /> : <NotAllowed />
+      return access.marks ? <MarkingPage attemptId={route.attemptId} /> : <NotAllowed />
+    case 'scripts':
+      return access.marks ? <ScriptsPage /> : <NotAllowed />
     case 'papers':
       return access.worksIn('Papers') ? <PapersPage /> : <NotAllowed />
     case 'paper':

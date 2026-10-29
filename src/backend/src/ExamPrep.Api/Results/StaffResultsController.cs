@@ -14,7 +14,9 @@ namespace ExamPrep.Api.Results;
 /// <param name="PaperVersion">The mixed-paper version the candidate sat (VE-67); null for a section with one paper.</param>
 public sealed record SectionResult(int SectionId, string Title, string Status, string GradingStatus, decimal? RawScore, decimal? MaxScore, int? AttemptId, int? PaperVersion = null);
 
-public sealed record CandidateResult(int CandidateId, string CandidateNumber, string FullName, IReadOnlyList<SectionResult> Sections);
+/// <param name="MarkingCode">VE-73: the code the examiner sees instead of the name; null until the Writing is dealt.</param>
+/// <param name="Examiner">VE-73: the examiner the Writing was dealt to.</param>
+public sealed record CandidateResult(int CandidateId, string CandidateNumber, string FullName, IReadOnlyList<SectionResult> Sections, string? MarkingCode = null, string? Examiner = null);
 
 /// <param name="Comment">Writing: the teacher's comment with the mark.</param>
 /// <param name="Selection">Where the candidate chooses which questions to answer: Yes, No or Undecided; null elsewhere.</param>
@@ -22,7 +24,13 @@ public sealed record CandidateResult(int CandidateId, string CandidateNumber, st
 public sealed record QuestionMark(int Number, int PartNo, string InteractionType, string? Response, IReadOnlyList<string> AcceptedAnswers, bool? IsCorrect, decimal? Score, decimal Points, string? Comment, string? Selection = null, bool Counts = true);
 
 /// <param name="PaperTitle">The paper the candidate sat: with mixed papers, the version of their seat (VE-67).</param>
-public sealed record AttemptMarking(int AttemptId, string SectionTitle, string GradingStatus, decimal? RawScore, decimal? MaxScore, IReadOnlyList<QuestionMark> Questions, string? PaperTitle = null, int? PaperVersion = null);
+/// <param name="RawScore">VE-73: the Writing marks so far (the examiner sees no other part of the test).</param>
+/// <param name="MaxScore">The most the Writing questions that count can give.</param>
+/// <param name="Code">VE-73: the script's code; the examiner never sees the candidate's name.</param>
+public sealed record AttemptMarking(int AttemptId, string SectionTitle, string GradingStatus, decimal? RawScore, decimal? MaxScore, IReadOnlyList<QuestionMark> Questions, string? PaperTitle = null, int? PaperVersion = null, string? Code = null);
+
+/// <summary>VE-73: a Writing script dealt to the signed-in examiner, known by its code.</summary>
+public sealed record MarkingScript(int AttemptId, int ExamId, string ExamName, DateOnly ScheduledDate, string Section, string Code, string GradingStatus);
 
 /// <summary>
 /// Scores for staff. Candidates never see marks in the exam room, as in Cambridge exams; results go through the
@@ -30,14 +38,15 @@ public sealed record AttemptMarking(int AttemptId, string SectionTitle, string G
 /// </summary>
 [ApiController]
 [Route("api/staff")]
-[Authorize(Policy = StaffAuthDefaults.ResultsPolicy)]
+[Authorize(Policy = StaffAuthDefaults.StaffPolicy)]
 public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBase
 {
     /// <summary>
-    /// One row per candidate with every section's status and score: administrators see every session, examiners the
-    /// sessions they are assigned to. Invigilators and managers do not see scores.
+    /// One row per candidate with every section's status and score, and who marks their Writing under which code:
+    /// administrators only (VE-73). Invigilators, managers and examiners do not see scores with names.
     /// </summary>
     [HttpGet("exams/{examId:int}/results")]
+    [Authorize(Policy = StaffAuthDefaults.ResultsPolicy)]
     public async Task<ActionResult<IReadOnlyList<CandidateResult>>> Results(int examId, CancellationToken cancellationToken)
     {
         if (!await db.Exams.ResultsVisibleTo(User).AnyAsync(e => e.Id == examId, cancellationToken))
@@ -53,8 +62,10 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
         var candidates = await db.Candidates.AsNoTracking()
             .Where(c => c.ExamId == examId)
             .OrderBy(c => c.CandidateNumber)
-            .Select(c => new { c.Id, c.CandidateNumber, c.FirstName, c.LastName })
+            .Select(c => new { c.Id, c.CandidateNumber, c.FirstName, c.LastName, c.MarkingCode, c.ExaminerUserId })
             .ToListAsync(cancellationToken);
+        var examinerIds = candidates.Select(c => c.ExaminerUserId).OfType<int>().Distinct().ToList();
+        var examiners = await db.Users.AsNoTracking().Where(u => examinerIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
         var attempts = await db.Attempts.AsNoTracking()
             .Where(a => a.ExamSection!.ExamId == examId)
             .Select(a => new { a.Id, a.CandidateId, a.ExamSectionId, a.Status, a.GradingStatus, a.RawScore, a.MaxScore, a.TestPaperId })
@@ -68,18 +79,44 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
             $"{c.FirstName} {c.LastName}",
             sections.Select(s => byKey.TryGetValue((c.Id, s.Id), out var a)
                 ? new SectionResult(s.Id, s.Title, a.Status.ToString(), a.GradingStatus.ToString(), a.RawScore, a.MaxScore, a.Id, versions.TryGetValue(a.TestPaperId, out var v) ? v : null)
-                : new SectionResult(s.Id, s.Title, AttemptStatus.NotStarted.ToString(), GradingStatus.NotGraded.ToString(), null, null, null)).ToList()))
+                : new SectionResult(s.Id, s.Title, AttemptStatus.NotStarted.ToString(), GradingStatus.NotGraded.ToString(), null, null, null)).ToList(),
+            c.MarkingCode,
+            c.ExaminerUserId is { } examinerId ? examiners.GetValueOrDefault(examinerId) : null))
             .ToList();
     }
 
     /// <summary>
-    /// Every question of a finished attempt with the candidate's answer, the accepted answers and the mark. Examiners
-    /// of the session only (Victory: only examiners see candidates' work), and only once the section has ended.
+    /// VE-73: the Writing scripts dealt to the signed-in examiner across their sessions, by code; the deal is brought up
+    /// to date first (candidates who finished since are dealt now).
+    /// </summary>
+    [HttpGet("marking")]
+    [Authorize(Policy = StaffAuthDefaults.ExaminerPolicy)]
+    public async Task<IReadOnlyList<MarkingScript>> Scripts([FromServices] Infrastructure.Marking.MarkingAllocator allocator, CancellationToken cancellationToken)
+    {
+        var userId = User.GetStaffId();
+        foreach (var examId in await db.Exams.MarkableBy(User).Select(e => e.Id).ToListAsync(cancellationToken))
+        {
+            await allocator.EnsureAsync(examId, cancellationToken);
+        }
+
+        return await db.Attempts.AsNoTracking()
+            .Where(a => a.Candidate!.ExaminerUserId == userId && a.Status == AttemptStatus.Submitted
+                && a.ExamSection!.Exam!.Examiners.Any(x => x.UserId == userId)
+                && db.QuestionGroups.Any(g => g.PaperPart!.TestPaperId == a.TestPaperId && g.InteractionType == InteractionType.Essay))
+            .OrderByDescending(a => a.ExamSection!.Exam!.ScheduledDate).ThenBy(a => a.Candidate!.MarkingCode)
+            .Select(a => new MarkingScript(a.Id, a.ExamSection!.ExamId, a.ExamSection.Exam!.Name, a.ExamSection.Exam.ScheduledDate, a.ExamSection.SectionTemplate!.Title, a.Candidate!.MarkingCode!, a.GradingStatus.ToString()))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// The Writing of a finished attempt with the marks so far: only for the examiner the script was dealt to (VE-73),
+    /// by code, without the candidate's name or the other parts of the test; only once the section has ended.
     /// </summary>
     [HttpGet("attempts/{attemptId:int}/marking")]
     [Authorize(Policy = StaffAuthDefaults.ExaminerPolicy)]
-    public async Task<ActionResult<AttemptMarking>> Marking(int attemptId, CancellationToken cancellationToken)
+    public async Task<ActionResult<AttemptMarking>> Marking(int attemptId, [FromServices] Infrastructure.Marking.MarkingAllocator allocator, CancellationToken cancellationToken)
     {
+        await WritingMarks.DealAsync(db, allocator, attemptId, User, cancellationToken);
         var status = await WritingMarks.AttemptStatusForAsync(db, attemptId, User, cancellationToken);
         if (status is null)
         {
@@ -101,12 +138,33 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
 /// </summary>
 public static class WritingMarks
 {
-    /// <summary>The attempt's status when it belongs to a session the examiner is assigned to; null otherwise.</summary>
+    /// <summary>
+    /// Brings the deal of the attempt's session up to date (VE-73) when the examiner is on that session, so a script
+    /// opened straight from its address has an examiner.
+    /// </summary>
+    public static async Task DealAsync(ExamPrepDbContext db, Infrastructure.Marking.MarkingAllocator allocator, int attemptId, System.Security.Claims.ClaimsPrincipal user, CancellationToken cancellationToken)
+    {
+        var markable = db.Exams.MarkableBy(user).Select(e => e.Id);
+        var examId = await db.Attempts.AsNoTracking()
+            .Where(a => a.Id == attemptId && markable.Contains(a.ExamSection!.ExamId) && a.Candidate!.ExaminerUserId == null)
+            .Select(a => (int?)a.ExamSection!.ExamId)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (examId is { } id)
+        {
+            await allocator.EnsureAsync(id, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// The attempt's status when its candidate's Writing was dealt to this examiner, on a session they are still
+    /// assigned to (VE-73); null otherwise.
+    /// </summary>
     public static async Task<AttemptStatus?> AttemptStatusForAsync(ExamPrepDbContext db, int attemptId, System.Security.Claims.ClaimsPrincipal user, CancellationToken cancellationToken)
     {
         var markable = db.Exams.MarkableBy(user).Select(e => e.Id);
+        var userId = user.GetStaffId();
         return await db.Attempts.AsNoTracking()
-            .Where(a => a.Id == attemptId && markable.Contains(a.ExamSection!.ExamId))
+            .Where(a => a.Id == attemptId && markable.Contains(a.ExamSection!.ExamId) && a.Candidate!.ExaminerUserId == userId)
             .Select(a => (AttemptStatus?)a.Status)
             .SingleOrDefaultAsync(cancellationToken);
     }
@@ -116,16 +174,18 @@ public static class WritingMarks
         var attempt = await db.Attempts.AsNoTracking()
             .Include(a => a.ExamSection!).ThenInclude(s => s.SectionTemplate)
             .Include(a => a.TestPaper)
+            .Include(a => a.Candidate)
             .SingleOrDefaultAsync(a => a.Id == attemptId, cancellationToken);
         if (attempt is null)
         {
             return null;
         }
 
+        // VE-73: examiners mark Writing only, so the other parts of the test are left out.
         var questions = await db.Questions.AsNoTracking()
             .Include(q => q.AnswerKeys)
             .Include(q => q.QuestionGroup!).ThenInclude(g => g.PaperPart)
-            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.TestPaperId)
+            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.TestPaperId && q.QuestionGroup.InteractionType == InteractionType.Essay)
             .OrderBy(q => q.Number)
             .ToListAsync(cancellationToken);
         var responses = await db.Responses.AsNoTracking()
@@ -145,7 +205,10 @@ public static class WritingMarks
             return new QuestionMark(q.Number, q.QuestionGroup.PaperPart!.PartNo, type.ToString(), response?.Value, q.AnswerKeys.Select(k => k.Value).ToList(), isCorrect, score, q.Points, manual?.Comment, selection, counted.Contains(q.Id));
         }).ToList();
 
-        return new AttemptMarking(attempt.Id, attempt.ExamSection!.SectionTemplate!.Title, attempt.GradingStatus.ToString(), attempt.RawScore, attempt.MaxScore, marks, attempt.TestPaper!.Title, attempt.TestPaper.MixVersion);
+        var counting = marks.Where(m => m.Counts).ToList();
+        var writingScore = counting.All(m => m.Score is null) ? (decimal?)null : counting.Sum(m => m.Score ?? 0);
+        var writingMax = counting.Sum(m => m.Points);
+        return new AttemptMarking(attempt.Id, attempt.ExamSection!.SectionTemplate!.Title, attempt.GradingStatus.ToString(), writingScore, writingMax, marks, attempt.TestPaper!.Title, attempt.TestPaper.MixVersion, attempt.Candidate!.MarkingCode);
     }
 
     /// <summary>
@@ -241,15 +304,16 @@ public static class WritingMarks
 
 public sealed record WritingMarkRequest([Range(1, 1000)] int QuestionNumber, decimal Score, [StringLength(2000)] string? Comment = null);
 
-/// <summary>VE-26, VE-61: Writing marks, entered by an examiner assigned to the session.</summary>
+/// <summary>VE-26, VE-61, VE-73: Writing marks, entered by the examiner the script was dealt to.</summary>
 [ApiController]
 [Route("api/staff/attempts")]
 [Authorize(Policy = StaffAuthDefaults.ExaminerPolicy)]
 public sealed class WritingMarksController(ExamPrepDbContext db, TimeProvider clock, ILogger<WritingMarksController> logger) : ControllerBase
 {
     [HttpPost("{attemptId:int}/writing-marks")]
-    public async Task<ActionResult<AttemptMarking>> Mark(int attemptId, WritingMarkRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<AttemptMarking>> Mark(int attemptId, WritingMarkRequest request, [FromServices] Infrastructure.Marking.MarkingAllocator allocator, CancellationToken cancellationToken)
     {
+        await WritingMarks.DealAsync(db, allocator, attemptId, User, cancellationToken);
         if (await WritingMarks.AttemptStatusForAsync(db, attemptId, User, cancellationToken) is null)
         {
             return NotFound();

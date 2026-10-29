@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { staffApi, type ApprovalView, type ManagerArea, type Role, type StaffProfile } from './api'
+import { adminApi, staffApi, type ApprovalView, type ManagerArea, type Role, type StaffProfile } from './api'
 import StaffApp from './StaffApp'
 
 const profile = (id: number, role: Role, areas: ManagerArea[] = []): StaffProfile => ({ id, username: 'u', fullName: `Staff ${id}`, email: null, role, isActive: true, areas })
@@ -53,10 +53,12 @@ describe('StaffApp menu (VE-59, VE-61)', () => {
     expect(await screen.findByRole('heading', { name: 'Centre' })).toBeInTheDocument()
   })
 
-  it('gives examiners and invigilators their sessions only', async () => {
+  it('gives examiners their Writing scripts to mark, not the sessions (VE-73)', async () => {
+    vi.spyOn(adminApi, 'scripts').mockResolvedValue([{ attemptId: 5, examId: 2, examName: 'A2 Key – 20/11', scheduledDate: '2026-11-20', section: 'Reading & Writing', code: 'K7P2QX', gradingStatus: 'NeedsManualMarking' }])
     signIn(profile(3, 'Examiner'))
-    expect(await menu()).toEqual(['Exams'])
-    expect(await screen.findByText('Sessions you are marking')).toBeInTheDocument()
+    expect(await menu()).toEqual(['Marking'])
+    expect(await screen.findByText('K7P2QX')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Mark Writing' })).toHaveAttribute('href', '/staff/exams/2/marking/5')
   })
 })
 

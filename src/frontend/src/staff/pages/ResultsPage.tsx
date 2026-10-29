@@ -12,10 +12,10 @@ const GRADING_TEXT: Record<string, string> = {
 }
 
 /**
- * Scores per candidate and section (VE-11 auto-marking). Writing is marked by an examiner assigned to the session
- * (VE-26, VE-61), who alone opens the candidates' answers; administrators see the score table only.
+ * Scores per candidate and section (VE-11 auto-marking), for administrators. Writing is dealt at random to the
+ * session's examiners, who mark it by code (VE-73); this table shows which code and examiner each candidate has.
  */
-export function ResultsPage({ examId, canMark }: { examId: number; canMark: boolean }) {
+export function ResultsPage({ examId }: { examId: number }) {
   const { data: exam } = useLoad(() => staffApi.exam(examId), `exam-${examId}`)
   const { data: results, error } = useLoad(() => staffApi.results(examId), examId)
   const sections = results?.[0]?.sections ?? []
@@ -43,7 +43,7 @@ export function ResultsPage({ examId, canMark }: { examId: number; canMark: bool
           </button>
         }
       />
-      <p className="st-faint">Reading and Listening are marked automatically when a section ends. Writing is marked by the session's examiner (Mark Writing); the score is final once every Writing question has a mark.</p>
+      <p className="st-faint">Reading and Listening are marked automatically when a section ends. Writing is dealt at random and evenly to the session's examiners, who see only its code; the score is final once every Writing question has a mark.</p>
       <ErrorBox error={error} />
       {results && results.length === 0 && <p className="st-empty">No candidates.</p>}
       {results && results.length > 0 && (
@@ -51,6 +51,7 @@ export function ResultsPage({ examId, canMark }: { examId: number; canMark: bool
           <thead>
             <tr>
               <th>Candidate</th>
+              <th>Writing script</th>
               {sections.map((s) => (
                 <th key={s.sectionId}>{s.title}</th>
               ))}
@@ -63,6 +64,10 @@ export function ResultsPage({ examId, canMark }: { examId: number; canMark: bool
                   <strong>{candidate.fullName}</strong>
                   <div className="st-faint st-mono">{candidate.candidateNumber}</div>
                 </td>
+                <td>
+                  {candidate.markingCode ? <span className="st-mono">{candidate.markingCode}</span> : <span className="st-faint">not dealt yet</span>}
+                  {candidate.examiner && <div className="st-faint">{candidate.examiner}</div>}
+                </td>
                 {candidate.sections.map((s) => (
                   <td key={s.sectionId}>
                     <Badge value={s.status} />
@@ -73,11 +78,6 @@ export function ResultsPage({ examId, canMark }: { examId: number; canMark: bool
                       </div>
                     )}
                     {s.status === 'Submitted' && <div className="st-faint">{GRADING_TEXT[s.gradingStatus] ?? s.gradingStatus}</div>}
-                    {canMark && s.status === 'Submitted' && s.attemptId !== null && (
-                      <Link to={`/staff/exams/${examId}/marking/${s.attemptId}`} className="st-link">
-                        {s.gradingStatus === 'NeedsManualMarking' ? 'Mark Writing' : 'View marking'}
-                      </Link>
-                    )}
                   </td>
                 ))}
               </tr>

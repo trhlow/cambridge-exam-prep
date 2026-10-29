@@ -9,8 +9,8 @@ namespace ExamPrep.Api.Exams;
 /// Which sessions a staff member reaches, by what they do with them (VE-72, Victory 29/10: several people work in each
 /// area and each sees only their own work). Administrators reach every session. A manager of exams organises the
 /// sessions they created; a manager of candidates works in the sessions the organiser assigned them to; invigilators
-/// and examiners reach only the sessions they are assigned to. Everything else answers 404, as if the session did not
-/// exist.
+/// reach only the sessions they are assigned to. Examiners do not open sessions at all (VE-73): they mark the Writing
+/// scripts dealt to them, by code. Everything else answers 404, as if the session did not exist.
 /// </summary>
 public static class ExamAccess
 {
@@ -30,8 +30,7 @@ public static class ExamAccess
         return exams.Where(e =>
             (organises && e.CreatedByUserId == userId)
             || (entersCandidates && e.CandidateManagers.Any(m => m.UserId == userId))
-            || e.Invigilators.Any(i => i.UserId == userId)
-            || e.Examiners.Any(x => x.UserId == userId));
+            || e.Invigilators.Any(i => i.UserId == userId));
     }
 
     /// <summary>Changing the session itself: its papers, status, staff, deletion. Its creator (a manager of exams).</summary>
@@ -105,19 +104,11 @@ public static class ExamAccess
         return exams.Where(e => (organises && e.CreatedByUserId == userId) || e.Invigilators.Any(i => i.UserId == userId));
     }
 
-    /// <summary>Scores: administrators see every session's table, examiners their own sessions.</summary>
-    public static IQueryable<Exam> ResultsVisibleTo(this IQueryable<Exam> exams, ClaimsPrincipal user)
-    {
-        if (IsAdmin(user))
-        {
-            return exams;
-        }
+    /// <summary>Scores with candidates' names: administrators only (VE-73).</summary>
+    public static IQueryable<Exam> ResultsVisibleTo(this IQueryable<Exam> exams, ClaimsPrincipal user) =>
+        IsAdmin(user) ? exams : exams.Where(_ => false);
 
-        var userId = user.GetStaffId();
-        return exams.Where(e => e.Examiners.Any(x => x.UserId == userId));
-    }
-
-    /// <summary>Candidates' answers and Writing marks: examiners assigned to the session only.</summary>
+    /// <summary>Writing scripts to mark: examiners assigned to the session (each then sees only the scripts dealt to them).</summary>
     public static IQueryable<Exam> MarkableBy(this IQueryable<Exam> exams, ClaimsPrincipal user)
     {
         var userId = user.GetStaffId();

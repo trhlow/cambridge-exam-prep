@@ -147,7 +147,7 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task Marking_ShowsEveryQuestionWithTheCandidatesAnswerAndTheKey()
+    public async Task Marking_ShowsOnlyTheWriting_WithTheCandidatesAnswer_AndNoOtherPart()
     {
         api.SkipIfUnavailable();
         var (client, candidate) = await CandidateAsync();
@@ -158,15 +158,8 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
 
         var marking = (await staff.GetFromJsonAsync<AttemptMarking>($"/api/staff/attempts/{attemptId}/marking", ct))!;
 
-        Assert.Equal(32, marking.Questions.Count);
-        var q2 = marking.Questions.Single(q => q.Number == 2);
-        Assert.Equal("A", q2.Response);
-        Assert.Equal(["B"], q2.AcceptedAnswers);
-        Assert.False(q2.IsCorrect);
-        Assert.Equal(0m, q2.Score);
-        var q3 = marking.Questions.Single(q => q.Number == 3);
-        Assert.Null(q3.Response);
-        Assert.False(q3.IsCorrect);
+        // VE-73: the examiner marks Writing only (A2 Reading & Writing questions 31 and 32), so Reading is left out.
+        Assert.Equal([31, 32], marking.Questions.Select(q => q.Number));
         var essay = marking.Questions.Single(q => q.Number == 31);
         Assert.Null(essay.IsCorrect);
         Assert.StartsWith("Hi Jo", essay.Response);

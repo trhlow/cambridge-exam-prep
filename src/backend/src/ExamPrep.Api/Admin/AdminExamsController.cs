@@ -241,12 +241,23 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
     /// active examiner accounts can be assigned.
     /// </summary>
     [HttpPut("exams/{examId:int}/examiners")]
-    public async Task<ActionResult<IReadOnlyList<AssignedStaffView>>> AssignExaminers(int examId, AssignInvigilatorsRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<AssignedStaffView>>> AssignExaminers(
+        int examId, AssignInvigilatorsRequest request, [FromServices] Infrastructure.Marking.MarkingAllocator allocator, CancellationToken cancellationToken)
     {
         var exam = await db.Exams.OrganisedBy(User).Include(e => e.Examiners).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
-        return exam is null
-            ? NotFound()
-            : await AssignAsync(exam, exam.Examiners, UserRole.Examiner, "examiner", request.UserIds, id => new ExamExaminer { UserId = id, AssignedAt = DateTime.UtcNow }, x => x.UserId, cancellationToken);
+        if (exam is null)
+        {
+            return NotFound();
+        }
+
+        var result = await AssignAsync(exam, exam.Examiners, UserRole.Examiner, "examiner", request.UserIds, id => new ExamExaminer { UserId = id, AssignedAt = DateTime.UtcNow }, x => x.UserId, cancellationToken);
+        if (result.Value is not null)
+        {
+            // VE-73: the scripts nobody has started marking are dealt again among the examiners now on the session.
+            await allocator.RebalanceAsync(examId, cancellationToken);
+        }
+
+        return result;
     }
 
     /// <summary>

@@ -32,7 +32,9 @@ describe('accessOf', () => {
     expect(invigilator.seesResults || invigilator.requestsApprovals).toBe(false)
 
     const examiner = accessOf(staff('Examiner'))
-    expect(examiner.marks && examiner.seesResults && examiner.seesSessions).toBe(true)
+    // VE-73: examiners mark Writing by code only; results with names and the sessions are not theirs.
+    expect(examiner.marks).toBe(true)
+    expect(examiner.seesResults || examiner.seesSessions).toBe(false)
     expect(examiner.monitors || examiner.printsSlips || examiner.seesCandidates).toBe(false)
   })
 })

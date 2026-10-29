@@ -41,9 +41,10 @@ public static class StaffAuthenticationSetup
             .AddPolicy(StaffAuthDefaults.CandidatesPolicy, policy => AreaPolicy(policy, ManagerArea.Candidates))
             .AddPolicy(StaffAuthDefaults.CentrePolicy, policy => AreaPolicy(policy, ManagerArea.Centre))
             .AddPolicy(StaffAuthDefaults.CandidateListPolicy, policy => AreaPolicy(policy, ManagerArea.Exams, ManagerArea.Candidates))
+            // VE-73: scores with names are for administrators; examiners mark anonymous Writing scripts only.
             .AddPolicy(StaffAuthDefaults.ResultsPolicy, policy => policy
                 .AddAuthenticationSchemes(StaffAuthDefaults.Scheme)
-                .RequireRole(nameof(UserRole.Admin), nameof(UserRole.Examiner)))
+                .RequireRole(nameof(UserRole.Admin)))
             .AddPolicy(StaffAuthDefaults.ExaminerPolicy, policy => policy
                 .AddAuthenticationSchemes(StaffAuthDefaults.Scheme)
                 .RequireRole(nameof(UserRole.Examiner)));

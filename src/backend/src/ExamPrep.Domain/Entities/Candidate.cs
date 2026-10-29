@@ -44,5 +44,11 @@ public class Candidate
 
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>VE-73: the examiner who marks this candidate's Writing, dealt at random and evenly; null until dealt.</summary>
+    public int? ExaminerUserId { get; set; }
+
+    /// <summary>VE-73: what the examiner sees instead of the candidate's name (six letters or digits, unique in the session).</summary>
+    public string? MarkingCode { get; set; }
+
     public ICollection<Attempt> Attempts { get; set; } = [];
 }

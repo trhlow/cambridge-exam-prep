@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using ExamPrep.Api.Demo;
@@ -277,8 +278,10 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal("Admin", (string)(await secondAdmin.GetFromJsonAsync<JsonObject>("/api/staff/auth/me", ct))!["role"]!);
         var managerAreas = (await manager.GetFromJsonAsync<JsonObject>("/api/staff/auth/me", ct))!["areas"]!.AsArray().Select(a => (string)a!);
         Assert.Equal(["Papers", "Exams", "Candidates", "Centre"], managerAreas);
+        // VE-73: the examiner marks scripts by code and no longer opens sessions; the demo exam has them as its examiner.
         var examinerExams = await examiner.GetFromJsonAsync<List<JsonObject>>("/api/staff/exams", ct);
-        Assert.Equal([options.ExamName], examinerExams!.Select(e => (string)e["name"]!));
+        Assert.Empty(examinerExams!);
+        Assert.Equal(HttpStatusCode.OK, (await examiner.GetAsync("/api/staff/marking", ct)).StatusCode);
     }
 
     [Fact]

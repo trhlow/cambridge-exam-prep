@@ -475,6 +475,19 @@ export interface AttemptMarking {
   /** The paper the candidate sat (with mixed papers, their version). */
   paperTitle?: string | null
   paperVersion?: number | null
+  /** VE-73: the script's code; the examiner never sees the candidate's name. */
+  code?: string | null
+}
+
+/** VE-73: a Writing script dealt to the signed-in examiner. */
+export interface MarkingScript {
+  attemptId: number
+  examId: number
+  examName: string
+  scheduledDate: string
+  section: string
+  code: string
+  gradingStatus: string
 }
 
 export interface CandidateResult {
@@ -482,6 +495,9 @@ export interface CandidateResult {
   candidateNumber: string
   fullName: string
   sections: SectionResult[]
+  /** VE-73: the code the examiner sees, and who marks the Writing. */
+  markingCode?: string | null
+  examiner?: string | null
 }
 
 export type ApprovalKind = 'DeletePaper' | 'DeleteExam' | 'DeleteCandidate' | 'ChangeStaffAccount' | 'CreateAdmin'
@@ -624,6 +640,7 @@ export const adminApi = {
   mixPapers: (sourcePaperIds: number[], versionCount: number, title: string | null) => post<PaperMixView>('/api/admin/paper-mixes', { sourcePaperIds, versionCount, title }),
 
   marking: (attemptId: number) => request<AttemptMarking>(`/api/staff/attempts/${attemptId}/marking`),
+  scripts: () => request<MarkingScript[]>('/api/staff/marking'),
   markWriting: (attemptId: number, questionNumber: number, score: number, comment: string) =>
     post<AttemptMarking>(`/api/staff/attempts/${attemptId}/writing-marks`, { questionNumber, score, comment }),
 
