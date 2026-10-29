@@ -157,9 +157,9 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
 
             foreach (var group in part.Groups)
             {
-                if (Unwritten(group.Instructions) || Unwritten(group.BodyHtml) || Unwritten(group.OptionPoolJson))
+                if (Unwritten(group.Instructions) || Unwritten(group.BodyHtml) || Unwritten(group.OptionPoolJson) || Unwritten(group.ItemsHeading) || Unwritten(group.PoolHeading))
                 {
-                    problems.Add($"{label}: the instructions, text or cards are still to write.");
+                    problems.Add($"{label}: the instructions, text, headings or cards are still to write.");
                 }
 
                 foreach (var question in group.Questions.OrderBy(q => q.Number))

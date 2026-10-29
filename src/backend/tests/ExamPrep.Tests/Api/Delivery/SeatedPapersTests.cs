@@ -240,6 +240,12 @@ public sealed class SeatedPapersTests(ApiFixture api) : IClassFixture<ApiFixture
         Assert.Equal(2, (int)section["paperVersion"]!);
 
         await api.SubmitStartedAttemptAsync(startedId, sectionId);
+        // VE-73: the Writing reaches an examiner once the section was marked automatically.
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ExamPrep.Infrastructure.Marking.AttemptMarker>().MarkPendingAsync(ct);
+        }
+
         var examiner = await api.CreateStaffAsync(ExamPrep.Domain.Enums.UserRole.Examiner, Password + "-X1");
         await api.AssignExaminerAsync(room.Exam.ExamId, examiner.Id);
         using var examinerClient = await api.StaffClientAsync(examiner.Username, Password + "-X1");

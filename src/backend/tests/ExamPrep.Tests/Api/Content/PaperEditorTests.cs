@@ -166,6 +166,11 @@ public sealed class PaperEditorTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal(questions, paper["parts"]!.AsArray().SelectMany(p => p!["groups"]!.AsArray()).Sum(g => g!["questions"]!.AsArray().Count));
         Assert.Equal(HttpStatusCode.BadRequest, publish.StatusCode);
         Assert.Contains(unwritten, errors);
+        if (sectionTemplateId == 3)
+        {
+            // Reading Part 2: the column headings of the drag-and-drop are still to write too.
+            Assert.Contains("Part 2: the instructions, text, headings or cards are still to write.", errors);
+        }
     }
 
     [Fact]

@@ -28,8 +28,9 @@ public sealed partial class ExamAssetIndex(ExamPrepDbContext db, IMemoryCache ca
     }
 
     /// <summary>
-    /// VE-72: administrators read every file; other staff the files of the papers they made, and examiners those of the
-    /// sessions they mark (the Writing tasks they mark against). Cached per person for a minute.
+    /// VE-72: administrators read every file; other staff the files they uploaded and those of the papers they made, and
+    /// examiners those of the scripts dealt to them (the Writing tasks they mark against, VE-73). Cached per person for
+    /// a minute and rebuilt on a miss, so a picture just uploaded or imported shows at once.
     /// </summary>
     public async Task<bool> StaffMayReadAsync(System.Security.Claims.ClaimsPrincipal user, int assetId, CancellationToken cancellationToken)
     {
@@ -39,17 +40,27 @@ public sealed partial class ExamAssetIndex(ExamPrepDbContext db, IMemoryCache ca
         }
 
         var userId = Auth.StaffAuthenticationSetup.GetStaffId(user);
-        var assets = await cache.GetOrCreateAsync($"staff-assets:{userId}", async entry =>
+        var key = $"staff-assets:{userId}";
+        if (cache.TryGetValue(key, out HashSet<int>? cached) && cached!.Contains(assetId))
         {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
-            var markedExams = db.Exams.Where(e => e.Examiners.Any(x => x.UserId == userId)).Select(e => e.Id);
-            var paperIds = await db.TestPapers.Where(p => p.CreatedByUserId == userId).Select(p => p.Id)
-                .Concat(db.Attempts.Where(a => markedExams.Contains(a.ExamSection!.ExamId)).Select(a => a.TestPaperId))
-                .Distinct()
-                .ToListAsync(cancellationToken);
-            return await AssetsOfAsync(paperIds, cancellationToken);
-        });
-        return assets!.Contains(assetId);
+            return true;
+        }
+
+        var assets = await StaffAssetsAsync(userId, cancellationToken);
+        cache.Set(key, assets, TimeSpan.FromMinutes(1));
+        return assets.Contains(assetId);
+    }
+
+    private async Task<HashSet<int>> StaffAssetsAsync(int userId, CancellationToken cancellationToken)
+    {
+        var markedExams = db.Exams.Where(e => e.Examiners.Any(x => x.UserId == userId)).Select(e => e.Id);
+        var paperIds = await db.TestPapers.Where(p => p.CreatedByUserId == userId).Select(p => p.Id)
+            .Concat(db.Attempts.Where(a => markedExams.Contains(a.ExamSection!.ExamId) && a.Candidate!.ExaminerUserId == userId).Select(a => a.TestPaperId))
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var assets = await AssetsOfAsync(paperIds, cancellationToken);
+        assets.UnionWith(await db.Assets.Where(a => a.UploadedByUserId == userId).Select(a => a.Id).ToListAsync(cancellationToken));
+        return assets;
     }
 
     private async Task<HashSet<int>> LoadAsync(int examId, CancellationToken cancellationToken)
