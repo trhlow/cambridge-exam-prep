@@ -132,6 +132,8 @@ Quyển báo cáo `thesis/doc/BaoCao_DoAnChuyenNganh_TranHoangLong.docx` đượ
 
 ### Chạy cả hệ thống bằng Docker (một lệnh)
 
+Người không có chuyên môn: xem [setup/HuongDan_CaiDat_ChayThu.docx](setup/HuongDan_CaiDat_ChayThu.docx), hướng dẫn từng bước từ cài Docker Desktop đến dùng thử từng vai, có ảnh màn hình.
+
 Hướng dẫn đầy đủ cho phòng thi (máy thí sinh qua mạng LAN, sao lưu, xử lý sự cố): [setup/INSTALL.md](setup/INSTALL.md).
 
 Chỉ cần Docker Desktop. MySQL, API và giao diện chạy trong ba container; API tự tạo bảng, tạo tài khoản admin đầu tiên và kỳ thi demo A2.
