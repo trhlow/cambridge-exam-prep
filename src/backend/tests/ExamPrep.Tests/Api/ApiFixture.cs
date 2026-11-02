@@ -367,6 +367,16 @@ public sealed class ApiFixture : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Pauses a running attempt through the clock, as the invigilator's Pause does.</summary>
+    public async Task PauseAttemptAsync(int candidateId, int sectionId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var attempt = db.Attempts.Include(a => a.ExamSection).Include(a => a.Candidate).Single(a => a.CandidateId == candidateId && a.ExamSectionId == sectionId);
+        ExamPrep.Api.Delivery.AttemptExpiry.ClockFor(attempt, attempt.ExamSection!, attempt.Candidate!).Pause(DateTime.UtcNow);
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Pretends the candidate pressed Play <paramref name="earlier"/> ago.</summary>
     public async Task MoveAudioStartBackAsync(int candidateId, int sectionId, TimeSpan earlier)
     {

@@ -197,6 +197,87 @@ public sealed class CandidateAttemptTests(ApiFixture api) : IClassFixture<ApiFix
         Assert.Equal(SubmitReason.TimeExpired, (await api.GetAttemptAsync(candidate.CandidateId, section)).SubmitReason);
     }
 
+    private sealed record Problem(string? Title, string? Code);
+
+    [Fact]
+    public async Task Save_Returns409WithCodePaused_WhileThePauseLasts()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await SignedInAsync();
+        using var _ = client;
+        var section = candidate.ReadingWritingSectionId;
+        await StartAsync(client, section);
+        await api.PauseAttemptAsync(candidate.CandidateId, section);
+
+        var response = await SaveAsync(client, section, new ResponseItem(1, "B"));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("paused", (await response.Content.ReadFromJsonAsync<Problem>(ct))!.Code);
+    }
+
+    [Fact]
+    public async Task Save_Returns409WithCodeFinished_AfterTheTimeIsUp()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await SignedInAsync();
+        using var _ = client;
+        var section = candidate.ReadingWritingSectionId;
+        await StartAsync(client, section);
+        await api.MoveAttemptStartBackAsync(candidate.CandidateId, section, TimeSpan.FromMinutes(61));
+
+        var response = await SaveAsync(client, section, new ResponseItem(1, "B"));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("finished", (await response.Content.ReadFromJsonAsync<Problem>(ct))!.Code);
+    }
+
+    [Fact]
+    public async Task JustAfterTheEnd_HeartbeatAndGetKeepTheSectionOpen_ForTheAutosaveGrace()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await SignedInAsync();
+        using var _ = client;
+        var section = candidate.ReadingWritingSectionId;
+        await StartAsync(client, section);
+        await api.MoveAttemptStartBackAsync(candidate.CandidateId, section, TimeSpan.FromMinutes(60) + TimeSpan.FromSeconds(1));
+
+        var heartbeat = await (await client.PostAsync($"/api/candidate/sections/{section}/heartbeat", null, ct)).Content.ReadFromJsonAsync<AttemptState>(ct);
+        var get = await GetAsync(client, section);
+        var save = await SaveAsync(client, section, new ResponseItem(1, "last second"));
+
+        // The candidate still sees no time left, but the last save is taken.
+        Assert.Equal("InProgress", heartbeat!.Status);
+        Assert.Equal("InProgress", get.Status);
+        Assert.Equal(0, get.RemainingSeconds);
+        Assert.Equal(HttpStatusCode.NoContent, save.StatusCode);
+    }
+
+    [Fact]
+    public async Task TheSweep_WaitsForTheAutosaveGrace_ThenSubmits()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await SignedInAsync();
+        using var _ = client;
+        var section = candidate.ReadingWritingSectionId;
+        await StartAsync(client, section);
+        await api.MoveAttemptStartBackAsync(candidate.CandidateId, section, TimeSpan.FromMinutes(60) + TimeSpan.FromSeconds(1));
+
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<AttemptExpiry>().SubmitExpiredAsync(ct);
+        }
+
+        Assert.Equal(AttemptStatus.InProgress, (await api.GetAttemptAsync(candidate.CandidateId, section)).Status);
+
+        await api.MoveAttemptStartBackAsync(candidate.CandidateId, section, AttemptExpiry.AutosaveGrace);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<AttemptExpiry>().SubmitExpiredAsync(ct);
+        }
+
+        Assert.Equal(AttemptStatus.Submitted, (await api.GetAttemptAsync(candidate.CandidateId, section)).Status);
+    }
+
     [Fact]
     public async Task ExpiredSections_AreSubmittedByTheServer_EvenIfTheCandidateIsOffline()
     {
