@@ -143,15 +143,17 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         }
 
         var now = Now();
-        if (!InvigilatorMonitorController.IsOnline(attempt, now))
-        {
-            // Back online (or online for the first time): the invigilator sees it without waiting for a poll.
-            notifier.SectionChanged(sectionId);
-        }
+        var wasOffline = !InvigilatorMonitorController.IsOnline(attempt, now);
 
         // A direct update: the heartbeat must not rotate the attempt's concurrency stamp and clash with timer changes.
         await db.Attempts.Where(a => a.Id == attempt.Id)
             .ExecuteUpdateAsync(set => set.SetProperty(a => a.LastHeartbeatAt, now).SetProperty(a => a.ConnectionStatus, ConnectionStatus.Online), cancellationToken);
+        if (wasOffline)
+        {
+            // Back online (or online for the first time): the invigilator sees it without waiting for a poll. Only after
+            // the update, or a monitor reloading at once would read the old status and wait for its next poll.
+            notifier.SectionChanged(sectionId);
+        }
 
         var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);
         if (AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now))
