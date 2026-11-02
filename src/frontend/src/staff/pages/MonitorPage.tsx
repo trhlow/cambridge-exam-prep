@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLive } from '../../api/live'
 import { staffApi, type ActionOutcome, type MonitorRow, type MonitorView } from '../api'
+import { createMonitorLoader, type MonitorLoader } from '../monitorLoader'
 import { actionAvailability, clockText, extraTimeText, rowAt, type ActionButton } from '../monitorLogic'
 import { Link } from '../Link'
 import { Badge, ConfirmButton, ErrorBox, PageHeader, VersionBadge } from '../ui'
@@ -32,37 +33,39 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set())
   const [dialog, setDialog] = useState<DialogKind | null>(null)
   const [outcome, setOutcome] = useState<{ text: string; skipped: ActionOutcome['skipped'] } | null>(null)
-  const [version, setVersion] = useState(0)
+  const loaderRef = useRef<MonitorLoader | null>(null)
+  const reload = () => loaderRef.current?.request()
   const [warningsFor, setWarningsFor] = useState<{ candidateId: number | null; title: string } | null>(null)
   const [receivedAt, setReceivedAt] = useState(() => Date.now())
   const [now, setNow] = useState(() => Date.now())
   const isLive = useLive(
     '/hubs/staff',
-    { sectionChanged: () => setVersion((v) => v + 1) },
+    { sectionChanged: reload },
     (connection) => connection.invoke('WatchSection', examId, sectionId),
     `${examId}/${sectionId}`,
   )
 
   useEffect(() => {
-    let isCurrent = true
-    const load = () =>
-      staffApi.monitor(examId, sectionId).then(
-        (next) => {
-          if (isCurrent) {
-            setView(next)
-            setReceivedAt(Date.now())
-            setError(null)
-          }
-        },
-        (e: unknown) => isCurrent && setError(e),
-      )
-    void load()
-    const timer = setInterval(load, isLive ? LIVE_REFRESH_MS : REFRESH_MS)
+    // One load at a time; a change reported meanwhile only asks for one more afterwards (B6). The timer is the slow
+    // poll that guards against a missed message, so a message never restarts it.
+    const loader = createMonitorLoader(
+      () => staffApi.monitor(examId, sectionId),
+      (next) => {
+        setView(next)
+        setReceivedAt(Date.now())
+        setError(null)
+      },
+      setError,
+    )
+    loaderRef.current = loader
+    loader.request()
+    const timer = setInterval(loader.request, isLive ? LIVE_REFRESH_MS : REFRESH_MS)
     return () => {
-      isCurrent = false
+      loader.dispose()
+      loaderRef.current = null
       clearInterval(timer)
     }
-  }, [examId, sectionId, version, isLive])
+  }, [examId, sectionId, isLive])
 
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1_000)
@@ -95,7 +98,7 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
   const done = (result: { text: string; skipped: ActionOutcome['skipped'] }, next?: DialogKind) => {
     setOutcome(result)
     setDialog(next ?? null)
-    setVersion((v) => v + 1)
+    reload()
   }
   const buttons: ActionButton[] = view.hasAudio ? ['Pause', 'Resume', 'AddIncidentTime', 'EditEndTime', 'RewindAudio'] : ['Pause', 'Resume', 'AddIncidentTime', 'EditEndTime']
 
@@ -216,7 +219,7 @@ export function MonitorPage({ examId, sectionId }: { examId: number; sectionId: 
           candidateId={warningsFor.candidateId}
           title={warningsFor.title}
           onClose={() => setWarningsFor(null)}
-          onChanged={() => setVersion((v) => v + 1)}
+          onChanged={reload}
         />
       )}
       {dialog && <ActionDialog key={JSON.stringify(dialog)} dialog={dialog} examId={examId} sectionId={sectionId} selected={selectedRows} onClose={() => setDialog(null)} onDone={done} />}
