@@ -4,11 +4,14 @@ export class ApiError extends Error {
   readonly status: number
   /** Every problem the server found (invalid package, candidate list, exam form…), when it listed them. */
   readonly errors: string[]
+  /** Machine-readable reason the server gave besides the status, e.g. 'paused' or 'finished' on a refused save. */
+  readonly code?: string
 
-  constructor(status: number, message: string, errors: string[] = []) {
+  constructor(status: number, message: string, errors: string[] = [], code?: string) {
     super(message)
     this.status = status
     this.errors = errors
+    this.code = code
   }
 }
 
@@ -24,7 +27,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   if (!response.ok) {
     const problem = await response.json().catch(() => null)
     const errors = Array.isArray(problem?.errors) ? (problem.errors as string[]) : []
-    throw new ApiError(response.status, problem?.title ?? response.statusText, errors)
+    throw new ApiError(response.status, problem?.title ?? response.statusText, errors, typeof problem?.code === 'string' ? problem.code : undefined)
   }
 
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T)
@@ -56,6 +59,18 @@ export const candidateApi = {
   playAudio: (sectionId: number) => post<AttemptState>(`/api/candidate/sections/${sectionId}/audio`),
   saveResponses: (sectionId: number, responses: { questionNumber: number; value: string }[]) =>
     request<void>(`/api/candidate/sections/${sectionId}/responses`, { method: 'PUT', body: JSON.stringify({ responses }) }),
+  /** The page is closing: the browser finishes this request even after the page is gone. Fire and forget. */
+  saveResponsesOnPageHide: (sectionId: number, responses: { questionNumber: number; value: string }[]) => {
+    for (let from = 0; from < responses.length; from += 100) {
+      void fetch(`/api/candidate/sections/${sectionId}/responses`, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ responses: responses.slice(from, from + 100) }),
+      }).catch(() => {})
+    }
+  },
   /** VE-35: "Answering this question?" Yes / No / Undecided; 409 when Yes would choose too many questions. */
   saveSelection: (sectionId: number, questionNumber: number, selection: Selection) =>
     request<void>(`/api/candidate/sections/${sectionId}/selections`, { method: 'PUT', body: JSON.stringify({ questionNumber, selection }) }),

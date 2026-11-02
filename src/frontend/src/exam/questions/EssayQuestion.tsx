@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Question, Selection } from '../../api/types'
+import { MAX_ANSWER_LENGTH } from '../autosave'
 import { countWords } from '../paperLogic'
 
 /** VE-35: "Answering this question?" where the candidate answers only some of the group's questions. */
@@ -29,6 +30,7 @@ export function EssayQuestion({ question, answer, onAnswer, choice }: EssayQuest
         data-question={question.number}
         aria-label={`Question ${question.number}`}
         value={answer}
+        maxLength={MAX_ANSWER_LENGTH}
         spellCheck={false}
         autoComplete="off"
         autoCorrect="off"

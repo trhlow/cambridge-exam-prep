@@ -86,6 +86,7 @@ describe('GapText — type a word (A2 Reading Part 5)', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Question 25' }), 'for')
 
     expect(screen.getByRole('textbox', { name: 'Question 25' })).toHaveValue('for')
+    expect(screen.getByRole('textbox', { name: 'Question 25' })).toHaveAttribute('maxlength', '20000')
   })
 })
 
@@ -97,6 +98,12 @@ describe('EssayQuestion (A2 Writing Part 6–7)', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Question 31' }), 'Hi Jo, see you at six')
 
     expect(screen.getByText('Words: 6')).toBeInTheDocument()
+  })
+
+  it('stops at the number of characters the server accepts (B10)', () => {
+    render(<WithAnswers>{(answers, set) => <EssayQuestion question={q(31, { minWords: 25 })} answer={answers[31] ?? ''} onAnswer={set} />}</WithAnswers>)
+
+    expect(screen.getByRole('textbox', { name: 'Question 31' })).toHaveAttribute('maxlength', '20000')
   })
 })
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, candidateApi } from '../api/client'
 import { useLive } from '../api/live'
 import type { Answers, AttemptState, CandidateMessage, Selection, Selections } from '../api/types'
-import { AutosaveQueue, type SaveStatus } from './autosave'
+import { AutosaveQueue, clearStoredAnswers, loadStoredAnswers, type SaveStatus } from './autosave'
 import { remainingSecondsNow } from './timing'
 
 /**
@@ -41,9 +41,10 @@ type Clock = { status: AttemptState['status']; remaining: number; audioPositionM
 
 /**
  * The candidate's attempt at one section: starts (or resumes) it on the server, counts down from the server's
- * figure, saves every answer, and follows the server when the section is paused or ends.
+ * figure, saves every answer, and follows the server when the section is paused or ends. `owner` (exam and
+ * candidate) names the browser copy of unsent answers, which an earlier page, reload or crash may have left.
  */
-export function useAttempt(sectionId: number): AttemptView {
+export function useAttempt(sectionId: number, owner?: string): AttemptView {
   const [clock, setClock] = useState<Clock | null>(null)
   const [messages, setMessages] = useState<CandidateMessage[]>([])
   const [answers, setAnswers] = useState<Answers>({})
@@ -54,6 +55,7 @@ export function useAttempt(sectionId: number): AttemptView {
   const [isSignedOut, setIsSignedOut] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const queueRef = useRef<AutosaveQueue | null>(null)
+  const storageKey = owner ? `exam-pending:${owner}/${sectionId}` : undefined
 
   const apply = useCallback((state: AttemptState) => {
     setClock({ status: state.status, remaining: state.remainingSeconds, audioPositionMs: state.audioPositionMs, receivedAt: Date.now() })
@@ -73,13 +75,25 @@ export function useAttempt(sectionId: number): AttemptView {
       retryMs: 3_000,
       onStatus: setSaveStatus,
       onClosed: sync,
+      onPaused: sync,
+      maxWaitMs: 3_000,
+      storageKey,
+      saveOnPageHide: (items) => candidateApi.saveResponsesOnPageHide(sectionId, items),
     })
     queueRef.current = queue
+    const onPageHide = () => queue.sendOnPageHide()
+    window.addEventListener('pagehide', onPageHide)
 
     candidateApi.startAttempt(sectionId).then(
       (state) => {
         apply(state)
-        setAnswers(state.answers)
+        // What an earlier page left unsent goes up again, but only while the section can still take answers.
+        const leftOver = storageKey && state.status !== 'Submitted' ? loadStoredAnswers(storageKey) : []
+        if (storageKey && leftOver.length === 0) {
+          clearStoredAnswers(storageKey)
+        }
+        setAnswers({ ...state.answers, ...Object.fromEntries(leftOver.map((i) => [i.questionNumber, i.value])) })
+        leftOver.forEach((item) => queue.push(item.questionNumber, item.value))
         selectionsRef.current = state.selections ?? {}
         setSelections(selectionsRef.current)
       },
@@ -89,11 +103,19 @@ export function useAttempt(sectionId: number): AttemptView {
     const tick = setInterval(() => setNow(Date.now()), 1_000)
     const poll = setInterval(sync, SYNC_INTERVAL_MS)
     return () => {
-      queue.dispose()
+      window.removeEventListener('pagehide', onPageHide)
+      queue.flushAndDispose()
       clearInterval(tick)
       clearInterval(poll)
     }
-  }, [sectionId, apply, sync])
+  }, [sectionId, storageKey, apply, sync])
+
+  // The section ended: send once more what is still pending (the grace may have covered it) before the queue stops.
+  useEffect(() => {
+    if (clock?.status === 'Submitted') {
+      queueRef.current?.flushAndDispose()
+    }
+  }, [clock?.status])
 
   const remainingSeconds = clock ? (clock.status === 'InProgress' ? remainingSecondsNow(clock.remaining, clock.receivedAt, now) : clock.remaining) : 0
   const isTimeUp = clock?.status === 'InProgress' && remainingSeconds === 0
