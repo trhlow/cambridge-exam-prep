@@ -15,15 +15,21 @@ namespace ExamPrep.Api.Delivery;
 /// </summary>
 public sealed class AttemptExpiry(ExamPrepDbContext db, TimeProvider clock, RoomNotifier notifier, ILogger<AttemptExpiry> logger)
 {
+    /// <summary>Answers that arrive this soon after the end (network delay) are still kept, so nothing submits earlier.</summary>
+    public static readonly TimeSpan AutosaveGrace = TimeSpan.FromSeconds(5);
+
     /// <summary>Clock for an attempt, honouring its section duration and any parent-level end.</summary>
     public static AttemptClock ClockFor(Attempt attempt, ExamSection section, Candidate candidate) =>
         new(attempt, section.DurationMinutes, candidate.ParentEndOverrideAt);
 
-    /// <summary>Submits the attempt with reason TimeExpired if its time is up. Returns whether it did.</summary>
+    /// <summary>
+    /// Submits the attempt with reason TimeExpired once its time is up plus <see cref="AutosaveGrace"/>. Returns whether it
+    /// did. The clock the candidate sees is unchanged: only the moment the server stops taking answers moves.
+    /// </summary>
     public static bool SubmitIfExpired(Attempt attempt, ExamSection section, Candidate candidate, DateTime now)
     {
         var attemptClock = ClockFor(attempt, section, candidate);
-        if (!attemptClock.IsExpired(now))
+        if (!attemptClock.IsExpired(now - AutosaveGrace))
         {
             return false;
         }
@@ -39,7 +45,7 @@ public sealed class AttemptExpiry(ExamPrepDbContext db, TimeProvider clock, Room
         var due = await db.Attempts
             .Include(a => a.ExamSection)
             .Include(a => a.Candidate)
-            .Where(a => a.Status == AttemptStatus.InProgress && a.EndsAt <= now)
+            .Where(a => a.Status == AttemptStatus.InProgress && a.EndsAt <= now - AutosaveGrace)
             .ToListAsync(cancellationToken);
 
         var submitted = due.Count(a => SubmitIfExpired(a, a.ExamSection!, a.Candidate!, now));

@@ -42,9 +42,6 @@ public sealed record SelectionRequest([Range(1, 1000)] int QuestionNumber, [Requ
 [Authorize(Policy = CandidateAuthDefaults.ExamPolicy)]
 public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateSectionQuery sectionQuery, PaperAssignment papers, TimeProvider clock, RoomNotifier notifier, SecurityEventRecorder events) : ControllerBase
 {
-    /// <summary>Answers that arrive this soon after the end (network delay) are still kept.</summary>
-    private static readonly TimeSpan AutosaveGrace = TimeSpan.FromSeconds(5);
-
     /// <summary>The browser's clock in Unix milliseconds, sent with every heartbeat (VE-29).</summary>
     public const string ClientTimeHeader = "X-Client-Time";
 
@@ -286,15 +283,18 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         }
 
         var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);
-        if (AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now - AutosaveGrace))
+        if (AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now))
         {
             await db.SaveChangesAsync(cancellationToken);
         }
 
         if (attempt.Status != AttemptStatus.InProgress)
         {
-            var title = attempt.Status == AttemptStatus.Paused ? "Your test is paused." : "This part of the test has finished.";
-            return (null, Problem(title: title, statusCode: StatusCodes.Status409Conflict), now);
+            // The browser keeps its answers while paused and closes the queue only when finished.
+            var (title, code) = attempt.Status == AttemptStatus.Paused ? ("Your test is paused.", "paused") : ("This part of the test has finished.", "finished");
+            var problem = new ProblemDetails { Title = title, Status = StatusCodes.Status409Conflict };
+            problem.Extensions["code"] = code;
+            return (null, new ObjectResult(problem) { StatusCode = StatusCodes.Status409Conflict }, now);
         }
 
         return (attempt, null, now);
