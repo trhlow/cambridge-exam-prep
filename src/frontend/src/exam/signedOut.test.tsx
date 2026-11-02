@@ -52,3 +52,62 @@ describe('useAttempt when the server no longer knows this computer', () => {
     expect(result.current.error).toBeNull()
   })
 })
+
+/** Task 1 (review of 2 November): answers survive a reload, a closed page and a pause. */
+describe('useAttempt keeps answers', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    localStorage.clear()
+  })
+
+  it('sends again what an earlier page left unsent, and shows it', async () => {
+    localStorage.setItem('exam-pending:Mock/123/6', JSON.stringify([{ questionNumber: 3, value: 'left over' }]))
+    vi.spyOn(candidateApi, 'startAttempt').mockResolvedValue(running)
+    vi.spyOn(candidateApi, 'heartbeat').mockResolvedValue(running)
+    const save = vi.spyOn(candidateApi, 'saveResponses').mockResolvedValue(undefined)
+    const { result } = renderHook(() => useAttempt(6, 'Mock/123'))
+    await waitFor(() => expect(result.current.isLoaded).toBe(true))
+
+    await waitFor(() => expect(result.current.answers[3]).toBe('left over'))
+    await waitFor(() => expect(save).toHaveBeenCalledWith(6, [{ questionNumber: 3, value: 'left over' }]), { timeout: 3000 })
+  })
+
+  it('does not replay old answers into a section that has finished', async () => {
+    localStorage.setItem('exam-pending:Mock/123/6', JSON.stringify([{ questionNumber: 3, value: 'left over' }]))
+    vi.spyOn(candidateApi, 'startAttempt').mockResolvedValue({ ...running, status: 'Submitted' } as AttemptState)
+    const save = vi.spyOn(candidateApi, 'saveResponses').mockResolvedValue(undefined)
+    const { result } = renderHook(() => useAttempt(6, 'Mock/123'))
+    await waitFor(() => expect(result.current.isLoaded).toBe(true))
+
+    expect(save).not.toHaveBeenCalled()
+    expect(localStorage.getItem('exam-pending:Mock/123/6')).toBeNull()
+  })
+
+  it('sends unsent answers when the screen closes', async () => {
+    vi.spyOn(candidateApi, 'startAttempt').mockResolvedValue(running)
+    vi.spyOn(candidateApi, 'heartbeat').mockResolvedValue(running)
+    const save = vi.spyOn(candidateApi, 'saveResponses').mockResolvedValue(undefined)
+    const { result, unmount } = renderHook(() => useAttempt(6, 'Mock/123'))
+    await waitFor(() => expect(result.current.isLoaded).toBe(true))
+    act(() => result.current.setAnswer(1, 'B'))
+
+    unmount()
+
+    expect(save).toHaveBeenCalledWith(6, [{ questionNumber: 1, value: 'B' }])
+  })
+
+  it('sends unsent answers with keepalive when the page is hidden', async () => {
+    vi.spyOn(candidateApi, 'startAttempt').mockResolvedValue(running)
+    vi.spyOn(candidateApi, 'heartbeat').mockResolvedValue(running)
+    vi.spyOn(candidateApi, 'saveResponses').mockResolvedValue(undefined)
+    const keepalive = vi.spyOn(candidateApi, 'saveResponsesOnPageHide').mockImplementation(() => {})
+    const { result } = renderHook(() => useAttempt(6, 'Mock/123'))
+    await waitFor(() => expect(result.current.isLoaded).toBe(true))
+    act(() => result.current.setAnswer(1, 'B'))
+
+    window.dispatchEvent(new Event('pagehide'))
+
+    expect(keepalive).toHaveBeenCalledWith(6, [{ questionNumber: 1, value: 'B' }])
+  })
+})

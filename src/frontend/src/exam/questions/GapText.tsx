@@ -2,6 +2,7 @@ import DOMPurify from 'dompurify'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Answers, Question, QuestionGroup } from '../../api/types'
+import { MAX_ANSWER_LENGTH } from '../autosave'
 import { withGapSlots } from '../paperLogic'
 
 export interface GapTextProps {
@@ -138,6 +139,7 @@ function TextGap({ question, value, onAnswer }: { question: Question; value: str
       aria-label={`Question ${question.number}`}
       placeholder={String(question.number)}
       value={value}
+      maxLength={MAX_ANSWER_LENGTH}
       spellCheck={false}
       autoComplete="off"
       autoCorrect="off"

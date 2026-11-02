@@ -112,7 +112,7 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
   // Cambridge booklet (2026, p. 11): no notepad with Large or Extra large text, or at 1366×768, 1280×1024 or
   // 1280×720 screen resolutions.
   const canNote = display.textSize === 'Regular' && window.screen.width > 1366
-  const attempt = useAttempt(section.id)
+  const attempt = useAttempt(section.id, `${profile.examName}/${profile.candidateNumber}`)
   usePaintedAnnotations(annotations, `${storedPage}:${isReviewing}:${paper ? 'paper' : ''}:${attempt.isLoaded}:${display.textSize}`)
   const pages = useMemo(() => (paper ? buildPages(paper) : []), [paper])
   // A stored page from before a reload, kept within the paper.
@@ -226,7 +226,8 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
           {audioNotice}
         </div>
       )}
-      <main className={isNotesOpen && canNote && !isReviewing ? 'exam-main has-notes' : 'exam-main'}>
+      {/* Paused: nothing can be typed under the overlay; whatever was typed just before stays queued. */}
+      <main className={isNotesOpen && canNote && !isReviewing ? 'exam-main has-notes' : 'exam-main'} inert={attempt.status === 'Paused'}>
         {isReviewing ? (
           <ReviewPage paper={paper} answers={attempt.answers} onBack={() => setIsReviewing(false)} />
         ) : (
