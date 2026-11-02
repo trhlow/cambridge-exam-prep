@@ -428,6 +428,8 @@ export interface MonitorActionRequest {
 export interface ActionOutcome {
   applied: number
   skipped: { candidateId: number; fullName: string; reason: string }[]
+  /** End all only: ended candidates who are paused; they end when resumed. */
+  pausedUntilResumed?: number
 }
 
 export interface MessageView {
