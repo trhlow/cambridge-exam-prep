@@ -20,6 +20,11 @@ const STATUS_HELP: Record<ExamStatus, string> = {
  * login slips for the people who run the room; status, invigilators and examiners for managers of exams; the
  * candidates for managers of candidates; results for examiners and administrators. Monitoring happens per section.
  */
+/** " (2 are paused and will end when resumed)", or nothing when nobody is paused. */
+function paused(count = 0) {
+  return count === 0 ? '' : ` (${count} ${count === 1 ? 'is' : 'are'} paused and will end when resumed)`
+}
+
 export function ExamPage({ examId, access }: { examId: number; access: Access }) {
   const { data: exam, error, reload, setData } = useLoad(() => staffApi.exam(examId), examId)
   // VE-72: only the session's creator (or an administrator) organises it; the server says so per session.
@@ -48,7 +53,7 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
       setEndedAll(
         outcome.applied === 0
           ? 'Nobody changed: the test had already ended for everyone.'
-          : `The test has ended for ${outcome.applied} candidate${outcome.applied === 1 ? '' : 's'}. Candidates still working are submitted within seconds. To undo it, open a section and use Edit end time → Use test end time.`,
+          : `The test has ended for ${outcome.applied} candidate${outcome.applied === 1 ? '' : 's'}${paused(outcome.pausedUntilResumed)}. Candidates still working are submitted within seconds. To undo it, open a section and use Edit end time → Use test end time.`,
       )
     } catch (e) {
       setActionError(e)

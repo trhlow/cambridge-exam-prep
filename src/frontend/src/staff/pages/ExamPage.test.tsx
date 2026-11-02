@@ -46,6 +46,16 @@ describe('ExamPage end of the whole test (B4)', () => {
     expect(await screen.findByText(/ended for 3 candidates/)).toBeInTheDocument()
   })
 
+  it('says how many paused candidates end only when they are resumed', async () => {
+    vi.spyOn(staffApi, 'endAll').mockResolvedValue({ applied: 3, skipped: [], pausedUntilResumed: 2 })
+    render(<ExamPage examId={4} access={invigilator} />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'End the whole test' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Click again: the test ends now for all 3 candidates' }))
+
+    expect(await screen.findByText(/2 are paused and will end when resumed/)).toBeInTheDocument()
+  })
+
   it('is not offered to people who do not run the room', async () => {
     render(<ExamPage examId={4} access={examiner} />)
 

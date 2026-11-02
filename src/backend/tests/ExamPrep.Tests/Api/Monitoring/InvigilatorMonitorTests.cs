@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamPrep.Tests.Api.Monitoring;
@@ -39,7 +41,7 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
 
     public sealed record Skipped(int CandidateId, string FullName, string Reason);
 
-    public sealed record ActionOutcome(int Applied, List<Skipped> Skipped);
+    public sealed record ActionOutcome(int Applied, List<Skipped> Skipped, int PausedUntilResumed = 0);
 
     public sealed record MessageView(int Id, string Text, DateTime SentAt, int? CandidateId);
 
@@ -49,7 +51,7 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
 
     private sealed record PinRequest(string Pin);
 
-    private sealed record Room(ApiFixture.SeededCandidate First, int SecondId, HttpClient Invigilator);
+    private sealed record Room(ApiFixture.SeededCandidate First, int SecondId, HttpClient Invigilator, string InvigilatorUsername = "");
 
     /// <summary>A session with two candidates and an invigilator assigned to it.</summary>
     private async Task<Room> RoomAsync()
@@ -59,7 +61,7 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
         var invigilator = await api.CreateStaffAsync(UserRole.Invigilator, Password);
         using var admin = await api.AdminClientAsync();
         (await admin.PutAsJsonAsync($"/api/admin/exams/{first.ExamId}/invigilators", new { userIds = new[] { invigilator.Id } }, ct)).EnsureSuccessStatusCode();
-        return new Room(first, secondId, await api.StaffClientAsync(invigilator.Username, Password));
+        return new Room(first, secondId, await api.StaffClientAsync(invigilator.Username, Password), invigilator.Username);
     }
 
     private Task<MonitorView?> MonitorAsync(HttpClient client, ApiFixture.SeededCandidate seeded, int sectionId) =>
@@ -222,6 +224,84 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
         Assert.Equal(first, await ParentEndOfAsync(room.First.CandidateId));
         Assert.Equal(0, again!.Applied);
         Assert.Contains("already", Assert.Single(again.Skipped).Reason);
+    }
+
+    /// <summary>Changes an attempt's concurrency stamp behind the request's back, a set number of times.</summary>
+    private sealed class ConflictMaker : SaveChangesInterceptor
+    {
+        public int Remaining;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            var context = eventData.Context!;
+            var attempt = context.ChangeTracker.Entries<ExamPrep.Domain.Entities.Attempt>().FirstOrDefault(e => e.State == EntityState.Modified);
+            if (attempt is not null && Remaining > 0)
+            {
+                Remaining--;
+                var id = attempt.Entity.Id;
+                await context.Database.ExecuteSqlInterpolatedAsync($"UPDATE attempts SET concurrency_stamp = UUID() WHERE id = {id}", cancellationToken);
+            }
+
+            return result;
+        }
+    }
+
+    private async Task SetExamStatusAsync(int examId, ExamStatus status)
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        await db.Exams.Where(e => e.Id == examId).ExecuteUpdateAsync(s => s.SetProperty(e => e.Status, status), ct);
+    }
+
+    [Theory]
+    [InlineData(ExamStatus.Scheduled)]
+    [InlineData(ExamStatus.Closed)]
+    public async Task EndAll_IsRefusedWith409UnlessTheExamIsActive(ExamStatus status)
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        await SetExamStatusAsync(room.First.ExamId, status);
+
+        var response = await EndAllAsync(room.Invigilator, room.First.ExamId);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("active", await response.Content.ReadAsStringAsync(ct), StringComparison.OrdinalIgnoreCase);
+        Assert.Null(await ParentEndOfAsync(room.First.CandidateId));
+    }
+
+    [Fact]
+    public async Task EndAll_LeavesAPausedCandidatePausedAndSaysHowManyEndWhenResumed()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var sectionId = room.First.ReadingWritingSectionId;
+        await api.StartAttemptAsync(room.First.CandidateId, sectionId);
+        await api.PauseAttemptAsync(room.First.CandidateId, sectionId);
+
+        var response = await EndAllAsync(room.Invigilator, room.First.ExamId);
+
+        var outcome = (await response.Content.ReadFromJsonAsync<ActionOutcome>(ct))!;
+        Assert.Equal(1, outcome.PausedUntilResumed);
+        Assert.Equal(AttemptStatus.Paused, (await api.GetAttemptAsync(room.First.CandidateId, sectionId)).Status);
+        Assert.NotNull(await ParentEndOfAsync(room.First.CandidateId));
+    }
+
+    [Fact]
+    public async Task EndAll_ThatKeepsLosingTheRaceAnswers409WithASentenceNotA500()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        await api.StartAttemptAsync(room.First.CandidateId, room.First.ReadingWritingSectionId);
+        var conflicts = new ConflictMaker { Remaining = 10 };
+        var factory = api.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            services.ConfigureDbContext<ExamPrepDbContext>(options => options.AddInterceptors(conflicts))));
+        using var client = factory.CreateClient();
+        (await client.PostAsJsonAsync("/api/staff/auth/login", new { username = room.InvigilatorUsername, password = Password }, ct)).EnsureSuccessStatusCode();
+
+        var response = await EndAllAsync(client, room.First.ExamId);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("same moment", await response.Content.ReadAsStringAsync(ct));
     }
 
     [Fact]

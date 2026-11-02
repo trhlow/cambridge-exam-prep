@@ -57,7 +57,8 @@ public sealed record EndAllRequest([MaxLength(500)] List<int>? CandidateIds = nu
 
 public sealed record SkippedCandidate(int CandidateId, string FullName, string Reason);
 
-public sealed record ActionOutcome(int Applied, IReadOnlyList<SkippedCandidate> Skipped);
+/// <param name="PausedUntilResumed">End all only: how many of the candidates it ended are paused, so they keep Paused and end when resumed.</param>
+public sealed record ActionOutcome(int Applied, IReadOnlyList<SkippedCandidate> Skipped, int PausedUntilResumed = 0);
 
 public sealed record SendMessageRequest([Required, StringLength(InvigilatorMonitorController.MaxMessageLength)] string Text, List<int>? CandidateIds = null);
 
@@ -169,9 +170,15 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
     [HttpPost("end-all")]
     public async Task<ActionResult<ActionOutcome>> EndAll(int examId, EndAllRequest request, CancellationToken cancellationToken)
     {
-        if (!await db.Exams.MonitorableBy(User).AnyAsync(e => e.Id == examId, cancellationToken))
+        var status = await db.Exams.MonitorableBy(User).Where(e => e.Id == examId).Select(e => (ExamStatus?)e.Status).SingleOrDefaultAsync(cancellationToken);
+        if (status is null)
         {
             return NotFound();
+        }
+
+        if (status != ExamStatus.Active)
+        {
+            return Problems.Conflict("The whole test can be ended only while the exam is Active.");
         }
 
         var ids = request.CandidateIds?.Distinct().ToList() ?? [];
@@ -186,9 +193,13 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
             {
                 return await EndAllAsync(examId, ids, request.Reason, cancellationToken);
             }
-            catch (DbUpdateConcurrencyException) when (round < MaxSaveAttempts)
+            catch (DbUpdateConcurrencyException)
             {
                 db.ChangeTracker.Clear();
+                if (round >= MaxSaveAttempts)
+                {
+                    return Problems.Conflict("Candidates' tests were updated at the same moment. Press End the whole test again.");
+                }
             }
         }
     }
@@ -205,6 +216,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
         var userId = User.GetStaffId();
         var skipped = new List<SkippedCandidate>();
         var applied = 0;
+        var pausedUntilResumed = 0;
 
         foreach (var candidate in candidates)
         {
@@ -218,6 +230,11 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
             var attempts = running[candidate.Id].ToList();
             attempts.ForEach(a => AttemptExpiry.ClockFor(a, a.ExamSection!, candidate).RefreshEnd());
             applied++;
+            if (attempts.Any(a => a.Status == AttemptStatus.Paused))
+            {
+                pausedUntilResumed++;
+            }
+
             db.InvigilatorActions.Add(new InvigilatorAction
             {
                 ExamId = examId,
@@ -239,7 +256,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
         }
 
         logger.LogInformation("Staff {UserId} ended the whole test of exam {ExamId} for {Applied} candidate(s); {Skipped} already ended", userId, examId, applied, skipped.Count);
-        return new ActionOutcome(applied, skipped);
+        return new ActionOutcome(applied, skipped, pausedUntilResumed);
     }
 
     /// <summary>
