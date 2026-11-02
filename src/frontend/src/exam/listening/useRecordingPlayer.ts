@@ -43,6 +43,7 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
   const offsetsRef = useRef<number[] | null>(null)
   const trackRef = useRef(0)
   const shouldPlayRef = useRef(false)
+  const turnRef = useRef(0)
   const urlsKey = urls.join('|')
 
   useEffect(() => {
@@ -104,8 +105,15 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
       return
     }
 
+    // A stop() (or a newer start) while a track is loading cancels this start.
+    const turn = ++turnRef.current
     const point = locateInRecording(positionMs, await durationsRef.current)
+    if (turn !== turnRef.current) {
+      return
+    }
+
     if (!point) {
+      shouldPlayRef.current = false
       setState('finished')
       return
     }
@@ -116,13 +124,26 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
       audio.addEventListener('loadedmetadata', () => resolve(), { once: true })
       audio.load()
     })
+    if (turn !== turnRef.current) {
+      return
+    }
+
     audio.currentTime = point.offsetMs / 1000
     shouldPlayRef.current = true
-    await audio.play()
-    setState('playing')
+    try {
+      await audio.play()
+    } catch (e) {
+      // Refused by the browser: stay idle so the Continue listening button shows.
+      shouldPlayRef.current = false
+      throw e
+    }
+    if (turn === turnRef.current) {
+      setState('playing')
+    }
   }, [])
 
   const stop = useCallback(() => {
+    turnRef.current += 1
     shouldPlayRef.current = false
     audioRef.current?.pause()
     setState((current) => (current === 'finished' ? current : 'idle'))

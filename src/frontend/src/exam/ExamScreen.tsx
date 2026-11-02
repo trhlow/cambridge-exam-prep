@@ -10,6 +10,7 @@ import { addHighlight, addNote, removeHighlights, removeNote, updateNote } from 
 import { useAnnotations, usePaintedAnnotations } from './annotations/useAnnotations'
 import { MessageCentre } from './MessageCentre'
 import { OptionsScreen, type DisplayOptions } from './OptionsScreen'
+import { realignTarget, useResumeAfterPause } from './listening/audioSync'
 import { useRecordingPlayer } from './listening/useRecordingPlayer'
 import { buildPages } from './paperLogic'
 import { PartView } from './PartView'
@@ -19,7 +20,6 @@ import { useAttempt } from './useAttempt'
 import { timeLeftText } from './timing'
 
 /** Further apart than this, the recording follows the server: the invigilator has rewound it. */
-const AUDIO_DRIFT_MS = 4_000
 
 type Props = {
   profile: CandidateProfile
@@ -131,20 +131,27 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
   }, [attempt.status, stopRecording])
 
   // VE-16: after an invigilator rewind the server's position jumps back; the recording follows it.
+  // A recording that already finished plays again when the rewind put the server position back inside it.
   useEffect(() => {
-    if (playerState !== 'playing' || syncedAt === null) {
+    if (syncedAt === null) {
       return
     }
 
-    const server = audioPositionNow()
     const local = recordingPosition()
-    if (server === null || local === null || Math.abs(server - local) < AUDIO_DRIFT_MS) {
+    const target = realignTarget(playerState, audioPositionNow(), local)
+    if (target === null) {
       return
     }
 
-    const wasRewound = server < local
-    void startRecording(server).then(() => wasRewound && setAudioNotice('The invigilator has moved the recording back.'))
+    const wasRewound = local === null || target < local
+    startRecording(target).then(
+      () => wasRewound && setAudioNotice('The invigilator has moved the recording back.'),
+      () => undefined,
+    )
   }, [syncedAt, playerState, audioPositionNow, recordingPosition, startRecording])
+
+  // VE-16: when the pause ends the recording restarts at the server position without another click.
+  useResumeAfterPause(attempt.status, playerState, audioPositionNow, startRecording)
 
   useEffect(() => {
     if (!audioNotice) {
