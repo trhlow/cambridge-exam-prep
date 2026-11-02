@@ -22,6 +22,12 @@ describe('remainingSecondsNow', () => {
     expect(remainingSecondsNow(600, 1_000_000, 1_012_400)).toBe(588)
   })
 
+  it('never gains time when the last clock tick is older than the reply', () => {
+    // The clock ticks once a second, so right after a reply "now" can still be up to a second behind it.
+    expect(remainingSecondsNow(3600, 1_000_000, 999_600)).toBe(3600)
+    expect(timeLeftText(remainingSecondsNow(3600, 1_000_000, 999_600))).toBe('60 minutes left')
+  })
+
   it('never goes below zero', () => {
     expect(remainingSecondsNow(5, 0, 60_000)).toBe(0)
   })

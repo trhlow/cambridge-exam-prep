@@ -19,8 +19,10 @@ export function timeLeftText(seconds: number): string {
 
 /**
  * Seconds left now, from the server's figure and the time elapsed on this computer since the reply arrived.
- * The computer's own clock may be wrong; only the elapsed time is trusted.
+ * The computer's own clock may be wrong; only the elapsed time is trusted. `nowMs` comes from a once-a-second tick, so
+ * right after a reply it can still be older than the reply: that never counts as time gained.
  */
 export function remainingSecondsNow(remainingAtReply: number, replyReceivedAtMs: number, nowMs: number): number {
-  return Math.max(0, remainingAtReply - Math.floor((nowMs - replyReceivedAtMs) / 1000))
+  const elapsedMs = Math.max(0, nowMs - replyReceivedAtMs)
+  return Math.max(0, remainingAtReply - Math.floor(elapsedMs / 1000))
 }
