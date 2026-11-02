@@ -11,6 +11,8 @@
   --st-select: #eef4fa;
   --st-sans: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --st-mono: 'Cascadia Mono', Consolas, 'SF Mono', monospace;
+  /* Headings hold Vietnamese names and titles: Georgia has no Vietnamese letters, so a word would mix two fonts. */
+  --st-serif: Cambria, 'Times New Roman', serif;
   --st-red-bg: #fdebec;
   --st-red: #9f2f2d;
   --st-blue-bg: #e1f3fe;
@@ -99,7 +101,7 @@
 
 .st-page-head h1 {
   margin: 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--st-serif);
   font-size: 32px;
   font-weight: 400;
   letter-spacing: -0.02em;
@@ -609,7 +611,7 @@
 
 .st-grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px 20px;
 }
 
@@ -633,6 +635,12 @@
   font: inherit;
   font-weight: 400;
   font-size: 14.5px;
+}
+
+.st-field input[type='file'] {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .st-paste {
@@ -704,7 +712,7 @@ ul.st-error {
 
 .st-modal-head h2 {
   margin: 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--st-serif);
   font-weight: 400;
   font-size: 22px;
   color: var(--st-ink-strong);
@@ -726,7 +734,7 @@ ul.st-error {
 
 .st-login-card h1 {
   margin: 12px 0 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--st-serif);
   font-weight: 400;
   font-size: 28px;
   color: var(--st-ink-strong);
@@ -980,7 +988,7 @@ ul.st-error {
   border: 1px solid var(--st-hairline);
   border-radius: var(--st-radius);
   background: #fbfbfa;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--st-serif);
   font-size: 16px;
   line-height: 1.7;
   white-space: pre-wrap;
