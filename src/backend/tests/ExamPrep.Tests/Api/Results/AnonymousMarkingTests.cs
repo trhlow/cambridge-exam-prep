@@ -39,13 +39,23 @@ public sealed class AnonymousMarkingTests(ApiFixture api) : IClassFixture<ApiFix
         return (exam, candidates);
     }
 
+    /// <summary>
+    /// Examiners put on the session together, as the portal does (one PUT, which deals the scripts evenly). Adding them one by one
+    /// straight in the database let the live background sweep deal every script to the first one before the others arrived.
+    /// </summary>
     private async Task<List<HttpClient>> ExaminersAsync(int examId, int count)
     {
-        var clients = new List<HttpClient>();
+        var staff = new List<ExamPrep.Domain.Entities.User>();
         for (var i = 0; i < count; i++)
         {
-            var examiner = await api.CreateStaffAsync(UserRole.Examiner, Password);
-            await api.AssignExaminerAsync(examId, examiner.Id);
+            staff.Add(await api.CreateStaffAsync(UserRole.Examiner, Password));
+        }
+
+        using var admin = await api.AdminClientAsync();
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{examId}/examiners", new { userIds = staff.Select(u => u.Id) }, ct)).EnsureSuccessStatusCode();
+        var clients = new List<HttpClient>();
+        foreach (var examiner in staff)
+        {
             clients.Add(await api.StaffClientAsync(examiner.Username, Password));
         }
 
@@ -134,8 +144,11 @@ public sealed class AnonymousMarkingTests(ApiFixture api) : IClassFixture<ApiFix
         await api.SubmitStartedAttemptAsync(exam.CandidateId, exam.ReadingWritingSectionId);
         var examiners = await ExaminersAsync(exam.ExamId, 1);
 
-        // Ended but not yet marked automatically (the marker runs every 5 s): the Writing cannot be marked yet.
+        // Ended but not yet marked automatically: the Writing cannot be marked yet. The live sweep marks every 5 s, so the
+        // list is only expected to be empty when the attempt was still ungraded before and after it was fetched.
+        var ungradedBefore = (await api.GetAttemptAsync(exam.CandidateId, exam.ReadingWritingSectionId)).GradingStatus == GradingStatus.NotGraded;
         var before = (await ScriptsAsync(examiners[0])).Count(s => (int)s!["examId"]! == exam.ExamId);
+        var ungradedAfter = (await api.GetAttemptAsync(exam.CandidateId, exam.ReadingWritingSectionId)).GradingStatus == GradingStatus.NotGraded;
         using (var scope = api.Factory.Services.CreateScope())
         {
             await scope.ServiceProvider.GetRequiredService<AttemptMarker>().MarkPendingAsync(ct);
@@ -143,7 +156,12 @@ public sealed class AnonymousMarkingTests(ApiFixture api) : IClassFixture<ApiFix
 
         var after = (await ScriptsAsync(examiners[0])).Count(s => (int)s!["examId"]! == exam.ExamId);
 
-        Assert.Equal((0, 1), (before, after));
+        if (ungradedBefore && ungradedAfter)
+        {
+            Assert.Equal(0, before);
+        }
+
+        Assert.Equal(1, after);
         examiners.ForEach(e => e.Dispose());
     }
 

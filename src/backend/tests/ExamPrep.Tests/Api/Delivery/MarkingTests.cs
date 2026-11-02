@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using ExamPrep.Api.Delivery;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Marking;
+using ExamPrep.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamPrep.Tests.Api.Delivery;
@@ -211,5 +213,51 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
         var response = await staff.GetAsync("/api/staff/attempts/999999/marking", ct);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>
+    /// The background sweep and a caller can mark at the same time. When one attempt of a batch was changed meanwhile,
+    /// its conflict used to throw the whole batch away (and report 0), so the others stayed ungraded until the next
+    /// tick. This was the cause of the occasional failure of AnonymousMarkingTests, which marks beside the live sweep.
+    /// </summary>
+    [Fact]
+    public async Task MarkPending_WhenOneAttemptWasChangedMeanwhile_StillMarksTheOthers()
+    {
+        api.SkipIfUnavailable();
+        var first = await api.CreateCandidateAsync(Password, withSamplePapers: true);
+        var ids = new List<int> { first.CandidateId };
+        for (var i = 0; i < 2; i++)
+        {
+            ids.Add((await api.AddCandidateAsync(first.ExamId, Password, "Mai", $"Zz{Guid.NewGuid():N}"[..10])).CandidateId);
+        }
+
+        foreach (var id in ids)
+        {
+            await api.StartAttemptAsync(id, first.ReadingWritingSectionId);
+            await api.SubmitStartedAttemptAsync(id, first.ReadingWritingSectionId);
+        }
+
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var bumped = false;
+        db.SavingChanges += (_, _) =>
+        {
+            // Someone else saves one of the attempts between this marker's read and its save.
+            if (bumped || db.ChangeTracker.Entries<ExamPrep.Domain.Entities.Attempt>().FirstOrDefault(e => e.State == EntityState.Modified) is not { } entry)
+            {
+                return;
+            }
+
+            bumped = true;
+            db.Database.ExecuteSqlInterpolated($"UPDATE attempts SET concurrency_stamp = UUID() WHERE id = {entry.Entity.Id}");
+        };
+
+        await new AttemptMarker(db).MarkPendingAsync(ct);
+
+        using var check = api.Factory.Services.CreateScope();
+        var graded = await check.ServiceProvider.GetRequiredService<ExamPrepDbContext>().Attempts
+            .Where(a => ids.Contains(a.CandidateId) && a.ExamSectionId == first.ReadingWritingSectionId)
+            .Select(a => a.GradingStatus).ToListAsync(ct);
+        Assert.All(graded, g => Assert.NotEqual(GradingStatus.NotGraded, g));
     }
 }
