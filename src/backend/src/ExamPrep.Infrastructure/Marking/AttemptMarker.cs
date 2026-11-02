@@ -38,9 +38,36 @@ public sealed class AttemptMarker(ExamPrepDbContext db)
         }
         catch (DbUpdateConcurrencyException)
         {
-            // Changed by someone else meanwhile; the next sweep marks it again from fresh data.
-            return 0;
+            // Another marker (the background sweep and a caller can run together) or an invigilator changed one of
+            // the attempts meanwhile. That must not throw away the others' marks: start again one attempt at a time,
+            // each from fresh data; one that is no longer waiting was marked by the other side.
+            db.ChangeTracker.Clear();
         }
+
+        var marked = 0;
+        foreach (var id in pending.Select(a => a.Id))
+        {
+            var attempt = await db.Attempts.Include(a => a.ExamSection)
+                .SingleOrDefaultAsync(a => a.Id == id && a.Status == AttemptStatus.Submitted && a.GradingStatus == GradingStatus.NotGraded, cancellationToken);
+            if (attempt is null)
+            {
+                continue;
+            }
+
+            await MarkAsync(attempt, cancellationToken);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                marked++;
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Lost again; the next sweep marks it from fresh data.
+                db.ChangeTracker.Clear();
+            }
+        }
+
+        return marked;
     }
 
     private async Task MarkAsync(Attempt attempt, CancellationToken cancellationToken)
