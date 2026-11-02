@@ -1,5 +1,5 @@
 import type { MonitorRow } from './api'
-import { actionAvailability, clockText, extraTimeText, rowAt } from './monitorLogic'
+import { actionAvailability, appliedIds, clockText, endNowText, extraTimeText, rowAt } from './monitorLogic'
 
 const row = (overrides: Partial<MonitorRow>): MonitorRow => ({
   candidateId: 1,
@@ -24,14 +24,14 @@ const row = (overrides: Partial<MonitorRow>): MonitorRow => ({
 
 describe('actionAvailability', () => {
   it('pauses only online candidates who are working, and resumes only paused ones', () => {
-    const selected = [row({ candidateId: 1 }), row({ candidateId: 2, isOnline: false }), row({ candidateId: 3, status: 'Paused' })]
+    const selected = [row({ candidateId: 1 }), row({ candidateId: 2, isOnline: false }), row({ candidateId: 3, status: 'Paused' }), row({ candidateId: 4, status: 'Paused', isOnline: false })]
 
     const availability = actionAvailability(selected, false)
 
     expect(availability.Pause).toBe(1)
     expect(availability.Resume).toBe(1)
-    expect(availability.AddIncidentTime).toBe(3)
-    expect(availability.EditEndTime).toBe(3)
+    expect(availability.AddIncidentTime).toBe(4)
+    expect(availability.EditEndTime).toBe(4)
   })
 
   it('offers nothing for candidates who have not started or have finished', () => {
@@ -76,5 +76,39 @@ describe('rowAt', () => {
   it('keeps a paused candidate still', () => {
     const paused = { ...running, status: 'Paused' } as MonitorRow
     expect(rowAt(paused, 7)).toBe(paused)
+  })
+})
+
+describe('appliedIds', () => {
+  it('leaves out the candidates the server skipped', () => {
+    const outcome = { applied: 2, skipped: [{ candidateId: 2, fullName: 'Binh Tran', reason: 'cannot be rewound further than the recording has played (1 min)' }] }
+
+    expect(appliedIds([1, 2, 3], outcome)).toEqual([1, 3])
+    expect(appliedIds([2], outcome)).toEqual([])
+  })
+})
+
+describe('endNowText', () => {
+  const outcome = (skippedIds: number[] = []) => ({
+    applied: 0,
+    skipped: skippedIds.map((candidateId) => ({ candidateId, fullName: 'x', reason: 'has already finished this section' })),
+  })
+
+  it('says how many ended and how many keep working on extra time', () => {
+    const selected = [row({ candidateId: 1 }), row({ candidateId: 2, plannedExtraSeconds: 900 }), row({ candidateId: 3, incidentExtraSeconds: 300 })]
+
+    expect(endNowText(selected, outcome(), false)).toBe('End now: 1 candidate ended; 2 keep working on their extra time.')
+  })
+
+  it('says paused candidates with extra time were resumed', () => {
+    const selected = [row({ candidateId: 1, status: 'Paused', plannedExtraSeconds: 900 }), row({ candidateId: 2, status: 'Paused' })]
+
+    expect(endNowText(selected, outcome(), false)).toBe('End now: 1 candidate ended; 1 keeps working on their extra time (1 was paused and has been resumed).')
+  })
+
+  it('ends everyone when extra time is disregarded, and ignores skipped candidates', () => {
+    const selected = [row({ candidateId: 1, plannedExtraSeconds: 900 }), row({ candidateId: 2, plannedExtraSeconds: 900 }), row({ candidateId: 3 })]
+
+    expect(endNowText(selected, outcome([3]), true)).toBe('End now: 2 candidates ended.')
   })
 })

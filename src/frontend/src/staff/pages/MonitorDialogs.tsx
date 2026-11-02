@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { staffApi, type ActionOutcome, type MonitorActionRequest, type MonitorRow } from '../api'
-import type { ActionButton } from '../monitorLogic'
+import { appliedIds, endNowText, type ActionButton } from '../monitorLogic'
 import { ConfirmButton, ErrorBox, Modal } from '../ui'
 
-export type DialogKind = { kind: ActionButton; minutes?: number; reason?: string } | { kind: 'message'; toRoom: boolean }
+/** `candidateIds` narrows the dialog to some of the selected candidates (incident time after a rewind: only those rewound). */
+export type DialogKind = { kind: ActionButton; minutes?: number; reason?: string; candidateIds?: number[] } | { kind: 'message'; toRoom: boolean }
 
 type Done = (result: { text: string; skipped: ActionOutcome['skipped'] }, next?: DialogKind) => void
 
@@ -25,17 +26,19 @@ const appliedText = (outcome: ActionOutcome, what: string) =>
   outcome.applied === 0 ? `${what}: no candidate changed.` : `${what}: done for ${outcome.applied} candidate${outcome.applied === 1 ? '' : 's'}.`
 
 /** The pop-up for each action of the bar, as in the Inspera Admin Portal. */
-export function ActionDialog({ dialog, examId, sectionId, selected, onClose, onDone }: Props) {
+export function ActionDialog({ dialog, examId, sectionId, selected: selectedRows, onClose, onDone }: Props) {
+  const narrowed = dialog.kind !== 'message' ? dialog.candidateIds : undefined
+  const selected = narrowed ? selectedRows.filter((r) => narrowed.includes(r.candidateId)) : selectedRows
   const ids = selected.map((r) => r.candidateId)
   const [error, setError] = useState<unknown>(null)
   const [isBusy, setIsBusy] = useState(false)
 
-  const run = async (request: Omit<MonitorActionRequest, 'candidateIds'>, what: string, next?: (outcome: ActionOutcome) => DialogKind | undefined) => {
+  const run = async (request: Omit<MonitorActionRequest, 'candidateIds'>, what: string | ((outcome: ActionOutcome) => string), next?: (outcome: ActionOutcome) => DialogKind | undefined) => {
     setIsBusy(true)
     setError(null)
     try {
       const outcome = await staffApi.act(examId, sectionId, { ...request, candidateIds: ids })
-      onDone({ text: appliedText(outcome, what), skipped: outcome.skipped }, next?.(outcome))
+      onDone({ text: typeof what === 'function' ? what(outcome) : appliedText(outcome, what), skipped: outcome.skipped }, next?.(outcome))
     } catch (e) {
       setError(e)
       setIsBusy(false)
@@ -64,7 +67,7 @@ export function ActionDialog({ dialog, examId, sectionId, selected, onClose, onD
           withDetails
           isBusy={isBusy}
           note="At most the minutes already played, and not while a candidate is paused. Then add the same minutes as incident extra time."
-          onSubmit={(minutes, reason) => run({ action: 'RewindAudio', minutes, reason }, `Rewound ${minutes} min`, (outcome) => (outcome.applied > 0 ? { kind: 'AddIncidentTime', minutes, reason } : undefined))}
+          onSubmit={(minutes, reason) => run({ action: 'RewindAudio', minutes, reason }, `Rewound ${minutes} min`, (outcome) => (outcome.applied > 0 ? { kind: 'AddIncidentTime', minutes, reason, candidateIds: appliedIds(ids, outcome) } : undefined))}
         />
       )}
       {dialog.kind === 'EditEndTime' && <EndTimeForm selected={selected} isBusy={isBusy} onSubmit={(request, what) => run(request, what)} />}
@@ -152,7 +155,7 @@ function MinutesForm(props: {
 
 type EndChoice = 'EndNow' | 'EndAt' | 'EndIn' | 'UseTestEndTime'
 
-function EndTimeForm({ selected, isBusy, onSubmit }: { selected: MonitorRow[]; isBusy: boolean; onSubmit: (request: Omit<MonitorActionRequest, 'candidateIds'>, what: string) => void }) {
+function EndTimeForm({ selected, isBusy, onSubmit }: { selected: MonitorRow[]; isBusy: boolean; onSubmit: (request: Omit<MonitorActionRequest, 'candidateIds'>, what: string | ((outcome: ActionOutcome) => string)) => void }) {
   const [choice, setChoice] = useState<EndChoice>('EndIn')
   const [minutes, setMinutes] = useState(10)
   const [time, setTime] = useState('')
@@ -162,7 +165,7 @@ function EndTimeForm({ selected, isBusy, onSubmit }: { selected: MonitorRow[]; i
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (choice === 'EndNow') {
-      onSubmit({ action: 'EndNow', disregardExtraTime: disregard }, 'Ended')
+      onSubmit({ action: 'EndNow', disregardExtraTime: disregard }, (outcome) => (outcome.applied === 0 ? 'End now: no candidate changed.' : endNowText(selected, outcome, disregard)))
     } else if (choice === 'EndIn') {
       onSubmit({ action: 'EndIn', minutes }, `Ends in ${minutes} min`)
     } else if (choice === 'EndAt') {
@@ -225,13 +228,22 @@ function EndTimeForm({ selected, isBusy, onSubmit }: { selected: MonitorRow[]; i
 function MessageForm({ examId, candidateIds, onSent }: { examId: number; candidateIds: number[]; onSent: (count: number) => void }) {
   const [text, setText] = useState('')
   const [error, setError] = useState<unknown>(null)
+  const [isBusy, setIsBusy] = useState(false)
   const submit = async (event: FormEvent) => {
     event.preventDefault()
+    if (isBusy) {
+      return
+    }
+
+    // A double click or Enter twice must not send the message twice.
+    setIsBusy(true)
+    setError(null)
     try {
       await staffApi.sendMessage(examId, text, candidateIds)
       onSent(candidateIds.length)
     } catch (e) {
       setError(e)
+      setIsBusy(false)
     }
   }
 
@@ -244,7 +256,7 @@ function MessageForm({ examId, candidateIds, onSent }: { examId: number; candida
       <p className="st-faint">Candidates see it under the bell icon at the top of their screen.</p>
       <ErrorBox error={error} />
       <div className="st-form-actions">
-        <button type="submit" className="st-btn st-btn--primary" disabled={text.trim() === ''}>
+        <button type="submit" className="st-btn st-btn--primary" disabled={isBusy || text.trim() === ''}>
           Send
         </button>
       </div>

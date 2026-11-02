@@ -27,6 +27,7 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
   const { data: staff } = useLoad(() => (manages ? adminApi.assignableStaff() : Promise.resolve(null)), `staff-${manages}`)
   const [actionError, setActionError] = useState<unknown>(null)
   const [sent, setSent] = useState<ApprovalView | null>(null)
+  const [endedAll, setEndedAll] = useState<string | null>(null)
 
   if (!exam) {
     return error ? <ErrorBox error={error} /> : <p className="st-empty">Loading…</p>
@@ -36,6 +37,19 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
     setActionError(null)
     try {
       setData(await adminApi.setStatus(exam.id, status))
+    } catch (e) {
+      setActionError(e)
+    }
+  }
+  const endAll = async () => {
+    setActionError(null)
+    try {
+      const outcome = await staffApi.endAll(exam.id, [])
+      setEndedAll(
+        outcome.applied === 0
+          ? 'Nobody changed: the test had already ended for everyone.'
+          : `The test has ended for ${outcome.applied} candidate${outcome.applied === 1 ? '' : 's'}. Candidates still working are submitted within seconds. To undo it, open a section and use Edit end time → Use test end time.`,
+      )
     } catch (e) {
       setActionError(e)
     }
@@ -138,6 +152,16 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
         })}
       </div>
 
+      {access.monitors && exam.canMonitor !== false && exam.status === 'Active' && (
+        <section className="st-card">
+          <h2 className="st-h2">End the whole test</h2>
+          <p className="st-faint">
+            For an emergency that stops the exam in every section, as the parent test does in Inspera. Do not use it to end one section: End now on that section&apos;s page does that.
+          </p>
+          <ConfirmButton label="End the whole test" confirmLabel={`Click again: the test ends now for all ${exam.candidates} candidates`} onConfirm={() => void endAll()} />
+          {endedAll && <p role="status">{endedAll}</p>}
+        </section>
+      )}
       {access.seesCandidates && <CandidatesPanel exam={exam} canEdit={access.worksIn('Candidates') && exam.canEnterCandidates !== false} onChanged={reload} />}
       {exam.invigilatorsNeeded !== undefined && exam.invigilators.length < exam.invigilatorsNeeded && (manages || access.isAdmin) && (
         <p className="st-note" role="status">
