@@ -96,7 +96,8 @@ public sealed class AttemptClock(Attempt attempt, int sectionDurationMinutes, Da
         RequireStatus(AttemptStatus.InProgress, "Only a candidate who is working can be ended.");
         // Rounded down, so standard time never ends a fraction of a second after now: rounded to the nearest
         // second it could, and the expiry sweep then submitted the attempt as TimeExpired (mock exam, VE-43).
-        attempt.EndAdjustSeconds += (int)Math.Floor((now - StandardEnd()).TotalSeconds);
+        // Only ever brings the end forward: a candidate already on extra time, or a second press, adds nothing.
+        attempt.EndAdjustSeconds += Math.Min(0, (int)Math.Floor((now - StandardEnd()).TotalSeconds));
         attempt.DisregardExtraTime = disregardExtraTime;
         Recompute();
 
@@ -112,6 +113,16 @@ public sealed class AttemptClock(Attempt attempt, int sectionDurationMinutes, Da
         RequireActive();
         attempt.EndAdjustSeconds = 0;
         attempt.DisregardExtraTime = false;
+        Recompute();
+    }
+
+    /// <summary>
+    /// The candidate's parent-level end was set or cleared (the clock was built with the new value): bring
+    /// <see cref="Attempt.EndsAt"/> in line. A paused attempt stays paused.
+    /// </summary>
+    public void RefreshEnd()
+    {
+        RequireActive();
         Recompute();
     }
 

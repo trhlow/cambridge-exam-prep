@@ -377,6 +377,17 @@ public sealed class ApiFixture : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
+    /// <summary>The candidate's computer stopped sending heartbeats (last one five minutes ago, connection closed).</summary>
+    public async Task SetOfflineAsync(int candidateId, int sectionId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var attempt = db.Attempts.Single(a => a.CandidateId == candidateId && a.ExamSectionId == sectionId);
+        attempt.LastHeartbeatAt = DateTime.UtcNow.AddMinutes(-5);
+        attempt.ConnectionStatus = ConnectionStatus.Offline;
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Pretends the candidate pressed Play <paramref name="earlier"/> ago.</summary>
     public async Task MoveAudioStartBackAsync(int candidateId, int sectionId, TimeSpan earlier)
     {

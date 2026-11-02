@@ -50,7 +50,10 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
 
     /// <summary>Starts the section, or returns the running attempt unchanged (reload, other computer).</summary>
     [HttpPost("attempt")]
-    public async Task<ActionResult<AttemptState>> Start(int sectionId, CancellationToken cancellationToken)
+    public Task<ActionResult<AttemptState>> Start(int sectionId, CancellationToken cancellationToken) =>
+        RetryOnConflictAsync(() => StartCoreAsync(sectionId, cancellationToken));
+
+    private async Task<ActionResult<AttemptState>> StartCoreAsync(int sectionId, CancellationToken cancellationToken)
     {
         var summary = await FindSectionAsync(sectionId, cancellationToken);
         if (summary is null)
@@ -108,7 +111,10 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
 
     /// <summary>The clock and saved answers; ends the section first if its time is up.</summary>
     [HttpGet("attempt")]
-    public async Task<ActionResult<AttemptState>> Get(int sectionId, CancellationToken cancellationToken)
+    public Task<ActionResult<AttemptState>> Get(int sectionId, CancellationToken cancellationToken) =>
+        RetryOnConflictAsync(() => GetCoreAsync(sectionId, cancellationToken));
+
+    private async Task<ActionResult<AttemptState>> GetCoreAsync(int sectionId, CancellationToken cancellationToken)
     {
         var attempt = await FindAttemptAsync(sectionId, cancellationToken);
         if (attempt is null)
@@ -131,7 +137,10 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
     /// the clock, so a pause, an end-time change, a rewind or a message reaches the candidate within seconds.
     /// </summary>
     [HttpPost("heartbeat")]
-    public async Task<ActionResult<AttemptState>> Heartbeat(int sectionId, CancellationToken cancellationToken)
+    public Task<ActionResult<AttemptState>> Heartbeat(int sectionId, CancellationToken cancellationToken) =>
+        RetryOnConflictAsync(() => HeartbeatCoreAsync(sectionId, cancellationToken));
+
+    private async Task<ActionResult<AttemptState>> HeartbeatCoreAsync(int sectionId, CancellationToken cancellationToken)
     {
         var attempt = await FindAttemptAsync(sectionId, cancellationToken);
         if (attempt is null)
@@ -140,12 +149,19 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         }
 
         var now = Now();
-        var wasOffline = !InvigilatorMonitorController.IsOnline(attempt, now);
 
-        // A direct update: the heartbeat must not rotate the attempt's concurrency stamp and clash with timer changes.
-        await db.Attempts.Where(a => a.Id == attempt.Id)
+        // Direct updates: the heartbeat must not rotate the attempt's concurrency stamp and clash with timer changes. The
+        // first only matches an attempt that was offline or stale, so the rows it changes are exactly the candidates the
+        // invigilator has to be told about, even when a closing connection (hub) races with this request.
+        var staleBefore = now - InvigilatorMonitorController.OnlineWindow;
+        var cameOnline = await db.Attempts
+            .Where(a => a.Id == attempt.Id && (a.ConnectionStatus != ConnectionStatus.Online || a.LastHeartbeatAt == null || a.LastHeartbeatAt < staleBefore))
             .ExecuteUpdateAsync(set => set.SetProperty(a => a.LastHeartbeatAt, now).SetProperty(a => a.ConnectionStatus, ConnectionStatus.Online), cancellationToken);
-        if (wasOffline)
+        if (cameOnline == 0)
+        {
+            await db.Attempts.Where(a => a.Id == attempt.Id).ExecuteUpdateAsync(set => set.SetProperty(a => a.LastHeartbeatAt, now), cancellationToken);
+        }
+        else
         {
             // Back online (or online for the first time): the invigilator sees it without waiting for a poll. Only after
             // the update, or a monitor reloading at once would read the old status and wait for its next poll.
@@ -169,7 +185,10 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
     /// another computer) leaves it running where it is, so it can never be heard from the start again.
     /// </summary>
     [HttpPost("audio")]
-    public async Task<ActionResult<AttemptState>> PlayAudio(int sectionId, CancellationToken cancellationToken)
+    public Task<ActionResult<AttemptState>> PlayAudio(int sectionId, CancellationToken cancellationToken) =>
+        RetryOnConflictAsync(() => PlayAudioCoreAsync(sectionId, cancellationToken));
+
+    private async Task<ActionResult<AttemptState>> PlayAudioCoreAsync(int sectionId, CancellationToken cancellationToken)
     {
         var attempt = await FindAttemptAsync(sectionId, cancellationToken);
         if (attempt is null)
@@ -203,7 +222,10 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
 
     /// <summary>Saves (inserts or replaces) the candidate's answers while the section is running.</summary>
     [HttpPut("responses")]
-    public async Task<IActionResult> Save(int sectionId, SaveResponsesRequest request, CancellationToken cancellationToken)
+    public Task<IActionResult> Save(int sectionId, SaveResponsesRequest request, CancellationToken cancellationToken) =>
+        RetryOnConflictAsync(() => SaveCoreAsync(sectionId, request, cancellationToken));
+
+    private async Task<IActionResult> SaveCoreAsync(int sectionId, SaveResponsesRequest request, CancellationToken cancellationToken)
     {
         var (attempt, refusal, now) = await RunningAttemptAsync(sectionId, cancellationToken);
         if (attempt is null)
@@ -231,7 +253,10 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
     /// candidate answers only some questions. Refused (409) when Yes would choose more questions than the group allows.
     /// </summary>
     [HttpPut("selections")]
-    public async Task<IActionResult> Select(int sectionId, SelectionRequest request, CancellationToken cancellationToken)
+    public Task<IActionResult> Select(int sectionId, SelectionRequest request, CancellationToken cancellationToken) =>
+        RetryOnConflictAsync(() => SelectCoreAsync(sectionId, request, cancellationToken));
+
+    private async Task<IActionResult> SelectCoreAsync(int sectionId, SelectionRequest request, CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<QuestionSelection>(request.Selection, out var selection) || !Enum.IsDefined(selection))
         {
@@ -270,6 +295,39 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         await db.SaveChangesAsync(cancellationToken);
         notifier.SectionChanged(sectionId);
         return NoContent();
+    }
+
+    private Task<ActionResult<AttemptState>> RetryOnConflictAsync(Func<Task<ActionResult<AttemptState>>> request) =>
+        RetryOnConflictAsync(request, conflict => new ActionResult<AttemptState>(conflict));
+
+    private Task<IActionResult> RetryOnConflictAsync(Func<Task<IActionResult>> request) =>
+        RetryOnConflictAsync(request, conflict => conflict);
+
+    /// <summary>
+    /// An invigilator, the sweep or another tab changed the attempt between this request's read and its save: read it
+    /// again and run the request once more. Losing twice is the candidate's cue to retry, not a server error.
+    /// </summary>
+    private async Task<TResult> RetryOnConflictAsync<TResult>(Func<Task<TResult>> request, Func<ObjectResult, TResult> conflict)
+    {
+        try
+        {
+            return await request();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.ChangeTracker.Clear();
+        }
+
+        try
+        {
+            return await request();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.ChangeTracker.Clear();
+            var problem = new ProblemDetails { Title = "Your test was updated at the same moment. Please try again.", Status = StatusCodes.Status409Conflict };
+            return conflict(new ObjectResult(problem) { StatusCode = StatusCodes.Status409Conflict });
+        }
     }
 
     /// <summary>The candidate's attempt when answers may be saved now; otherwise why not (409).</summary>

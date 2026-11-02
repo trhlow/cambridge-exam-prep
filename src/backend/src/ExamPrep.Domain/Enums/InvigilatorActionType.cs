@@ -14,4 +14,7 @@ public enum InvigilatorActionType
 
     /// <summary>The invigilator told the room to begin; candidates already working get a StartedEarly warning.</summary>
     AnnounceStart,
+
+    /// <summary>Parent-level end: the whole test (every section) ends for the candidate now.</summary>
+    EndAll,
 }
