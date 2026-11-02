@@ -132,6 +132,47 @@ public sealed class SebAndWarningsTests(ApiFixture api) : IClassFixture<ApiFixtu
     }
 
     [Fact]
+    public async Task AResolvedWarning_IsNotRaisedAgainFor30Minutes()
+    {
+        api.SkipIfUnavailable();
+        var candidate = await api.CreateCandidateAsync(Password);
+        await api.StartAttemptAsync(candidate.CandidateId, candidate.ReadingWritingSectionId);
+        using var browser = Browser(null);
+        await SignInAsync(browser, candidate);
+        using var admin = await api.AdminClientAsync();
+        var tenMinutesBehind = DateTimeOffset.UtcNow.AddMinutes(-10).ToUnixTimeMilliseconds().ToString();
+        async Task BeatAsync()
+        {
+            using var beat = new HttpRequestMessage(HttpMethod.Post, $"/api/candidate/sections/{candidate.ReadingWritingSectionId}/heartbeat");
+            beat.Headers.Add("X-Client-Time", tenMinutesBehind);
+            (await browser.SendAsync(beat, ct)).EnsureSuccessStatusCode();
+        }
+
+        await BeatAsync();
+        var first = (await WarningsAsync(admin, candidate)).Single();
+        (await admin.PostAsync($"/api/staff/exams/{candidate.ExamId}/sections/{candidate.ReadingWritingSectionId}/warnings/{(long)first["id"]!}/resolve", null, ct)).EnsureSuccessStatusCode();
+
+        await BeatAsync();
+        var afterResolve = await WarningsAsync(admin, candidate);
+
+        Assert.Single(afterResolve);
+        Assert.Equal(0, await WarningCountAsync(admin, candidate));
+
+        // 31 minutes after the invigilator looked into it, the same problem is worth a new warning.
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var longAgo = DateTime.UtcNow.AddMinutes(-31);
+            await db.SecurityEvents.ExecuteUpdateAsync(e => e.SetProperty(x => x.ResolvedAt, longAgo), ct);
+        }
+
+        await BeatAsync();
+
+        Assert.Equal(2, (await WarningsAsync(admin, candidate)).Count);
+        Assert.Equal(1, await WarningCountAsync(admin, candidate));
+    }
+
+    [Fact]
     public async Task AComputerThatStopsResponding_RaisesAConnectionWarning()
     {
         api.SkipIfUnavailable();

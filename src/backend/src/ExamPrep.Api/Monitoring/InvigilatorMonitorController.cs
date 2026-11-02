@@ -52,6 +52,9 @@ public sealed record InvigilatorActionRequest(
     bool DisregardExtraTime = false,
     [StringLength(200)] string? Reason = null);
 
+/// <param name="CandidateIds">Who the test ends for; empty or missing means everyone entered for the exam.</param>
+public sealed record EndAllRequest([MaxLength(500)] List<int>? CandidateIds = null, [StringLength(200)] string? Reason = null);
+
 public sealed record SkippedCandidate(int CandidateId, string FullName, string Reason);
 
 public sealed record ActionOutcome(int Applied, IReadOnlyList<SkippedCandidate> Skipped);
@@ -100,7 +103,8 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
             .Select(g => new { AttemptId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.AttemptId, g => g.Count, cancellationToken);
 
-        var rows = candidates.Select(c => Row(c, attempts.GetValueOrDefault(c.Id), section, answered, now) is var row && row.AttemptId is { } id
+        var lengths = await RecordingLength.OfPapersAsync(db, attempts.Values.Select(a => a.TestPaperId), cancellationToken);
+        var rows = candidates.Select(c => Row(c, attempts.GetValueOrDefault(c.Id), section, answered, now, lengths) is var row && row.AttemptId is { } id
             ? row with { Warnings = warnings.GetValueOrDefault(id) }
             : row).ToList();
 
@@ -154,6 +158,88 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
                 db.ChangeTracker.Clear();
             }
         }
+    }
+
+    /// <summary>
+    /// The parent-level end of the Inspera guide: the whole test (every section) ends for the candidates now. It sets
+    /// <c>candidates.parent_end_override_at</c>, which cuts every section's end short, and brings the running attempts'
+    /// end in line through the clock; the expiry sweep then submits them. "Use test end time" on the monitor page gives
+    /// the end back. A candidate already ended this way keeps the earlier moment.
+    /// </summary>
+    [HttpPost("end-all")]
+    public async Task<ActionResult<ActionOutcome>> EndAll(int examId, EndAllRequest request, CancellationToken cancellationToken)
+    {
+        if (!await db.Exams.MonitorableBy(User).AnyAsync(e => e.Id == examId, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        var ids = request.CandidateIds?.Distinct().ToList() ?? [];
+        if (ids.Count > 0 && await db.Candidates.CountAsync(c => c.ExamId == examId && ids.Contains(c.Id), cancellationToken) != ids.Count)
+        {
+            return Problems.Invalid("Some of the selected candidates are not entered for this exam.");
+        }
+
+        for (var round = 1; ; round++)
+        {
+            try
+            {
+                return await EndAllAsync(examId, ids, request.Reason, cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException) when (round < MaxSaveAttempts)
+            {
+                db.ChangeTracker.Clear();
+            }
+        }
+    }
+
+    private async Task<ActionOutcome> EndAllAsync(int examId, List<int> candidateIds, string? reason, CancellationToken cancellationToken)
+    {
+        var now = Now();
+        var candidates = await db.Candidates.Where(c => c.ExamId == examId && (candidateIds.Count == 0 || candidateIds.Contains(c.Id))).OrderBy(c => c.CandidateNumber).ToListAsync(cancellationToken);
+        var ids = candidates.Select(c => c.Id).ToList();
+        var running = (await db.Attempts.Include(a => a.ExamSection)
+            .Where(a => ids.Contains(a.CandidateId) && (a.Status == AttemptStatus.InProgress || a.Status == AttemptStatus.Paused))
+            .ToListAsync(cancellationToken)).ToLookup(a => a.CandidateId);
+        var batchId = Guid.NewGuid();
+        var userId = User.GetStaffId();
+        var skipped = new List<SkippedCandidate>();
+        var applied = 0;
+
+        foreach (var candidate in candidates)
+        {
+            if (candidate.ParentEndOverrideAt is { } earlier && earlier <= now)
+            {
+                skipped.Add(new SkippedCandidate(candidate.Id, FullName(candidate), "has already been ended"));
+                continue;
+            }
+
+            candidate.ParentEndOverrideAt = now;
+            var attempts = running[candidate.Id].ToList();
+            attempts.ForEach(a => AttemptExpiry.ClockFor(a, a.ExamSection!, candidate).RefreshEnd());
+            applied++;
+            db.InvigilatorActions.Add(new InvigilatorAction
+            {
+                ExamId = examId,
+                AttemptId = attempts.Count == 1 ? attempts[0].Id : null,
+                UserId = userId,
+                ActionType = InvigilatorActionType.EndAll,
+                PayloadJson = JsonSerializer.Serialize(new { candidateId = candidate.Id, endsAt = now }),
+                Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),
+                BatchId = batchId,
+                CreatedAt = now,
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        running.SelectMany(g => g).Select(a => a.ExamSectionId).Distinct().ToList().ForEach(notifier.SectionChanged);
+        if (applied > 0)
+        {
+            await notifier.RefreshCandidatesAsync(candidates.Select(c => c.Id).Except(skipped.Select(s => s.CandidateId)));
+        }
+
+        logger.LogInformation("Staff {UserId} ended the whole test of exam {ExamId} for {Applied} candidate(s); {Skipped} already ended", userId, examId, applied, skipped.Count);
+        return new ActionOutcome(applied, skipped);
     }
 
     /// <summary>
@@ -314,8 +400,11 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
     private async Task<ActionOutcome> ApplyAsync(ExamSection section, List<int> candidateIds, MonitorCommand command, string? reason, CancellationToken cancellationToken)
     {
         var now = Now();
-        var candidates = await db.Candidates.AsNoTracking().Where(c => candidateIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, cancellationToken);
+        var candidates = await db.Candidates.Where(c => candidateIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, cancellationToken);
         var attempts = await db.Attempts.Where(a => a.ExamSectionId == section.Id && candidateIds.Contains(a.CandidateId)).ToDictionaryAsync(a => a.CandidateId, cancellationToken);
+        var lengths = command.Action == MonitorAction.RewindAudio
+            ? await RecordingLength.OfPapersAsync(db, attempts.Values.Select(a => a.TestPaperId), cancellationToken)
+            : [];
         var batchId = Guid.NewGuid();
         var userId = User.GetStaffId();
         var skipped = new List<SkippedCandidate>();
@@ -325,6 +414,29 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
         {
             var candidate = candidates[id];
             var attempt = attempts.GetValueOrDefault(id);
+            // "Use test end time" also undoes a parent-level end (End all); it has to happen before the clock is built.
+            var restoredParentEnd = command.Action == MonitorAction.UseTestEndTime && attempt?.Status != AttemptStatus.Submitted && candidate.ParentEndOverrideAt is not null;
+            if (restoredParentEnd)
+            {
+                candidate.ParentEndOverrideAt = null;
+            }
+
+            if (restoredParentEnd && attempt is null)
+            {
+                applied++;
+                db.InvigilatorActions.Add(new InvigilatorAction
+                {
+                    ExamId = section.ExamId,
+                    UserId = userId,
+                    ActionType = InvigilatorActionType.UseTestEndTime,
+                    PayloadJson = JsonSerializer.Serialize(new { action = command.Action.ToString(), candidateId = id }),
+                    Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),
+                    BatchId = batchId,
+                    CreatedAt = now,
+                });
+                continue;
+            }
+
             var attemptClock = attempt is null ? null : AttemptExpiry.ClockFor(attempt, section, candidate);
             if (attempt is not null && AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now))
             {
@@ -332,7 +444,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
                 continue;
             }
 
-            var skipReason = InvigilatorActionRules.Apply(command, attempt, attemptClock, IsOnline(attempt, now), now);
+            var skipReason = InvigilatorActionRules.Apply(command, attempt, attemptClock, IsOnline(attempt, now), now, attempt is not null && lengths.TryGetValue(attempt.TestPaperId, out var length) ? length : null);
             if (skipReason is not null)
             {
                 skipped.Add(new SkippedCandidate(id, FullName(candidate), skipReason));
@@ -388,7 +500,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
         return (new MonitorCommand(action, request.Minutes, endAt, request.DisregardExtraTime), null);
     }
 
-    private static MonitorRow Row(Candidate candidate, Attempt? attempt, ExamSection section, Dictionary<int, int> answered, DateTime now)
+    private static MonitorRow Row(Candidate candidate, Attempt? attempt, ExamSection section, Dictionary<int, int> answered, DateTime now, Dictionary<int, TimeSpan> recordingLengths)
     {
         if (attempt is null)
         {
@@ -398,7 +510,8 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
         var attemptClock = AttemptExpiry.ClockFor(attempt, section, candidate);
         var isRunning = attempt.Status != AttemptStatus.Submitted;
         // Once the section is submitted the recording is over: the position would otherwise keep counting (mock exam).
-        var audio = attempt.AudioStartedAt is null || !isRunning ? (int?)null : (int)attemptClock.AudioPosition(now).TotalSeconds;
+        // It also stops at the end of the recording once every track's length is known.
+        var audio = attempt.AudioStartedAt is null || !isRunning ? (int?)null : (int)InvigilatorActionRules.Played(attemptClock, now, recordingLengths.TryGetValue(attempt.TestPaperId, out var length) ? length : null).TotalSeconds;
         return new MonitorRow(
             candidate.Id,
             candidate.CandidateNumber,

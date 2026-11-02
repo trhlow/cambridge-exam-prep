@@ -839,7 +839,7 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.ToTable("invigilator_actions", t =>
                         {
-                            t.HasCheckConstraint("CK_invigilator_actions_action_type_values", "action_type IN ('Pause', 'Resume', 'AddIncidentExtraTime', 'EditEndTime', 'EndNow', 'UseTestEndTime', 'RewindAudio', 'SendMessage', 'AnnounceStart')");
+                            t.HasCheckConstraint("CK_invigilator_actions_action_type_values", "action_type IN ('Pause', 'Resume', 'AddIncidentExtraTime', 'EditEndTime', 'EndNow', 'UseTestEndTime', 'RewindAudio', 'SendMessage', 'AnnounceStart', 'EndAll')");
                         });
                 });
 

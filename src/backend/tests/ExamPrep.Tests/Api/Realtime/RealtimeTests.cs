@@ -101,6 +101,27 @@ public sealed class RealtimeTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
+    public async Task Heartbeat_OfACandidateAlreadyOnline_KeepsThemOnlineWithoutTellingTheInvigilator()
+    {
+        api.SkipIfUnavailable();
+        var candidate = await api.CreateCandidateAsync(Password);
+        var section = candidate.ReadingWritingSectionId;
+        await api.StartAttemptAsync(candidate.CandidateId, section);
+        var before = (await api.GetAttemptAsync(candidate.CandidateId, section)).LastHeartbeatAt;
+        await using var staff = await WatchAsync(candidate, section);
+        var heard = Listen(staff, RoomNotifier.SectionChangedMethod);
+        using var browser = ClientWith(await CandidateCookieAsync(candidate));
+        await Task.Delay(20, ct);
+
+        (await browser.PostAsync($"/api/candidate/sections/{section}/heartbeat", null, ct)).EnsureSuccessStatusCode();
+
+        var after = await api.GetAttemptAsync(candidate.CandidateId, section);
+        Assert.True(after.LastHeartbeatAt > before);
+        Assert.Equal(ConnectionStatus.Online, after.ConnectionStatus);
+        await Assert.ThrowsAsync<TimeoutException>(() => heard.Task.WaitAsync(TimeSpan.FromSeconds(1.5), ct));
+    }
+
+    [Fact]
     public async Task Invigilator_IsToldWithinTwoSeconds_WhenACandidateSavesAnAnswer()
     {
         api.SkipIfUnavailable();

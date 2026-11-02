@@ -61,7 +61,16 @@ public sealed class RoomNotifier(IHubContext<StaffRoomHub> staff, IHubContext<Ca
         {
             if (dirtySections.TryRemove(sectionId, out _))
             {
-                await staff.Clients.Group(SectionGroup(sectionId)).SendAsync(SectionChangedMethod, sectionId, cancellationToken);
+                try
+                {
+                    await staff.Clients.Group(SectionGroup(sectionId)).SendAsync(SectionChangedMethod, sectionId, cancellationToken);
+                }
+                catch
+                {
+                    // Not sent: keep it marked, or the monitoring page would stay out of date until the next change.
+                    SectionChanged(sectionId);
+                    throw;
+                }
             }
         }
     }

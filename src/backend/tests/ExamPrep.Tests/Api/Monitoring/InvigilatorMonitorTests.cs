@@ -138,6 +138,110 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
     }
 
     [Fact]
+    public async Task Resume_RefusesAnOfflineCandidateAndTheySleepThroughTheSweepStillPaused()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var sectionId = room.First.ReadingWritingSectionId;
+        await api.StartAttemptAsync(room.First.CandidateId, sectionId);
+        await api.PauseAttemptAsync(room.First.CandidateId, sectionId);
+        await api.SetOfflineAsync(room.First.CandidateId, sectionId);
+        await api.MoveAttemptStartBackAsync(room.First.CandidateId, sectionId, TimeSpan.FromMinutes(70));
+
+        var resume = await ActAsync(room.Invigilator, room.First, sectionId, new { action = "Resume", candidateIds = new[] { room.First.CandidateId } });
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ExamPrep.Api.Delivery.AttemptExpiry>().SubmitExpiredAsync(ct);
+        }
+
+        Assert.Equal(0, resume.Applied);
+        Assert.Contains("offline", Assert.Single(resume.Skipped).Reason);
+        Assert.Equal(AttemptStatus.Paused, (await api.GetAttemptAsync(room.First.CandidateId, sectionId)).Status);
+    }
+
+    private async Task<HttpResponseMessage> EndAllAsync(HttpClient client, int examId, params int[] candidateIds) =>
+        await client.PostAsJsonAsync($"/api/staff/exams/{examId}/end-all", new { candidateIds, reason = "Fire evacuation" }, ct);
+
+    private async Task<DateTime?> ParentEndOfAsync(int candidateId)
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        return await db.Candidates.Where(c => c.Id == candidateId).Select(c => c.ParentEndOverrideAt).SingleAsync(ct);
+    }
+
+    [Fact]
+    public async Task EndAll_EndsTheWholeTestForEveryoneAndUseTestEndTimeBringsItBack()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var sectionId = room.First.ReadingWritingSectionId;
+        await api.StartAttemptAsync(room.First.CandidateId, sectionId);
+        var before = DateTime.UtcNow;
+
+        var response = await EndAllAsync(room.Invigilator, room.First.ExamId);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var outcome = (await response.Content.ReadFromJsonAsync<ActionOutcome>(ct))!;
+        Assert.Equal(2, outcome.Applied);
+        Assert.InRange((await ParentEndOfAsync(room.First.CandidateId))!.Value, before.AddSeconds(-1), DateTime.UtcNow.AddSeconds(1));
+        Assert.NotNull(await ParentEndOfAsync(room.SecondId));
+        var ended = await api.GetAttemptAsync(room.First.CandidateId, sectionId);
+        Assert.True(ended.EndsAt <= DateTime.UtcNow.AddSeconds(1));
+        var row = (await MonitorAsync(room.Invigilator, room.First, sectionId))!.Candidates.Single(c => c.CandidateId == room.First.CandidateId);
+        Assert.Equal(0, row.RemainingSeconds);
+
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var log = await db.InvigilatorActions.Where(a => a.ExamId == room.First.ExamId).ToListAsync(ct);
+            Assert.Equal(2, log.Count(a => a.ActionType == InvigilatorActionType.EndAll));
+            Assert.All(log, a => Assert.Equal("Fire evacuation", a.Reason));
+        }
+
+        // Ended by mistake: "Use test end time" gives the candidate the section's own end back.
+        var restore = await ActAsync(room.Invigilator, room.First, sectionId, new { action = "UseTestEndTime", candidateIds = new[] { room.First.CandidateId } });
+        Assert.Equal(1, restore.Applied);
+        Assert.Null(await ParentEndOfAsync(room.First.CandidateId));
+        var back = (await MonitorAsync(room.Invigilator, room.First, sectionId))!.Candidates.Single(c => c.CandidateId == room.First.CandidateId);
+        Assert.InRange(back.RemainingSeconds!.Value, 3500, 3600);
+        Assert.NotNull(await ParentEndOfAsync(room.SecondId));
+    }
+
+    [Fact]
+    public async Task EndAll_WithSelectedCandidatesLeavesTheOthersAndNeverMovesAnEarlierEndLater()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+
+        await EndAllAsync(room.Invigilator, room.First.ExamId, room.First.CandidateId);
+        var first = await ParentEndOfAsync(room.First.CandidateId);
+        await Task.Delay(50, ct);
+        var again = await (await EndAllAsync(room.Invigilator, room.First.ExamId, room.First.CandidateId)).Content.ReadFromJsonAsync<ActionOutcome>(ct);
+
+        Assert.Null(await ParentEndOfAsync(room.SecondId));
+        Assert.Equal(first, await ParentEndOfAsync(room.First.CandidateId));
+        Assert.Equal(0, again!.Applied);
+        Assert.Contains("already", Assert.Single(again.Skipped).Reason);
+    }
+
+    [Fact]
+    public async Task EndAll_IsRefusedForOutsidersAndForCandidatesOfAnotherSession()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var stranger = await api.CreateCandidateAsync(Password);
+        var outsider = await api.CreateStaffAsync(UserRole.Invigilator, Password);
+        using var client = await api.StaffClientAsync(outsider.Username, Password);
+
+        var hidden = await EndAllAsync(client, room.First.ExamId);
+        var foreign = await EndAllAsync(room.Invigilator, room.First.ExamId, stranger.CandidateId);
+
+        Assert.Equal(HttpStatusCode.NotFound, hidden.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, foreign.StatusCode);
+        Assert.Null(await ParentEndOfAsync(room.First.CandidateId));
+    }
+
+    [Fact]
     public async Task IncidentTime_AddsMinutesEvenForOfflineCandidates()
     {
         api.SkipIfUnavailable();
@@ -217,6 +321,53 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
         Assert.Equal(1, rewind.Applied);
         Assert.Equal(60_000, (await api.GetAttemptAsync(room.First.CandidateId, listening)).AudioAdjustMs);
         Assert.Contains("played", Assert.Single(tooFar.Skipped).Reason);
+    }
+
+    /// <summary>Gives the section's Listening paper two parts whose recordings are two minutes each (four in all).</summary>
+    private async Task GiveRecordingsAsync(int sectionId)
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var paperId = await db.ExamSections.Where(s => s.Id == sectionId).Select(s => s.TestPaperId).SingleAsync(ct);
+        for (var partNo = 1; partNo <= 2; partNo++)
+        {
+            var asset = new ExamPrep.Domain.Entities.Asset
+            {
+                Kind = AssetKind.Audio,
+                OriginalFileName = $"part{partNo}.mp3",
+                StoredPath = $"test/{Guid.NewGuid():N}.mp3",
+                ContentType = "audio/mpeg",
+                Sha256 = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N"),
+                DurationMs = 120_000,
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.Assets.Add(asset);
+            await db.SaveChangesAsync(ct);
+            db.PaperParts.Add(new ExamPrep.Domain.Entities.PaperPart { TestPaperId = paperId, PartNo = partNo, AudioAssetId = asset.Id });
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+
+    [Fact]
+    public async Task RewindAndPosition_NeverGoPastTheEndOfTheRecording_WhenItsLengthIsKnown()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var listening = room.First.ListeningSectionId;
+        await GiveRecordingsAsync(listening);
+        // The recording is 4 minutes long but this candidate's section has been running for 6 since they pressed Play.
+        await api.StartAttemptAsync(room.First.CandidateId, listening, durationMinutes: 30, audioPlayedMinutes: 6);
+        var first = new[] { room.First.CandidateId };
+
+        var tooFar = await ActAsync(room.Invigilator, room.First, listening, new { action = "RewindAudio", candidateIds = first, minutes = 5 });
+        var row = (await MonitorAsync(room.Invigilator, room.First, listening))!.Candidates.Single(c => c.CandidateId == room.First.CandidateId);
+        var whole = await ActAsync(room.Invigilator, room.First, listening, new { action = "RewindAudio", candidateIds = first, minutes = 4 });
+
+        Assert.Equal(0, tooFar.Applied);
+        Assert.Contains("4 min", Assert.Single(tooFar.Skipped).Reason);
+        Assert.Equal(240, row.AudioPositionSeconds);
+        Assert.Equal(1, whole.Applied);
     }
 
     [Fact]

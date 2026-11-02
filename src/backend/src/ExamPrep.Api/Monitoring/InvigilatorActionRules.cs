@@ -23,12 +23,12 @@ public sealed record MonitorCommand(MonitorAction Action, int? Minutes, DateTime
 
 /// <summary>
 /// Applies one invigilator operation to one candidate's attempt, under the same conditions as Inspera: pause only a
-/// candidate who is online and working, rewind only while not paused and by no more than has played, never touch a
+/// candidate who is online and working, resume only one who is online, rewind only while not paused and by no more than has played, never touch a
 /// section that has ended. Returns null when applied, or the reason it was skipped.
 /// </summary>
 public static class InvigilatorActionRules
 {
-    public static string? Apply(MonitorCommand command, Attempt? attempt, AttemptClock? clock, bool isOnline, DateTime now)
+    public static string? Apply(MonitorCommand command, Attempt? attempt, AttemptClock? clock, bool isOnline, DateTime now, TimeSpan? recordingLength = null)
     {
         if (attempt is null || clock is null)
         {
@@ -42,7 +42,7 @@ public static class InvigilatorActionRules
 
         try
         {
-            return Run(command, attempt, clock, isOnline, now);
+            return Run(command, attempt, clock, isOnline, now, recordingLength);
         }
         catch (Exception ex) when (ex is DomainRuleException or ArgumentOutOfRangeException)
         {
@@ -62,7 +62,7 @@ public static class InvigilatorActionRules
         _ => throw new ArgumentOutOfRangeException(nameof(action), action, null),
     };
 
-    private static string? Run(MonitorCommand command, Attempt attempt, AttemptClock clock, bool isOnline, DateTime now)
+    private static string? Run(MonitorCommand command, Attempt attempt, AttemptClock clock, bool isOnline, DateTime now, TimeSpan? recordingLength)
     {
         var minutes = TimeSpan.FromMinutes(command.Minutes ?? 0);
         switch (command.Action)
@@ -72,6 +72,8 @@ public static class InvigilatorActionRules
             case MonitorAction.Pause:
                 clock.Pause(now);
                 break;
+            case MonitorAction.Resume when !isOnline:
+                return "is offline; resume them when they are back online";
             case MonitorAction.Resume:
                 clock.Resume(now);
                 break;
@@ -92,8 +94,8 @@ public static class InvigilatorActionRules
                 break;
             case MonitorAction.RewindAudio when attempt.AudioStartedAt is null:
                 return "has not started the recording yet";
-            case MonitorAction.RewindAudio when minutes > clock.AudioPosition(now):
-                return $"cannot be rewound further than the recording has played ({(int)clock.AudioPosition(now).TotalMinutes} min)";
+            case MonitorAction.RewindAudio when minutes > Played(clock, now, recordingLength):
+                return $"cannot be rewound further than the recording has played ({(int)Played(clock, now, recordingLength).TotalMinutes} min)";
             case MonitorAction.RewindAudio:
                 clock.RewindAudio(minutes, now);
                 break;
@@ -101,6 +103,10 @@ public static class InvigilatorActionRules
 
         return null;
     }
+
+    /// <summary>What has been played of the recording: the position, but never more than the recording is long.</summary>
+    public static TimeSpan Played(AttemptClock clock, DateTime now, TimeSpan? recordingLength) =>
+        recordingLength is { } length && clock.AudioPosition(now) > length ? length : clock.AudioPosition(now);
 
     /// <summary>ArgumentOutOfRangeException appends the parameter name; keep the sentence for the invigilator.</summary>
     private static string FirstSentence(string message)

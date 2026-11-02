@@ -185,6 +185,33 @@ public sealed class AttemptClockTests
         Assert.Equal(AttemptStatus.Submitted, attempt.Status);
     }
 
+    [Fact]
+    public void EndNow_NeverLengthensTheEnd_WhenStandardTimeIsAlreadyOver()
+    {
+        // 25 % extra time: standard time ended at minute 60, the candidate is working on extra time until minute 75.
+        var (attempt, clock) = Started(plannedExtraPercent: 25);
+
+        clock.EndNow(disregardExtraTime: false, At(65));
+
+        Assert.Equal(0, attempt.EndAdjustSeconds);
+        Assert.Equal(At(75), attempt.EndsAt);
+        Assert.Equal(AttemptStatus.InProgress, attempt.Status);
+    }
+
+    [Fact]
+    public void EndNow_PressedTwice_ChangesNothingTheSecondTime()
+    {
+        var (attempt, clock) = Started(plannedExtraPercent: 25);
+        clock.EndNow(disregardExtraTime: false, At(20));
+        var adjust = attempt.EndAdjustSeconds;
+        var endsAt = attempt.EndsAt;
+
+        clock.EndNow(disregardExtraTime: false, At(25));
+
+        Assert.Equal(adjust, attempt.EndAdjustSeconds);
+        Assert.Equal(endsAt, attempt.EndsAt);
+    }
+
     [Theory]
     [InlineData(100)]
     [InlineData(400)]
@@ -200,6 +227,18 @@ public sealed class AttemptClockTests
         Assert.Equal(AttemptStatus.Submitted, attempt.Status);
         Assert.Equal(SubmitReason.InvigilatorEndNow, attempt.SubmitReason);
         Assert.True(attempt.EndsAt <= now);
+    }
+
+    [Fact]
+    public void RefreshEnd_FollowsTheParentLevelEndSetOrCleared()
+    {
+        var (attempt, _) = Started(plannedExtraPercent: 25);
+
+        new AttemptClock(attempt, SectionMinutes, At(20)).RefreshEnd();
+        Assert.Equal(At(20), attempt.EndsAt);
+
+        new AttemptClock(attempt, SectionMinutes, null).RefreshEnd();
+        Assert.Equal(At(75), attempt.EndsAt);
     }
 
     [Fact]
