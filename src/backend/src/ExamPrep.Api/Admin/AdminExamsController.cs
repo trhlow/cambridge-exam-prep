@@ -223,6 +223,9 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             return Problems.Invalid($"Status must be one of {string.Join(", ", Enum.GetNames<ExamStatus>())}.");
         }
 
+        // Locked first: a second status change or a candidate's Start waits here and then reads what this one decided.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await ExamRowLock.ExclusiveAsync(db, examId, cancellationToken);
         var exam = await db.Exams.OrganisedBy(User).Include(e => e.Candidates).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         if (exam is null)
         {
@@ -250,6 +253,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
 
         exam.Status = target;
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         logger.LogInformation("Staff {UserId} set exam {ExamId} to {Status}", User.GetStaffId(), examId, exam.Status);
         return await ExamViews.WithRightsAsync(db, (await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken))!, User, cancellationToken);
     }
@@ -305,6 +309,15 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             if (!await db.ExamInvigilators.AnyAsync(i => i.ExamId == exam.Id, cancellationToken))
             {
                 missing.Add("Assign at least one invigilator before opening the exam.");
+            }
+
+            // A typed label such as "A3" would be replaced by a number when seats are fixed: the person must choose one.
+            foreach (var c in exam.Candidates.OrderBy(c => c.CandidateNumber).ThenBy(c => c.Id))
+            {
+                if (!string.IsNullOrWhiteSpace(c.SeatNo) && Domain.Papers.SeatPattern.Parse(c.SeatNo) is null)
+                {
+                    missing.Add($"Candidate {c.FirstName} {c.LastName} ({c.CandidateNumber}): seat \"{c.SeatNo.Trim()}\" is not a number. Change it to a computer number.");
+                }
             }
 
             if (missing.Count > 0)

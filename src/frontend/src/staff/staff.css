@@ -351,6 +351,12 @@
   background: var(--st-hover);
 }
 
+.st-segmented button.is-armed,
+.st-segmented button.is-armed:hover:not(:disabled) {
+  background: var(--st-red);
+  color: #fff;
+}
+
 .st-segmented button.is-on {
   background: var(--st-ink-strong);
   color: #fff;

@@ -148,6 +148,16 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
             return Problems.Conflict("This candidate has started the test, so the planned extra time can no longer change. Add incident extra time on the monitoring page instead.");
         }
 
+        // Once the exam is open or anyone has started, a candidate without a computer number would fall back to a list
+        // place and shift the others, so every edit keeps a numeric seat (A12).
+        var frozen = hasStarted
+            || await db.Exams.AnyAsync(e => e.Id == candidate.ExamId && e.Status == ExamStatus.Active, cancellationToken)
+            || await ExamViews.HasStartedAsync(db, candidate.ExamId, cancellationToken);
+        if (frozen && (Blank(request.SeatNo) is not { } typed || Domain.Papers.SeatPattern.Parse(typed) is null))
+        {
+            return Problems.Invalid("The exam is open, so the seat must be a free computer number. A blank seat or a label would move this candidate and shift the others.");
+        }
+
         if (Blank(request.SeatNo) is { } seat)
         {
             var others = await db.Candidates.Where(c => c.ExamId == candidate.ExamId && c.Id != candidateId && c.SeatNo != null).Select(c => c.SeatNo!).ToListAsync(cancellationToken);

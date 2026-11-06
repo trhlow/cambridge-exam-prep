@@ -126,7 +126,6 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
                   onConfirm={() => void setStatus(status)}
                   disabled={status === exam.status}
                 />
-
               ))}
             </div>
           )}

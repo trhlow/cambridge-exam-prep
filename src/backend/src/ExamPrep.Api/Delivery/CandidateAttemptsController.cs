@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using ExamPrep.Api.Auth;
+using ExamPrep.Api.Exams;
 using ExamPrep.Api.Monitoring;
 using ExamPrep.Api.Realtime;
 using ExamPrep.Api.Security;
@@ -69,7 +70,10 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         }
 
         // A candidate signed in before the exam was closed (or taken back to Scheduled) cannot start or resume anything.
+        // The shared lock lasts until the attempt is saved, so a Close cannot slip in between the check and the insert.
         var examId = User.GetExamId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await ExamRowLock.SharedAsync(db, examId, cancellationToken);
         if (!await db.Exams.AnyAsync(e => e.Id == examId && e.Status == ExamStatus.Active, cancellationToken))
         {
             return Problem(title: NotOpenTitle, statusCode: StatusCodes.Status409Conflict);
@@ -89,6 +93,7 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
             await db.SaveChangesAsync(cancellationToken);
         }
 
+        await transaction.CommitAsync(cancellationToken);
         notifier.SectionChanged(sectionId);
         return await StateAsync(attempt, section, candidate, now, cancellationToken);
     }
