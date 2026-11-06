@@ -68,46 +68,66 @@ public sealed class AdminPaperAnswersController(ExamPrepDbContext db, AnswerRema
             return Problems.Invalid("The answers could not be saved.", errors);
         }
 
+        // The keys of the source and of every mix version that copies the question, and their log rows, in one short
+        // transaction: committed before any attempt is marked again, so an attempt the marker marks meanwhile already
+        // uses the corrected key, and no attempt row stays locked while the others are marked (final review A6).
         var targets = await TargetsAsync(paperId, number, cancellationToken);
+        var corrections = new List<(int PaperId, int QuestionId, string Before, AnswerCorrection Log)>();
+        await using (var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken))
+        {
+            foreach (var target in targets)
+            {
+                var current = await db.Questions
+                    .Include(q => q.AnswerKeys)
+                    .SingleAsync(q => q.Number == number && q.QuestionGroup!.PaperPart!.TestPaperId == target, cancellationToken);
+                var before = string.Join(" | ", current.AnswerKeys.OrderBy(k => k.Id).Select(k => k.Value));
+                var caseSensitive = current.AnswerKeys.Count > 0 && current.AnswerKeys.All(k => k.IsCaseSensitive);
+                db.AnswerKeys.RemoveRange(current.AnswerKeys);
+                current.AnswerKeys = answers.Select(a => new AnswerKey { Value = a, IsCaseSensitive = caseSensitive }).ToList();
+                var log = new AnswerCorrection
+                {
+                    TestPaperId = target,
+                    QuestionNumber = number,
+                    OldAnswers = before,
+                    NewAnswers = string.Join(" | ", answers),
+                    CorrectedByUserId = User.GetStaffId(),
+                    CorrectedAt = DateTime.UtcNow,
+                };
+                db.AnswerCorrections.Add(log);
+                corrections.Add((target, current.Id, before, log));
+            }
+
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Another administrator replaced these keys a moment ago: this correction was based on what they replaced.
+                return Problems.Conflict("Someone else corrected this question; reload the paper.");
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+
+        // Then each submitted attempt on each paper, in its own save (AnswerRemarker reloads and retries a lost race),
+        // and last the counts on each log row.
         var attempts = 0;
         var changed = 0;
         var skipped = new List<int>();
-        // READ COMMITTED: the re-mark retries a lost race by reading the attempt again, and under REPEATABLE READ that
-        // read would return the snapshot taken at the first SELECT, so a stamp changed by the sweep worker never shows.
-        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
-        foreach (var target in targets)
+        foreach (var (target, questionId, before, log) in corrections)
         {
-            var current = await db.Questions
-                .Include(q => q.AnswerKeys)
-                .SingleAsync(q => q.Number == number && q.QuestionGroup!.PaperPart!.TestPaperId == target, cancellationToken);
-            var before = current.AnswerKeys.OrderBy(k => k.Id).Select(k => k.Value).ToList();
-            var caseSensitive = current.AnswerKeys.Count > 0 && current.AnswerKeys.All(k => k.IsCaseSensitive);
-            db.AnswerKeys.RemoveRange(current.AnswerKeys);
-            current.AnswerKeys = answers.Select(a => new AnswerKey { Value = a, IsCaseSensitive = caseSensitive }).ToList();
-            await db.SaveChangesAsync(cancellationToken);
-
-            var result = await remarker.RemarkAsync(current.Id, cancellationToken);
-            db.AnswerCorrections.Add(new AnswerCorrection
-            {
-                TestPaperId = target,
-                QuestionNumber = number,
-                OldAnswers = string.Join(" | ", before),
-                NewAnswers = string.Join(" | ", answers),
-                CorrectedByUserId = User.GetStaffId(),
-                CorrectedAt = DateTime.UtcNow,
-                AttemptsRemarked = result.Attempts,
-                AttemptsSkipped = result.Skipped.Count,
-            });
-            await db.SaveChangesAsync(cancellationToken);
+            var result = await remarker.RemarkAsync(questionId, cancellationToken);
+            await db.AnswerCorrections.Where(c => c.Id == log.Id)
+                .ExecuteUpdateAsync(set => set.SetProperty(c => c.AttemptsRemarked, result.Attempts).SetProperty(c => c.AttemptsSkipped, result.Skipped.Count), cancellationToken);
             logger.LogWarning(
                 "Staff {UserId} corrected the answers of question {Number} of published paper {PaperId} from [{Before}] to [{After}]: {Attempts} attempts marked again, {Changed} scores changed, {Skipped} skipped ({SkippedIds})",
-                User.GetStaffId(), number, target, string.Join(" | ", before), string.Join(" | ", answers), result.Attempts, result.Changed, result.Skipped.Count, string.Join(", ", result.Skipped));
+                User.GetStaffId(), number, target, before, string.Join(" | ", answers), result.Attempts, result.Changed, result.Skipped.Count, string.Join(", ", result.Skipped));
             attempts += result.Attempts;
             changed += result.Changed;
             skipped.AddRange(result.Skipped);
         }
 
-        await transaction.CommitAsync(cancellationToken);
         return new AnswersCorrected(number, answers, attempts, changed, skipped);
     }
 
