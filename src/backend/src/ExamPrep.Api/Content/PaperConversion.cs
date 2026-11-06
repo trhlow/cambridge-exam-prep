@@ -22,10 +22,14 @@ public sealed record PaperConversionReport(IReadOnlyList<string> Errors, IReadOn
 public interface IPaperConverter
 {
     /// <exception cref="PaperConverterUnavailableException">The server has no converter set up.</exception>
+    /// <exception cref="PaperConverterFailedException">The converter ran but its summary cannot be read.</exception>
     Task<PaperConversionReport> ConvertAsync(PaperConversionInput input, CancellationToken cancellationToken);
 }
 
 public sealed class PaperConverterUnavailableException(string message) : Exception(message);
+
+/// <summary>The converter ran, but not as the server expects (an unreadable summary): the answer is 502, not a crash.</summary>
+public sealed class PaperConverterFailedException(string message) : Exception(message);
 
 /// <summary>Section <c>Converter</c>: where Python and setup/exam-package/pdf2package.py are.</summary>
 public sealed class ConverterOptions
@@ -110,8 +114,20 @@ public sealed class PythonPaperConverter(IOptions<ConverterOptions> options, IHo
             await output;
             if (File.Exists(reportPath))
             {
-                var report = JsonSerializer.Deserialize<ScriptReport>(await File.ReadAllTextAsync(reportPath, cancellationToken), Json)!;
-                return new PaperConversionReport(report.Warnings ?? [], report.Checks ?? []);
+                ScriptReport? report;
+                try
+                {
+                    report = JsonSerializer.Deserialize<ScriptReport>(await File.ReadAllTextAsync(reportPath, cancellationToken), Json);
+                }
+                catch (JsonException e)
+                {
+                    logger.LogWarning(e, "pdf2package.py wrote a summary that is not valid JSON");
+                    report = null;
+                }
+
+                return report is null
+                    ? throw new PaperConverterFailedException("The converter wrote a summary the server cannot read. Check pdf2package.py and its version on the server.")
+                    : new PaperConversionReport(report.Warnings ?? [], report.Checks ?? []);
             }
 
             // No report: the script crashed. The last line of a Python traceback is the error itself.

@@ -58,10 +58,11 @@ public sealed class AdminPaperConversionController(IPaperConverter converter, Pa
             return Problems.Invalid("Check the uploaded files.", problems);
         }
 
-        var work = Directory.CreateTempSubdirectory("examprep-convert-").FullName;
+        string? work = null;
         await OneAtATime.WaitAsync(cancellationToken);
         try
         {
+            work = Directory.CreateTempSubdirectory("examprep-convert-").FullName;
             // Every name on disk is ours; nothing from the upload's file names reaches a path.
             var input = new PaperConversionInput(
                 Path.Combine(work, "questions.pdf"),
@@ -89,6 +90,11 @@ public sealed class AdminPaperConversionController(IPaperConverter converter, Pa
             {
                 logger.LogWarning("PDF conversion unavailable: {Reason}", e.Message);
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails { Status = StatusCodes.Status503ServiceUnavailable, Title = e.Message });
+            }
+            catch (PaperConverterFailedException e)
+            {
+                logger.LogError("PDF conversion failed: {Reason}", e.Message);
+                return StatusCode(StatusCodes.Status502BadGateway, new ProblemDetails { Status = StatusCodes.Status502BadGateway, Title = e.Message });
             }
 
             if (report.Errors.Count > 0 || !System.IO.File.Exists(Path.Combine(input.OutputFolder, PaperPackageReader.PaperFileName)))
@@ -118,13 +124,16 @@ public sealed class AdminPaperConversionController(IPaperConverter converter, Pa
         finally
         {
             OneAtATime.Release();
-            try
+            if (work is not null)
             {
-                Directory.Delete(work, recursive: true);
-            }
-            catch (IOException e)
-            {
-                logger.LogWarning(e, "Could not delete the conversion folder {Folder}", work);
+                try
+                {
+                    Directory.Delete(work, recursive: true);
+                }
+                catch (IOException e)
+                {
+                    logger.LogWarning(e, "Could not delete the conversion folder {Folder}", work);
+                }
             }
         }
     }

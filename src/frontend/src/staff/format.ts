@@ -19,3 +19,9 @@ export function formatDateTime(iso: string | null): string {
 export function patternText(pattern: string) {
   return [...pattern].map((source, index) => `Part ${index + 1} ${source}`).join(' · ')
 }
+
+/** Today's date as yyyy-mm-dd on the computer's clock; `toISOString()` is UTC, a day behind before 07:00 in Vietnam. */
+export function localDate(date = new Date()): string {
+  const two = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`
+}
