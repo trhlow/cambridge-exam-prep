@@ -29,6 +29,8 @@ public class ExamPrepDbContext(DbContextOptions<ExamPrepDbContext> options) : Db
 
     public DbSet<AnswerKey> AnswerKeys => Set<AnswerKey>();
 
+    public DbSet<AnswerCorrection> AnswerCorrections => Set<AnswerCorrection>();
+
     public DbSet<Exam> Exams => Set<Exam>();
 
     public DbSet<ExamSection> ExamSections => Set<ExamSection>();

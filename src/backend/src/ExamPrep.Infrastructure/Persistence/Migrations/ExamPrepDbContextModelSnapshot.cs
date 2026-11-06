@@ -72,6 +72,61 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ExamPrep.Domain.Entities.AnswerCorrection", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AttemptsRemarked")
+                        .HasColumnType("int")
+                        .HasColumnName("attempts_remarked");
+
+                    b.Property<int>("AttemptsSkipped")
+                        .HasColumnType("int")
+                        .HasColumnName("attempts_skipped");
+
+                    b.Property<DateTime>("CorrectedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("corrected_at");
+
+                    b.Property<int?>("CorrectedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("corrected_by_user_id");
+
+                    b.Property<string>("NewAnswers")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)")
+                        .HasColumnName("new_answers");
+
+                    b.Property<string>("OldAnswers")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)")
+                        .HasColumnName("old_answers");
+
+                    b.Property<int>("QuestionNumber")
+                        .HasColumnType("int")
+                        .HasColumnName("question_number");
+
+                    b.Property<int>("TestPaperId")
+                        .HasColumnType("int")
+                        .HasColumnName("test_paper_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrectedByUserId");
+
+                    b.HasIndex("TestPaperId", "QuestionNumber");
+
+                    b.ToTable("answer_corrections", t =>
+                        {
+                            t.HasCheckConstraint("CK_answer_corrections_counts", "attempts_remarked >= 0 AND attempts_skipped >= 0");
+                        });
+                });
+
             modelBuilder.Entity("ExamPrep.Domain.Entities.AnswerKey", b =>
                 {
                     b.Property<int>("Id")
@@ -1563,6 +1618,22 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                     b.Navigation("Attempt");
 
                     b.Navigation("PaperPart");
+                });
+
+            modelBuilder.Entity("ExamPrep.Domain.Entities.AnswerCorrection", b =>
+                {
+                    b.HasOne("ExamPrep.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CorrectedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ExamPrep.Domain.Entities.TestPaper", "TestPaper")
+                        .WithMany()
+                        .HasForeignKey("TestPaperId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TestPaper");
                 });
 
             modelBuilder.Entity("ExamPrep.Domain.Entities.AnswerKey", b =>

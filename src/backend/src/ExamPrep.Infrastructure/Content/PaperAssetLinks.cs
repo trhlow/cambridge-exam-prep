@@ -15,7 +15,10 @@ public static partial class PaperAssetLinks
 {
     /// <summary>The ids of the stored files these HTML texts link to.</summary>
     public static HashSet<int> In(IEnumerable<string?> html) =>
-        html.OfType<string>().SelectMany(h => AssetUrl().Matches(h).Select(m => int.Parse(m.Groups[1].Value))).ToHashSet();
+        html.OfType<string>().SelectMany(h => AssetUrl().Matches(h).Select(m => IdOf(m.Groups[1].Value))).ToHashSet();
+
+    /// <summary>A number too long for an id names no stored file; it counts as an id nobody uploaded, so the link is refused (400).</summary>
+    private static int IdOf(string digits) => int.TryParse(digits, out var id) ? id : int.MaxValue;
 
     /// <summary>Every file the HTML of the paper links to (needs parts, groups and questions loaded).</summary>
     public static HashSet<int> In(TestPaper paper) => In(paper.Parts

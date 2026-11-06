@@ -3,6 +3,7 @@ using ExamPrep.Api.Auth;
 using ExamPrep.Api.Common;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
+using ExamPrep.Domain.Papers;
 using ExamPrep.Infrastructure.Marking;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -31,9 +32,9 @@ public sealed class AdminPaperAnswersController(ExamPrepDbContext db, AnswerRema
     [HttpPut]
     public async Task<ActionResult<AnswersCorrected>> Correct(int paperId, int number, CorrectAnswersRequest request, CancellationToken cancellationToken)
     {
-        var paper = await db.TestPapers.AsNoTracking().SingleOrDefaultAsync(p => p.Id == paperId, cancellationToken);
+        var paper = await db.TestPapers.AsNoTracking().Include(p => p.Parts).SingleOrDefaultAsync(p => p.Id == paperId, cancellationToken);
         var question = await db.Questions
-            .Include(q => q.AnswerKeys)
+            .AsNoTracking()
             .Include(q => q.QuestionGroup)
             .SingleOrDefaultAsync(q => q.Number == number && q.QuestionGroup!.PaperPart!.TestPaperId == paperId, cancellationToken);
         if (paper is null || question is null)
@@ -44,6 +45,13 @@ public sealed class AdminPaperAnswersController(ExamPrepDbContext db, AnswerRema
         if (paper.Status != PaperStatus.Published)
         {
             return Problems.Conflict("Only a published paper is corrected here. Edit a draft in the paper editor.");
+        }
+
+        if (paper.PaperMixId is { } mixId)
+        {
+            // A version holds copies of its sources' questions: the one key lives on the source, so the copies cannot disagree.
+            var source = await SourceOfAsync(paper, mixId, question, cancellationToken);
+            return Problems.Invalid($"This paper is a mixed version; correct the answer on its source paper {source}.");
         }
 
         var group = question.QuestionGroup!;
@@ -59,16 +67,77 @@ public sealed class AdminPaperAnswersController(ExamPrepDbContext db, AnswerRema
             return Problems.Invalid("The answers could not be saved.", errors);
         }
 
-        var before = question.AnswerKeys.OrderBy(k => k.Id).Select(k => k.Value).ToList();
-        var caseSensitive = question.AnswerKeys.Count > 0 && question.AnswerKeys.All(k => k.IsCaseSensitive);
-        db.AnswerKeys.RemoveRange(question.AnswerKeys);
-        question.AnswerKeys = answers.Select(a => new AnswerKey { Value = a, IsCaseSensitive = caseSensitive }).ToList();
-        await db.SaveChangesAsync(cancellationToken);
+        var targets = await TargetsAsync(paperId, number, cancellationToken);
+        var attempts = 0;
+        var changed = 0;
+        var skipped = new List<int>();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        foreach (var target in targets)
+        {
+            var current = await db.Questions
+                .Include(q => q.AnswerKeys)
+                .SingleAsync(q => q.Number == number && q.QuestionGroup!.PaperPart!.TestPaperId == target, cancellationToken);
+            var before = current.AnswerKeys.OrderBy(k => k.Id).Select(k => k.Value).ToList();
+            var caseSensitive = current.AnswerKeys.Count > 0 && current.AnswerKeys.All(k => k.IsCaseSensitive);
+            db.AnswerKeys.RemoveRange(current.AnswerKeys);
+            current.AnswerKeys = answers.Select(a => new AnswerKey { Value = a, IsCaseSensitive = caseSensitive }).ToList();
+            await db.SaveChangesAsync(cancellationToken);
 
-        var result = await remarker.RemarkAsync(question.Id, cancellationToken);
-        logger.LogWarning(
-            "Staff {UserId} corrected the answers of question {Number} of published paper {PaperId} from [{Before}] to [{After}]: {Attempts} attempts marked again, {Changed} scores changed, {Skipped} skipped",
-            User.GetStaffId(), number, paperId, string.Join(" | ", before), string.Join(" | ", answers), result.Attempts, result.Changed, result.Skipped.Count);
-        return new AnswersCorrected(number, answers, result.Attempts, result.Changed, result.Skipped);
+            var result = await remarker.RemarkAsync(current.Id, cancellationToken);
+            db.AnswerCorrections.Add(new AnswerCorrection
+            {
+                TestPaperId = target,
+                QuestionNumber = number,
+                OldAnswers = string.Join(" | ", before),
+                NewAnswers = string.Join(" | ", answers),
+                CorrectedByUserId = User.GetStaffId(),
+                CorrectedAt = DateTime.UtcNow,
+                AttemptsRemarked = result.Attempts,
+                AttemptsSkipped = result.Skipped.Count,
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            logger.LogWarning(
+                "Staff {UserId} corrected the answers of question {Number} of published paper {PaperId} from [{Before}] to [{After}]: {Attempts} attempts marked again, {Changed} scores changed, {Skipped} skipped",
+                User.GetStaffId(), number, target, string.Join(" | ", before), string.Join(" | ", answers), result.Attempts, result.Changed, result.Skipped.Count);
+            attempts += result.Attempts;
+            changed += result.Changed;
+            skipped.AddRange(result.Skipped);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return new AnswersCorrected(number, answers, attempts, changed, skipped);
+    }
+
+    /// <summary>The source paper (its title) a mix version took the part holding <paramref name="question"/> from.</summary>
+    private async Task<string> SourceOfAsync(TestPaper version, int mixId, Question question, CancellationToken cancellationToken)
+    {
+        var partNo = await db.PaperParts.Where(p => p.Id == question.QuestionGroup!.PaperPartId).Select(p => p.PartNo).SingleAsync(cancellationToken);
+        var ordinal = version.Parts.OrderBy(p => p.PartNo).ToList().FindIndex(p => p.PartNo == partNo) + 1;
+        var position = PaperMixPlan.SourceOf(version.MixPattern!, ordinal) + 1;
+        return await db.PaperMixSources.Where(s => s.PaperMixId == mixId && s.Position == position).Select(s => s.TestPaper!.Title).SingleAsync(cancellationToken);
+    }
+
+    /// <summary>The paper itself, then every mix version that took the question's part from it (in version order).</summary>
+    private async Task<List<int>> TargetsAsync(int paperId, int number, CancellationToken cancellationToken)
+    {
+        var targets = new List<int> { paperId };
+        var mixes = await db.PaperMixSources.AsNoTracking().Where(s => s.TestPaperId == paperId).Select(s => new { s.PaperMixId, s.Position }).ToListAsync(cancellationToken);
+        foreach (var mix in mixes)
+        {
+            var versions = await db.TestPapers.AsNoTracking().Include(p => p.Parts)
+                .Where(p => p.PaperMixId == mix.PaperMixId).OrderBy(p => p.MixVersion).ToListAsync(cancellationToken);
+            foreach (var version in versions)
+            {
+                var partNo = await db.Questions.Where(q => q.Number == number && q.QuestionGroup!.PaperPart!.TestPaperId == version.Id)
+                    .Select(q => q.QuestionGroup!.PaperPart!.PartNo).SingleAsync(cancellationToken);
+                var ordinal = version.Parts.OrderBy(p => p.PartNo).ToList().FindIndex(p => p.PartNo == partNo) + 1;
+                if (PaperMixPlan.SourceOf(version.MixPattern!, ordinal) + 1 == mix.Position)
+                {
+                    targets.Add(version.Id);
+                }
+            }
+        }
+
+        return targets;
     }
 }
