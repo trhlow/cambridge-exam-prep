@@ -92,6 +92,7 @@ public sealed class B1ListeningTests(ApiFixture api) : IClassFixture<ApiFixture>
         var client = api.CreateClient();
         (await client.PostAsJsonAsync("/api/candidate/auth/login", new { username, password = Password }, ct)).EnsureSuccessStatusCode();
         (await client.PostAsJsonAsync("/api/candidate/auth/pin", new { pin = "4821" }, ct)).EnsureSuccessStatusCode();
+        (await client.PostAsync($"/api/candidate/sections/{sectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
         var paper = (await client.GetFromJsonAsync<JsonObject>($"/api/candidate/sections/{sectionId}/paper", ct))!;
 
         Assert.Equal([false, true, false, false], PerPage(paper));

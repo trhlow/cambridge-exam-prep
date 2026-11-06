@@ -87,8 +87,8 @@ public sealed class SeatedPapersTests(ApiFixture api) : IClassFixture<ApiFixture
         foreach (var (id, username) in room.Candidates)
         {
             using var client = await SignInAsync(username, room.Exam.SessionPin);
-            var paper = (await client.GetFromJsonAsync<JsonObject>($"/api/candidate/sections/{room.Exam.ReadingWritingSectionId}/paper", ct))!;
             (await client.PostAsync($"/api/candidate/sections/{room.Exam.ReadingWritingSectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
+            var paper = (await client.GetFromJsonAsync<JsonObject>($"/api/candidate/sections/{room.Exam.ReadingWritingSectionId}/paper", ct))!;
             papers.Add(PartTitles(paper));
             Assert.Equal(room.VersionPapers[room.Candidates.IndexOf((id, username)) + 1], await AttemptPaperAsync(id, room.Exam.ReadingWritingSectionId));
         }
@@ -122,6 +122,49 @@ public sealed class SeatedPapersTests(ApiFixture api) : IClassFixture<ApiFixture
         Assert.Equal(before, after);
         Assert.Equal(HttpStatusCode.OK, resumed.StatusCode);
         Assert.Equal(room.VersionPapers[1], await AttemptPaperAsync(id, sectionId));
+    }
+
+    [Fact]
+    public async Task ACandidateCannotFetchTheFilesOfAnotherVersion()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var (_, username) = room.Candidates[0];
+        using var client = await SignInAsync(username, room.Exam.SessionPin);
+        var sectionId = room.Exam.ReadingWritingSectionId;
+        (await client.PostAsync($"/api/candidate/sections/{sectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
+
+        // Both sources are the same sample, so their pictures are one stored file: give version 2 a picture of its own.
+        int ownPicture, otherPicture;
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var question = await db.Questions.Where(q => q.StimulusHtml != null && q.QuestionGroup!.PaperPart!.TestPaperId == room.VersionPapers[1]).FirstAsync(ct);
+            ownPicture = int.Parse(System.Text.RegularExpressions.Regex.Match(question.StimulusHtml!, @"/api/assets/(\d+)").Groups[1].Value);
+            var asset = new ExamPrep.Domain.Entities.Asset
+            {
+                Kind = ExamPrep.Domain.Enums.AssetKind.Image,
+                OriginalFileName = "v2.png",
+                StoredPath = (await db.Assets.SingleAsync(a => a.Id == ownPicture, ct)).StoredPath,
+                ContentType = "image/png",
+                SizeBytes = 3,
+                Sha256 = new string('1', 64),
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.Assets.Add(asset);
+            await db.SaveChangesAsync(ct);
+            otherPicture = asset.Id;
+            var versionTwo = await db.Questions.Where(q => q.StimulusHtml != null && q.QuestionGroup!.PaperPart!.TestPaperId == room.VersionPapers[2]).FirstAsync(ct);
+            versionTwo.StimulusHtml = $"<img src=\"/api/assets/{otherPicture}\">";
+            await db.SaveChangesAsync(ct);
+        }
+
+        var own = $"/api/assets/{ownPicture}";
+        var other = $"/api/assets/{otherPicture}";
+
+        Assert.NotEqual(own, other);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(own, ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync(other, ct)).StatusCode);
     }
 
     [Fact]
@@ -231,7 +274,11 @@ public sealed class SeatedPapersTests(ApiFixture api) : IClassFixture<ApiFixture
         var monitor = (await admin.GetFromJsonAsync<JsonObject>($"/api/staff/exams/{room.Exam.ExamId}/sections/{sectionId}/monitor", ct))!;
         var results = (await admin.GetFromJsonAsync<JsonArray>($"/api/staff/exams/{room.Exam.ExamId}/results", ct))!;
 
-        Assert.Equal(4, (int)candidates.Single(c => (int)c!["id"]! == startedId)!["paperVersions"]![0]!["version"]!);
+        // A12: the list and the room plan show the paper of the started attempt, not the one the new seat would give.
+        Assert.Equal(2, (int)candidates.Single(c => (int)c!["id"]! == startedId)!["paperVersions"]![0]!["version"]!);
+        var roomPlan = (await admin.GetFromJsonAsync<JsonObject>($"/api/staff/exams/{room.Exam.ExamId}/room-plan", ct))!;
+        Assert.Equal(2, (int)roomPlan["seats"]!.AsArray().Single(x => (int)x!["candidateId"]! == startedId)!["paperVersions"]![0]!["version"]!);
+        Assert.Equal(1, (int)candidates.Single(c => (int)c!["id"]! == room.Candidates[0].Id)!["paperVersions"]![0]!["version"]!);
         Assert.NotNull((string?)monitor["paperMixTitle"]);
         var rows = monitor["candidates"]!.AsArray();
         Assert.Equal(2, (int)rows.Single(r => (int)r!["candidateId"]! == startedId)!["paperVersion"]!);

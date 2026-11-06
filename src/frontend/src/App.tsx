@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { candidateApi } from './api/client'
 import type { CandidateProfile, CandidateSection } from './api/types'
+import { clearAnnotations } from './exam/annotations/useAnnotations'
 import { ExamScreen } from './exam/ExamScreen'
 import { InstructionsScreen, LoggedInScreen, LoginScreen, PinScreen, ReadinessScreen, SectionsScreen } from './screens/SignInScreens'
 
@@ -97,6 +98,7 @@ export default function App() {
           }}
           onExit={() => {
             rememberOpenSection(null)
+            clearAnnotations()
             void candidateApi.logout().finally(() => setStage({ kind: 'login', notice: EXIT_NOTICE }))
           }}
         />

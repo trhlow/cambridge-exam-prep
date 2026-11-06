@@ -35,7 +35,7 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
         }, ct);
         create.EnsureSuccessStatusCode();
         var examId = (await create.Content.ReadFromJsonAsync<IdOnly>(ct))!.Id;
-        (await admin.PostAsJsonAsync($"/api/admin/exams/{examId}/status", new { status = "Active" }, ct)).EnsureSuccessStatusCode();
+        await api.OpenExamAsync(examId);
         return examId;
     }
 

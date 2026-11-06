@@ -145,7 +145,6 @@ async function createSession(admin) {
     papers: sectionPapers,
     sessionPin: '4821',
   })
-  await admin.send('setup', 'POST', `/api/admin/exams/${exam.id}/status`, { status: 'Active' })
   const staff = await admin.send('setup', 'GET', '/api/admin/assignable-staff')
   const invigilator = staff.find((s) => s.username === options.invigilator.split(':')[0])
   await admin.send('setup', 'PUT', `/api/admin/exams/${exam.id}/invigilators`, { userIds: [invigilator.id] })
@@ -160,6 +159,9 @@ async function createSession(admin) {
     await admin.send('setup', 'POST', `/api/admin/exams/${exam.id}/candidates`, { candidates: rows.slice(i, i + 500) })
   }
 
+  // An exam opens only from Scheduled and with its candidates and an invigilator in place.
+  await admin.send('setup', 'POST', `/api/admin/exams/${exam.id}/status`, { status: 'Scheduled' })
+  await admin.send('setup', 'POST', `/api/admin/exams/${exam.id}/status`, { status: 'Active' })
   const slips = await admin.send('setup', 'GET', `/api/staff/exams/${exam.id}/login-slips`)
   return { examId: exam.id, name, slips }
 }

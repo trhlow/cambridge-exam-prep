@@ -152,6 +152,12 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             return Problems.Conflict($"{StartedTitle} Its papers can no longer be changed.");
         }
 
+        // The row length decides every seat's paper, so it freezes with the first attempt (A12).
+        if (request.SeatsPerRow is { } newRow && (newRow > 0 ? newRow : null) != exam.SeatsPerRow && await ExamViews.HasStartedAsync(db, examId, cancellationToken))
+        {
+            return Problems.Conflict($"{StartedTitle} The number of computers per row can no longer change.");
+        }
+
         exam.Name = request.Name.Trim();
         exam.ScheduledDate = request.ScheduledDate;
         exam.Room = Blank(request.Room);
@@ -186,7 +192,10 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
         return await ExamViews.WithRightsAsync(db, (await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken))!, User, cancellationToken);
     }
 
-    /// <summary>Draft → Scheduled → Active (candidates can sign in) → Closed.</summary>
+    /// <summary>
+    /// Draft ↔ Scheduled → Active (candidates can sign in) → Closed, and back: Active → Scheduled only while nobody has
+    /// started, Closed → Active for administrators. Any other jump is refused with a sentence (review B1, B2).
+    /// </summary>
     [HttpPost("exams/{examId:int}/status")]
     public async Task<ActionResult<ExamDetail>> SetStatus(int examId, SetExamStatusRequest request, CancellationToken cancellationToken)
     {
@@ -195,16 +204,97 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             return Problems.Invalid($"Status must be one of {string.Join(", ", Enum.GetNames<ExamStatus>())}.");
         }
 
-        var exam = await db.Exams.OrganisedBy(User).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
+        var exam = await db.Exams.OrganisedBy(User).Include(e => e.Candidates).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         if (exam is null)
         {
             return NotFound();
         }
 
-        exam.Status = Enum.Parse<ExamStatus>(request.Status);
+        var target = Enum.Parse<ExamStatus>(request.Status);
+        if (await StatusProblemAsync(exam, target, cancellationToken) is { } refusal)
+        {
+            return refusal;
+        }
+
+        if (target == ExamStatus.Active)
+        {
+            // Seats stop following the list: a candidate added later can no longer push anyone to another paper (A12).
+            foreach (var (candidateId, seat) in Delivery.PaperAssignment.SeatsOf(exam.Candidates))
+            {
+                var candidate = exam.Candidates.Single(c => c.Id == candidateId);
+                if (Domain.Papers.SeatPattern.Parse(candidate.SeatNo) is null)
+                {
+                    candidate.SeatNo = seat.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
+            }
+        }
+
+        exam.Status = target;
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Staff {UserId} set exam {ExamId} to {Status}", User.GetStaffId(), examId, exam.Status);
         return await ExamViews.WithRightsAsync(db, (await ExamViews.DetailAsync(db, db.Exams, examId, cancellationToken))!, User, cancellationToken);
+    }
+
+    /// <summary>The refusal for moving the exam to <paramref name="target"/>: 409 for a jump the lifecycle does not allow, 400 for what Active still needs.</summary>
+    private async Task<ActionResult?> StatusProblemAsync(Exam exam, ExamStatus target, CancellationToken cancellationToken)
+    {
+        var from = exam.Status;
+        var allowed = (from, target) switch
+        {
+            (ExamStatus.Draft, ExamStatus.Scheduled) => true,
+            (ExamStatus.Scheduled, ExamStatus.Draft) => true,
+            (ExamStatus.Scheduled, ExamStatus.Active) => true,
+            (ExamStatus.Active, ExamStatus.Scheduled) => true,
+            (ExamStatus.Active, ExamStatus.Closed) => true,
+            (ExamStatus.Closed, ExamStatus.Active) => true,
+            _ => false,
+        };
+        if (!allowed)
+        {
+            return Problems.Conflict(from == target
+                ? $"The exam is already {from}."
+                : $"An exam cannot go from {from} to {target}.{(target == ExamStatus.Active && from == ExamStatus.Draft ? " Schedule it first." : string.Empty)}");
+        }
+
+        if (from == ExamStatus.Closed && !User.IsInRole(nameof(UserRole.Admin)))
+        {
+            return Problems.Conflict("Only an administrator can reopen a closed exam.");
+        }
+
+        if (from == ExamStatus.Active && target == ExamStatus.Scheduled && await ExamViews.HasStartedAsync(db, exam.Id, cancellationToken))
+        {
+            return Problems.Conflict($"{StartedTitle} It cannot go back to Scheduled.");
+        }
+
+        if (target == ExamStatus.Closed)
+        {
+            var running = await db.Attempts.CountAsync(a => a.ExamSection!.ExamId == exam.Id && (a.Status == AttemptStatus.InProgress || a.Status == AttemptStatus.Paused), cancellationToken);
+            if (running > 0)
+            {
+                return Problems.Conflict($"{running} {(running == 1 ? "candidate is" : "candidates are")} still taking a section (running or paused). End it on the monitoring page first.");
+            }
+        }
+
+        if (target == ExamStatus.Active)
+        {
+            var missing = new List<string>();
+            if (exam.Candidates.Count == 0)
+            {
+                missing.Add("Enter at least one candidate before opening the exam.");
+            }
+
+            if (!await db.ExamInvigilators.AnyAsync(i => i.ExamId == exam.Id, cancellationToken))
+            {
+                missing.Add("Assign at least one invigilator before opening the exam.");
+            }
+
+            if (missing.Count > 0)
+            {
+                return Problems.Invalid("The exam cannot be opened yet.", missing);
+            }
+        }
+
+        return null;
     }
 
     /// <summary>VE-60: asks for an unused session to be deleted; an administrator other than the requester approves it.</summary>

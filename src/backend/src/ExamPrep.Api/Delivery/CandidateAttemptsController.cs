@@ -42,6 +42,8 @@ public sealed record SelectionRequest([Range(1, 1000)] int QuestionNumber, [Requ
 [Authorize(Policy = CandidateAuthDefaults.ExamPolicy)]
 public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateSectionQuery sectionQuery, PaperAssignment papers, TimeProvider clock, RoomNotifier notifier, SecurityEventRecorder events) : ControllerBase
 {
+    public const string NotOpenTitle = "This test is not open. Ask your invigilator.";
+
     /// <summary>The browser's clock in Unix milliseconds, sent with every heartbeat (VE-29).</summary>
     public const string ClientTimeHeader = "X-Client-Time";
 
@@ -64,6 +66,13 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         if (summary.Status == CandidateSectionQuery.LockedStatus)
         {
             return Problem(title: CandidateSectionsController.LockedTitle, statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        // A candidate signed in before the exam was closed (or taken back to Scheduled) cannot start or resume anything.
+        var examId = User.GetExamId();
+        if (!await db.Exams.AnyAsync(e => e.Id == examId && e.Status == ExamStatus.Active, cancellationToken))
+        {
+            return Problem(title: NotOpenTitle, statusCode: StatusCodes.Status409Conflict);
         }
 
         var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);

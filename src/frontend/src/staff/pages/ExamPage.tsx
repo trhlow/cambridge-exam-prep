@@ -117,9 +117,16 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
           {manages && (
             <div className="st-segmented" role="group" aria-label="Change status">
               {EXAM_STATUSES.map((status) => (
-                <button key={status} type="button" className={status === exam.status ? 'is-on' : undefined} onClick={() => void setStatus(status)} disabled={status === exam.status}>
-                  {status}
-                </button>
+                // Opening or closing a session changes who can sign in and what the room sees: two clicks, as for the other irreversible steps.
+                <ConfirmButton
+                  key={status}
+                  label={status}
+                  confirmLabel={`Click again: set ${status}`}
+                  className={status === exam.status ? 'is-on' : ''}
+                  onConfirm={() => void setStatus(status)}
+                  disabled={status === exam.status}
+                />
+
               ))}
             </div>
           )}
