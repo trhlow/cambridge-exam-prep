@@ -7,7 +7,7 @@ namespace ExamPrep.Domain.Marking;
 /// <summary>
 /// Decides whether a response matches the answer key. Several keys are accepted alternatives. Choices compare
 /// option keys; typed answers forgive case (unless the key is case-sensitive), surrounding and repeated spaces,
-/// curly apostrophes and a final full stop — but not spelling, which Cambridge marks as wrong.
+/// curly apostrophes and a final full stop (with the space before it) — but not spelling, which Cambridge marks as wrong.
 /// </summary>
 public static class AnswerMatcher
 {
@@ -55,6 +55,6 @@ public static class AnswerMatcher
             lastWasSpace = false;
         }
 
-        return builder.ToString().TrimEnd('.');
+        return builder.ToString().TrimEnd('.').TrimEnd();
     }
 }

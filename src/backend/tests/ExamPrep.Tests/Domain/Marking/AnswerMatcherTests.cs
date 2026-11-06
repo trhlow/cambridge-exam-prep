@@ -35,6 +35,8 @@ public sealed class AnswerMatcherTests
     [InlineData("FOR")]
     [InlineData("  for  ")]
     [InlineData("for.")]
+    [InlineData("for .")]
+    [InlineData(" for . ")]
     public void TypedAnswer_IgnoresCaseSurroundingSpacesAndAFinalFullStop(string response)
     {
         Assert.True(AnswerMatcher.IsCorrect(InteractionType.InlineText, response, Keys("for")));
