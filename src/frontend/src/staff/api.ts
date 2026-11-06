@@ -604,6 +604,8 @@ export const staffApi = {
   sendMessage: (examId: number, text: string, candidateIds: number[]) => post<MessageView[]>(`${exam(examId)}/messages`, { text, candidateIds }),
   /** Parent-level end: the whole test ends for these candidates (none given: for everyone entered). */
   endAll: (examId: number, candidateIds: number[], reason?: string) => post<ActionOutcome>(`${exam(examId)}/end-all`, { candidateIds, reason }),
+  /** Undoes endAll for these candidates (none given: everyone); sections already submitted stay submitted. */
+  useTestEndTime: (examId: number, candidateIds: number[], reason?: string) => post<ActionOutcome>(`${exam(examId)}/use-test-end-time`, { candidateIds, reason }),
   announceStart: (examId: number, sectionId: number) => post<MonitorView>(`${exam(examId)}/sections/${sectionId}/announce-start`),
   warnings: (examId: number, sectionId: number) => request<WarningView[]>(`${exam(examId)}/sections/${sectionId}/warnings`),
   resolveWarning: (examId: number, sectionId: number, id: number) => post<WarningView>(`${exam(examId)}/sections/${sectionId}/warnings/${id}/resolve`),

@@ -53,7 +53,20 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
       setEndedAll(
         outcome.applied === 0
           ? 'Nobody changed: the test had already ended for everyone.'
-          : `The test has ended for ${outcome.applied} candidate${outcome.applied === 1 ? '' : 's'}${paused(outcome.pausedUntilResumed)}. Candidates still working are submitted within seconds. To undo it, open a section and use Edit end time → Use test end time.`,
+          : `The test has ended for ${outcome.applied} candidate${outcome.applied === 1 ? '' : 's'}${paused(outcome.pausedUntilResumed)}. Candidates still working are submitted within seconds, and those sections stay submitted. Ended by mistake? Use test end time below: the later sections then run with their full time.`,
+      )
+    } catch (e) {
+      setActionError(e)
+    }
+  }
+  const restoreAll = async () => {
+    setActionError(null)
+    try {
+      const outcome = await staffApi.useTestEndTime(exam.id, [])
+      setEndedAll(
+        outcome.applied === 0
+          ? 'Nobody changed: the whole test had not been ended for anyone.'
+          : `${outcome.applied} candidate${outcome.applied === 1 ? ' has' : 's have'} the test end time back. Sections already submitted stay submitted; a section still running and the later sections run with their own time.`,
       )
     } catch (e) {
       setActionError(e)
@@ -168,8 +181,15 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
           <h2 className="st-h2">End the whole test</h2>
           <p className="st-faint">
             For an emergency that stops the exam in every section, as the parent test does in Inspera. Do not use it to end one section: End now on that section&apos;s page does that.
+            Use test end time undoes it: sections already submitted stay submitted, and the later sections run with their full time.
           </p>
-          <ConfirmButton label="End the whole test" confirmLabel={`Click again: the test ends now for all ${exam.candidates} candidates`} onConfirm={() => void endAll()} />
+          <ConfirmButton
+            label="End the whole test"
+            confirmLabel={`Click again: the test ends now for all ${exam.candidates} candidates, and the sections they are in are submitted`}
+            onConfirm={() => void endAll()}
+          />{' '}
+          {/* The undo: the section-level Use test end time cannot reach a section the sweep has already submitted (B4). */}
+          <ConfirmButton label="Use test end time" confirmLabel="Click again: every candidate gets the test end time back" onConfirm={() => void restoreAll()} />
           {endedAll && <p role="status">{endedAll}</p>}
         </section>
       )}

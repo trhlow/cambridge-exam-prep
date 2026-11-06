@@ -41,10 +41,26 @@ describe('ExamPage end of the whole test (B4)', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'End the whole test' }))
     expect(endAll).not.toHaveBeenCalled()
-    await userEvent.click(screen.getByRole('button', { name: 'Click again: the test ends now for all 3 candidates' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Click again: the test ends now for all 3 candidates, and the sections they are in are submitted' }))
 
     expect(endAll).toHaveBeenCalledWith(4, [])
     expect(await screen.findByText(/ended for 3 candidates/)).toBeInTheDocument()
+    // The undo is on this page: the section-level one no longer reaches a section the sweep has submitted.
+    expect(screen.getByRole('status')).toHaveTextContent(/those sections stay submitted/)
+    expect(screen.getByRole('status')).toHaveTextContent(/Use test end time below/)
+  })
+
+  it('gives everyone the test end time back only after a second click', async () => {
+    const restore = vi.spyOn(staffApi, 'useTestEndTime').mockResolvedValue({ applied: 2, skipped: [{ candidateId: 9, fullName: 'Binh Tran', reason: 'has not had the whole test ended' }] })
+    render(<ExamPage examId={4} access={invigilator} />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Use test end time' }))
+    expect(restore).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Click again: every candidate gets the test end time back' }))
+
+    expect(restore).toHaveBeenCalledWith(4, [])
+    expect(await screen.findByText(/2 candidates have the test end time back/)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/already submitted stay submitted/)
   })
 
   it('says how many paused candidates end only when they are resumed', async () => {
@@ -52,7 +68,7 @@ describe('ExamPage end of the whole test (B4)', () => {
     render(<ExamPage examId={4} access={invigilator} />)
 
     await userEvent.click(await screen.findByRole('button', { name: 'End the whole test' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Click again: the test ends now for all 3 candidates' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Click again: the test ends now for all 3 candidates, and the sections they are in are submitted' }))
 
     expect(await screen.findByText(/2 are paused and will end when resumed/)).toBeInTheDocument()
   })
@@ -73,5 +89,6 @@ describe('ExamPage end of the whole test (B4)', () => {
 
     await screen.findByRole('heading', { name: 'A2 Key – 20/11' })
     expect(screen.queryByRole('button', { name: 'End the whole test' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Use test end time' })).not.toBeInTheDocument()
   })
 })

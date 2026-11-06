@@ -164,11 +164,27 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
     /// <summary>
     /// The parent-level end of the Inspera guide: the whole test (every section) ends for the candidates now. It sets
     /// <c>candidates.parent_end_override_at</c>, which cuts every section's end short, and brings the running attempts'
-    /// end in line through the clock; the expiry sweep then submits them. "Use test end time" on the monitor page gives
-    /// the end back. A candidate already ended this way keeps the earlier moment.
+    /// end in line through the clock; the expiry sweep then submits them. "Use test end time" for the whole test
+    /// (<see cref="UseTestEndTimeForAll"/>) gives the end back. A candidate already ended this way keeps the earlier moment.
     /// </summary>
     [HttpPost("end-all")]
-    public async Task<ActionResult<ActionOutcome>> EndAll(int examId, EndAllRequest request, CancellationToken cancellationToken)
+    public Task<ActionResult<ActionOutcome>> EndAll(int examId, EndAllRequest request, CancellationToken cancellationToken) =>
+        ParentLevelAsync(examId, request, "The whole test can be ended only while the exam is Active.", "End the whole test", EndAllAsync, cancellationToken);
+
+    /// <summary>
+    /// "Use test end time" at the parent level: undoes <see cref="EndAll"/> for the candidates (empty: everyone) by
+    /// clearing <c>candidates.parent_end_override_at</c>, whatever state their sections are in. The section-level action
+    /// cannot do it once the sweep has submitted the running section. A section already submitted stays submitted
+    /// (attempts are exam records); a running one gets its own end back through the clock, and later sections run with
+    /// their full time. Allowed to the same people as End all.
+    /// </summary>
+    [HttpPost("use-test-end-time")]
+    public Task<ActionResult<ActionOutcome>> UseTestEndTimeForAll(int examId, EndAllRequest request, CancellationToken cancellationToken) =>
+        ParentLevelAsync(examId, request, "The test end time can be given back only while the exam is Active.", "Use test end time", RestoreAllAsync, cancellationToken);
+
+    /// <summary>The checks and the retry shared by the two parent-level actions.</summary>
+    private async Task<ActionResult<ActionOutcome>> ParentLevelAsync(
+        int examId, EndAllRequest request, string notActive, string button, Func<int, List<int>, string?, CancellationToken, Task<ActionOutcome>> apply, CancellationToken cancellationToken)
     {
         var status = await db.Exams.MonitorableBy(User).Where(e => e.Id == examId).Select(e => (ExamStatus?)e.Status).SingleOrDefaultAsync(cancellationToken);
         if (status is null)
@@ -178,7 +194,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
 
         if (status != ExamStatus.Active)
         {
-            return Problems.Conflict("The whole test can be ended only while the exam is Active.");
+            return Problems.Conflict(notActive);
         }
 
         var ids = request.CandidateIds?.Distinct().ToList() ?? [];
@@ -191,17 +207,66 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
         {
             try
             {
-                return await EndAllAsync(examId, ids, request.Reason, cancellationToken);
+                return await apply(examId, ids, request.Reason, cancellationToken);
             }
             catch (DbUpdateConcurrencyException)
             {
                 db.ChangeTracker.Clear();
                 if (round >= MaxSaveAttempts)
                 {
-                    return Problems.Conflict("Candidates' tests were updated at the same moment. Press End the whole test again.");
+                    return Problems.Conflict($"Candidates' tests were updated at the same moment. Press {button} again.");
                 }
             }
         }
+    }
+
+    private async Task<ActionOutcome> RestoreAllAsync(int examId, List<int> candidateIds, string? reason, CancellationToken cancellationToken)
+    {
+        var now = Now();
+        var candidates = await db.Candidates.Where(c => c.ExamId == examId && (candidateIds.Count == 0 || candidateIds.Contains(c.Id))).OrderBy(c => c.CandidateNumber).ToListAsync(cancellationToken);
+        var ids = candidates.Select(c => c.Id).ToList();
+        var running = (await db.Attempts.Include(a => a.ExamSection)
+            .Where(a => ids.Contains(a.CandidateId) && (a.Status == AttemptStatus.InProgress || a.Status == AttemptStatus.Paused))
+            .ToListAsync(cancellationToken)).ToLookup(a => a.CandidateId);
+        var batchId = Guid.NewGuid();
+        var userId = User.GetStaffId();
+        var skipped = new List<SkippedCandidate>();
+        var applied = 0;
+
+        foreach (var candidate in candidates)
+        {
+            if (candidate.ParentEndOverrideAt is null)
+            {
+                skipped.Add(new SkippedCandidate(candidate.Id, FullName(candidate), "has not had the whole test ended"));
+                continue;
+            }
+
+            candidate.ParentEndOverrideAt = null;
+            var attempts = running[candidate.Id].ToList();
+            attempts.ForEach(a => AttemptExpiry.ClockFor(a, a.ExamSection!, candidate).RefreshEnd());
+            applied++;
+            db.InvigilatorActions.Add(new InvigilatorAction
+            {
+                ExamId = examId,
+                AttemptId = attempts.Count == 1 ? attempts[0].Id : null,
+                UserId = userId,
+                ActionType = InvigilatorActionType.UseTestEndTime,
+                PayloadJson = JsonSerializer.Serialize(new { level = "test", candidateId = candidate.Id }),
+                Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),
+                BatchId = batchId,
+                CreatedAt = now,
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        running.SelectMany(g => g).Select(a => a.ExamSectionId).Distinct().ToList().ForEach(notifier.SectionChanged);
+        if (applied > 0)
+        {
+            await notifier.RefreshCandidatesAsync(candidates.Select(c => c.Id).Except(skipped.Select(s => s.CandidateId)));
+        }
+
+        logger.LogInformation("Staff {UserId} gave the test end time back in exam {ExamId} to {Applied} candidate(s); {Skipped} had not been ended", userId, examId, applied, skipped.Count);
+        return new ActionOutcome(applied, skipped);
     }
 
     private async Task<ActionOutcome> EndAllAsync(int examId, List<int> candidateIds, string? reason, CancellationToken cancellationToken)
