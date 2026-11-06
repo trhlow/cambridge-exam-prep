@@ -169,7 +169,7 @@ function Page({ route, access }: { route: Route; access: Access }) {
     case 'papers':
       return access.worksIn('Papers') ? <PapersPage /> : <NotAllowed />
     case 'paper':
-      return access.worksIn('Papers') ? <PaperPage paperId={route.paperId} /> : <NotAllowed />
+      return access.worksIn('Papers') ? <PaperPage paperId={route.paperId} isAdmin={access.isAdmin} /> : <NotAllowed />
     case 'users':
       return access.isAdmin ? <StaffUsersPage currentUserId={access.userId} /> : <NotAllowed />
     case 'approvals':

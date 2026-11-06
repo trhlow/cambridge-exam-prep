@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { adminApi, staffApi, type ExamTypeView, type PaperListItem, type PaperMixView } from '../api'
+import { adminApi, staffApi, type ExamMixChoice, type ExamPaperChoice, type ExamTypeView } from '../api'
 import { Link } from '../Link'
 import { navigate } from '../router'
 import { ErrorBox, PageHeader } from '../ui'
@@ -177,8 +177,8 @@ export function ExamFormPage({ examId }: { examId?: number }) {
 
 function PaperChoices(props: {
   type: ExamTypeView
-  papers: PaperListItem[]
-  mixes: PaperMixView[]
+  papers: ExamPaperChoice[]
+  mixes: ExamMixChoice[]
   chosen: Record<number, string>
   disabled: boolean
   onChoose: (templateId: number, choice: string) => void

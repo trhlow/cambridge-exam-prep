@@ -1,21 +1,25 @@
 import { useRef, useState } from 'react'
 import { HtmlContent } from '../../ui/HtmlContent'
-import { adminApi, type PaperGroupDetail, type PaperOption, type PaperPartDetail, type PaperQuestionDetail } from '../api'
+import { adminApi, type AnswersCorrected, type PaperGroupDetail, type PaperOption, type PaperPartDetail, type PaperQuestionDetail } from '../api'
 import { Link } from '../Link'
 import { gapsAsLabels, isAccepted } from '../paperPreview'
 import { Badge, ErrorBox, PageHeader } from '../ui'
 import { useLoad } from '../useLoad'
+import { AnswerCorrection } from './AnswerCorrection'
 import { PaperEditor, type PaperEdit } from './PaperEditors'
 
 /**
  * A paper as the administrator checks it before publishing: every part with its recording, passages, questions,
  * options (pictures included) and the accepted answers. Gaps in a text show as their question number. A draft
- * can be fixed here (VE-25) before it is published.
+ * can be fixed here (VE-25) before it is published; once it is published an administrator can still correct a wrong
+ * answer, which marks the attempts again (A6).
  */
-export function PaperPage({ paperId }: { paperId: number }) {
+export function PaperPage({ paperId, isAdmin = false }: { paperId: number; isAdmin?: boolean }) {
   const { data: paper, error, reload, setData } = useLoad(() => adminApi.paper(paperId), `paper-${paperId}`)
   const [actionError, setActionError] = useState<unknown>(null)
   const [edit, setEdit] = useState<PaperEdit | null>(null)
+  const [correcting, setCorrecting] = useState<{ group: PaperGroupDetail; question: PaperQuestionDetail } | null>(null)
+  const [corrected, setCorrected] = useState<AnswersCorrected | null>(null)
 
   if (!paper) {
     return error ? <ErrorBox error={error} /> : <p className="st-empty">Loading…</p>
@@ -33,6 +37,7 @@ export function PaperPage({ paperId }: { paperId: number }) {
 
   const questionCount = paper.parts.reduce((sum, part) => sum + part.groups.reduce((n, group) => n + group.questions.length, 0), 0)
   const onEdit = paper.status === 'Draft' ? setEdit : null
+  const onCorrect = isAdmin && paper.status === 'Published' ? (group: PaperGroupDetail, question: PaperQuestionDetail) => setCorrecting({ group, question }) : null
   const replaceAudio = async (part: PaperPartDetail, file: File) => {
     setActionError(null)
     try {
@@ -74,10 +79,30 @@ export function PaperPage({ paperId }: { paperId: number }) {
           Version {paper.mixVersion} of the mix “{paper.mixTitle}”: {[...paper.mixPattern].map((source, i) => `Part ${i + 1} from ${source}`).join(', ')}. A mixed paper is a copy of the source parts and cannot be edited; it is given to candidates by seat.
         </p>
       )}
+      {onCorrect && <p className="st-note">This paper is published. An administrator can still correct a wrong answer with “Correct answer”; the attempts already marked are marked again.</p>}
+      {corrected && (
+        <p className="st-note" role="status">
+          Question {corrected.number}: the answer is now {corrected.answers.join(' / ')}. {corrected.attemptsRemarked} marked attempt{corrected.attemptsRemarked === 1 ? '' : 's'} looked at again, {corrected.scoresChanged} score{corrected.scoresChanged === 1 ? '' : 's'} changed.
+          {corrected.skipped.length > 0 && ` ${corrected.skipped.length} could not be updated just now: correct the answer again to mark them.`}
+        </p>
+      )}
       <ErrorBox error={actionError} />
       {paper.parts.map((part) => (
-        <PartPreview key={part.partNo} part={part} onEdit={onEdit} onReplaceAudio={(file) => void replaceAudio(part, file)} />
+        <PartPreview key={part.partNo} part={part} onEdit={onEdit} onCorrect={onCorrect} onReplaceAudio={(file) => void replaceAudio(part, file)} />
       ))}
+      {correcting && (
+        <AnswerCorrection
+          paperId={paper.id}
+          group={correcting.group}
+          question={correcting.question}
+          onClose={() => setCorrecting(null)}
+          onDone={(result) => {
+            setCorrecting(null)
+            setCorrected(result)
+            reload()
+          }}
+        />
+      )}
       {edit && (
         <PaperEditor
           paper={paper}
@@ -95,6 +120,7 @@ export function PaperPage({ paperId }: { paperId: number }) {
 }
 
 type OnEdit = ((edit: PaperEdit) => void) | null
+type OnCorrect = ((group: PaperGroupDetail, question: PaperQuestionDetail) => void) | null
 
 function EditLink({ onClick, label = 'Edit' }: { onClick: () => void; label?: string }) {
   return (
@@ -104,7 +130,7 @@ function EditLink({ onClick, label = 'Edit' }: { onClick: () => void; label?: st
   )
 }
 
-function PartPreview({ part, onEdit, onReplaceAudio }: { part: PaperPartDetail; onEdit: OnEdit; onReplaceAudio: (file: File) => void }) {
+function PartPreview({ part, onEdit, onCorrect, onReplaceAudio }: { part: PaperPartDetail; onEdit: OnEdit; onCorrect: OnCorrect; onReplaceAudio: (file: File) => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
   return (
     <section className="st-card st-paper-part">
@@ -150,14 +176,20 @@ function PartPreview({ part, onEdit, onReplaceAudio }: { part: PaperPartDetail; 
           group={group}
           onEditGroup={onEdit && (() => onEdit({ kind: 'group', part, group }))}
           onEditQuestion={onEdit && ((question) => onEdit({ kind: 'question', group, question }))}
+          onCorrectQuestion={onCorrect && ((question) => onCorrect(group, question))}
         />
       ))}
     </section>
   )
 }
 
-function GroupPreview(props: { group: PaperGroupDetail; onEditGroup: (() => void) | null; onEditQuestion: ((question: PaperQuestionDetail) => void) | null }) {
-  const { group, onEditGroup, onEditQuestion } = props
+function GroupPreview(props: {
+  group: PaperGroupDetail
+  onEditGroup: (() => void) | null
+  onEditQuestion: ((question: PaperQuestionDetail) => void) | null
+  onCorrectQuestion: ((question: PaperQuestionDetail) => void) | null
+}) {
+  const { group, onEditGroup, onEditQuestion, onCorrectQuestion } = props
   return (
     <div className="st-paper-group">
       <p className="st-faint">
@@ -182,12 +214,12 @@ function GroupPreview(props: { group: PaperGroupDetail; onEditGroup: (() => void
             <th>Question</th>
             <th>Options</th>
             <th>Answer</th>
-            {onEditQuestion && <th />}
+            {(onEditQuestion || onCorrectQuestion) && <th />}
           </tr>
         </thead>
         <tbody>
           {group.questions.map((question) => (
-            <QuestionRow key={question.number} question={question} pool={group.optionPool} onEdit={onEditQuestion && (() => onEditQuestion(question))} />
+            <QuestionRow key={question.number} question={question} pool={group.optionPool} onEdit={onEditQuestion && (() => onEditQuestion(question))} onCorrect={onCorrectQuestion && (() => onCorrectQuestion(question))} />
           ))}
         </tbody>
       </table>
@@ -195,7 +227,7 @@ function GroupPreview(props: { group: PaperGroupDetail; onEditGroup: (() => void
   )
 }
 
-function QuestionRow({ question, pool, onEdit }: { question: PaperQuestionDetail; pool: PaperOption[] | null; onEdit: (() => void) | null }) {
+function QuestionRow({ question, pool, onEdit, onCorrect }: { question: PaperQuestionDetail; pool: PaperOption[] | null; onEdit: (() => void) | null; onCorrect: (() => void) | null }) {
   const essay = question.minWords !== null
   const card = pool?.find((option) => isAccepted(option, question.answers))
   return (
@@ -228,9 +260,10 @@ function QuestionRow({ question, pool, onEdit }: { question: PaperQuestionDetail
           </strong>
         )}
       </td>
-      {onEdit && (
+      {(onEdit || onCorrect) && (
         <td className="st-row-actions">
-          <EditLink onClick={onEdit} />
+          {onEdit && <EditLink onClick={onEdit} />}
+          {onCorrect && !essay && <EditLink onClick={onCorrect} label="Correct answer" />}
         </td>
       )}
     </tr>

@@ -38,12 +38,16 @@ public static class AssetUploads
         return matches ? null : "The file is not the picture its name says.";
     }
 
-    /// <summary>The stored asset with these bytes, or a new one (saved with the paper's next SaveChanges).</summary>
+    /// <summary>
+    /// The asset this person already uploaded with these bytes, or a new one (saved with the paper's next SaveChanges).
+    /// Another person's identical upload is not reused: the file on disk is shared, but each uploader has their own row,
+    /// so what they may link to (<see cref="PaperAssetLinks"/>) stays theirs.
+    /// </summary>
     public static async Task<Asset> StoreAsync(
         ExamPrepDbContext db, IAssetStorage storage, byte[] content, string fileName, AssetKind kind, int userId, DateTime now, CancellationToken cancellationToken)
     {
         var sha = Convert.ToHexStringLower(SHA256.HashData(content));
-        var existing = await db.Assets.FirstOrDefaultAsync(a => a.Sha256 == sha, cancellationToken);
+        var existing = await db.Assets.FirstOrDefaultAsync(a => a.Sha256 == sha && a.UploadedByUserId == userId, cancellationToken);
         if (existing is not null)
         {
             return existing;

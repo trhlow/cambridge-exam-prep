@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { adminApi, type PaperListItem, type PaperSection } from '../api'
+import { adminApi, type ApprovalView, type PaperListItem, type PaperMixView, type PaperSection } from '../api'
 import { PapersPage } from './PapersPage'
 
 const sections: PaperSection[] = [
@@ -52,5 +52,34 @@ describe('PapersPage filters and PDF import (VE-71)', () => {
     fireEvent.change(within(dialog).getByLabelText('Paper'), { target: { value: '5' } })
     expect(within(dialog).getByLabelText('Answer key (PDF)')).toBeInTheDocument()
     expect(within(dialog).getAllByLabelText(/^Part \d$/)).toHaveLength(4)
+  })
+
+  it('asks for an unused mix to be deleted, and says a source paper stays until then (B15)', async () => {
+    const mix: PaperMixView = {
+      id: 7,
+      title: 'Mock 1',
+      examType: 'A2 Key for Schools',
+      sectionTemplateId: 1,
+      section: 'Reading & Writing',
+      sources: [{ letter: 'A', id: 1, title: 'A2 Test 1 R&W' }, { letter: 'B', id: 4, title: 'A2 Test 2 R&W' }],
+      versionCount: 4,
+      seed: 1,
+      createdAt: '2026-10-29T00:00:00Z',
+      versions: [{ version: 1, paperId: 11, title: 'Mock 1 – Version 1', pattern: 'ABABABA' }],
+    }
+    vi.spyOn(adminApi, 'papers').mockResolvedValue([{ ...paper(1, 1, 'A2 Test 1 R&W'), isMixSource: true }, paper(4, 1, 'A2 Test 2 R&W')])
+    vi.spyOn(adminApi, 'paperMixes').mockResolvedValue([mix])
+    const request: ApprovalView = { id: 9, kind: 'DeleteMix', targetId: 7, summary: 'Delete mix “Mock 1”', status: 'Pending', requestedById: 1, requestedBy: 'admin', requestedAt: '2026-11-02T00:00:00Z', decidedById: null, decidedBy: null, decidedAt: null, decisionNote: null, outcome: null }
+    const deleteMix = vi.spyOn(adminApi, 'deleteMix').mockResolvedValue(request)
+    render(<PapersPage />)
+
+    await screen.findByText('Mixed papers')
+    expect(screen.getByText('Mixed into a mix: delete the mix first')).toBeInTheDocument()
+    const row = screen.getByText('Mock 1').closest('tr')!
+    fireEvent.click(within(row).getByRole('button', { name: 'Request deletion' }))
+    expect(deleteMix).not.toHaveBeenCalled()
+    fireEvent.click(within(row).getByRole('button', { name: 'Ask an administrator to delete' }))
+
+    expect(deleteMix).toHaveBeenCalledWith(7)
   })
 })

@@ -16,7 +16,8 @@ public static partial class PaperPackageValidator
     private const int MaxHeadingLength = 128;
     private const int MaxAnswerLength = 255;
 
-    public static IReadOnlyList<string> Validate(PaperPackage package, SectionTemplate template)
+    /// <param name="allowMissingAnswers">Only for a blank paper (<see cref="PaperSkeletons"/>): choice, card and typed questions may start without an answer.</param>
+    public static IReadOnlyList<string> Validate(PaperPackage package, SectionTemplate template, bool allowMissingAnswers = false)
     {
         var errors = new List<string>();
         var paper = package.Paper;
@@ -44,14 +45,14 @@ public static partial class PaperPackageValidator
         var isListening = template.Skill == Skill.Listening;
         foreach (var part in paper.Parts)
         {
-            ValidatePart(part, isListening, package.Files, errors);
+            ValidatePart(part, isListening, package.Files, errors, allowMissingAnswers);
         }
 
         ValidateNumbering(paper, errors);
         return errors;
     }
 
-    private static void ValidatePart(PackagePart part, bool isListening, IReadOnlyDictionary<string, byte[]> files, List<string> errors)
+    private static void ValidatePart(PackagePart part, bool isListening, IReadOnlyDictionary<string, byte[]> files, List<string> errors, bool allowMissingAnswers)
     {
         var label = $"Part {part.PartNo}";
         if (part.Title?.Length > MaxTitleLength)
@@ -82,11 +83,11 @@ public static partial class PaperPackageValidator
         for (var i = 0; i < part.Groups.Count; i++)
         {
             var groupLabel = part.Groups.Count > 1 ? $"{label}, group {i + 1}" : label;
-            ValidateGroup(part.Groups[i], groupLabel, label, files, errors);
+            ValidateGroup(part.Groups[i], groupLabel, label, files, errors, allowMissingAnswers);
         }
     }
 
-    private static void ValidateGroup(PackageGroup group, string groupLabel, string partLabel, IReadOnlyDictionary<string, byte[]> files, List<string> errors)
+    private static void ValidateGroup(PackageGroup group, string groupLabel, string partLabel, IReadOnlyDictionary<string, byte[]> files, List<string> errors, bool allowMissingAnswers)
     {
         if (string.IsNullOrWhiteSpace(group.Instructions) || group.Instructions.Length > MaxInstructionsLength)
         {
@@ -138,11 +139,11 @@ public static partial class PaperPackageValidator
 
         foreach (var question in group.Questions)
         {
-            ValidateQuestion(question, group, $"{partLabel}, question {question.Number}", files, errors);
+            ValidateQuestion(question, group, $"{partLabel}, question {question.Number}", files, errors, allowMissingAnswers);
         }
     }
 
-    private static void ValidateQuestion(PackageQuestion question, PackageGroup group, string label, IReadOnlyDictionary<string, byte[]> files, List<string> errors)
+    private static void ValidateQuestion(PackageQuestion question, PackageGroup group, string label, IReadOnlyDictionary<string, byte[]> files, List<string> errors, bool allowMissingAnswers)
     {
         CheckHtmlImages(question.PromptHtml, label, files, errors);
         CheckHtmlImages(question.StimulusHtml, label, files, errors);
@@ -152,12 +153,18 @@ public static partial class PaperPackageValidator
         }
 
         var answers = question.Answers ?? [];
+        // A blank paper (VE-25) starts with no answers, to be chosen in the editor; any answer it does carry is still checked.
+        var unanswered = allowMissingAnswers && answers.Count == 0;
         switch (group.InteractionType)
         {
             case InteractionType.SingleChoice or InteractionType.ImageChoice or InteractionType.InlineChoice:
                 var needsPicture = group.InteractionType == InteractionType.ImageChoice;
                 CheckOptions(question.Options, needsPicture, label, files, errors, "choice questions need at least two options");
-                CheckSingleAnswer(answers, question.Options, "options", label, errors);
+                if (!unanswered)
+                {
+                    CheckSingleAnswer(answers, question.Options, "options", label, errors);
+                }
+
                 break;
             case InteractionType.DragDropMatch:
                 if (string.IsNullOrWhiteSpace(question.PromptHtml) && !HasGaps(group.BodyHtml))
@@ -165,10 +172,14 @@ public static partial class PaperPackageValidator
                     errors.Add($"{label}: drag-and-drop questions need a label (promptHtml), or a gap in the group's text.");
                 }
 
-                CheckSingleAnswer(answers, group.OptionPool, "cards", label, errors);
+                if (!unanswered)
+                {
+                    CheckSingleAnswer(answers, group.OptionPool, "cards", label, errors);
+                }
+
                 break;
             case InteractionType.InlineText:
-                if (answers.Count == 0 || answers.Any(string.IsNullOrWhiteSpace))
+                if (!unanswered && (answers.Count == 0 || answers.Any(string.IsNullOrWhiteSpace)))
                 {
                     errors.Add($"{label}: at least one accepted answer is required.");
                 }

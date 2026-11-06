@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
+using ExamPrep.Api.Approvals;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Common;
+using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Content;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -64,6 +66,28 @@ public sealed class AdminPaperMixesController(ExamPrepDbContext db, PaperMixer m
         logger.LogInformation("Staff {UserId} mixed papers {Sources} into {Count} papers, mix {MixId}", User.GetStaffId(), string.Join(", ", request.SourcePaperIds), request.VersionCount, mix.Id);
         var view = (await ViewsAsync(db, mix.Id, cancellationToken)).Single();
         return CreatedAtAction(nameof(Get), new { mixId = mix.Id }, view);
+    }
+
+    /// <summary>
+    /// B15: asks for a mix (and its mixed papers) to be deleted, which frees its source papers; another administrator
+    /// approves it (VE-60). Refused at once while a session gives the mix.
+    /// </summary>
+    [HttpDelete("{mixId:int}")]
+    public async Task<ActionResult<ApprovalView>> Delete(int mixId, [FromServices] ApprovalService approvals, CancellationToken cancellationToken)
+    {
+        var mix = await db.PaperMixes.VisibleTo(User).AsNoTracking().SingleOrDefaultAsync(m => m.Id == mixId, cancellationToken);
+        if (mix is null)
+        {
+            return NotFound();
+        }
+
+        if (await ApprovalActions.MixProblemAsync(db, mixId, cancellationToken) is { } problem)
+        {
+            return Problems.Conflict(problem);
+        }
+
+        var (request, conflict) = await approvals.RequestAsync(ApprovalKind.DeleteMix, mixId, $"Delete mix “{mix.Title}”", null, User.GetStaffId(), cancellationToken);
+        return request is null ? Problems.Conflict(conflict!) : Accepted(request);
     }
 
     /// <param name="source">The mixes to read from (VE-72: a papers manager's own); every mix when null.</param>

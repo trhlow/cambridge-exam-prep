@@ -315,7 +315,7 @@ public sealed class SeatedPapersTests(ApiFixture api) : IClassFixture<ApiFixture
         var version3 = papers.Single(p => (int)p!["id"]! == room.VersionPapers[3])!;
         var detail = (await admin.GetFromJsonAsync<JsonObject>($"/api/admin/papers/{room.VersionPapers[3]}", ct))!;
 
-        Assert.Contains(mixes, m => (int)m!["id"]! == room.MixId && m["versions"]!.AsArray().Count == 4);
+        Assert.Contains(mixes, m => (int)m!["id"]! == room.MixId && (int)m!["versionCount"]! == 4);
         Assert.Equal(room.MixId, (int)version3["paperMixId"]!);
         Assert.Equal(3, (int)version3["mixVersion"]!);
         Assert.Equal(3, (int)detail["mixVersion"]!);

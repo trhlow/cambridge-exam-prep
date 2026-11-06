@@ -172,13 +172,16 @@ export function PapersPage() {
           onDelete={(p) => void act(async () => setSent(await adminApi.deletePaper(p.id)))}
         />
       )}
-      {mixes && mixes.length > 0 && filter.status !== 'Draft' && <MixTable mixes={filterPapers(mixes, filter)} />}
+      {mixes && mixes.length > 0 && filter.status !== 'Draft' && <MixTable mixes={filterPapers(mixes, filter)} onDelete={(mix) => void act(async () => setSent(await adminApi.deleteMix(mix.id)))} />}
     </>
   )
 }
 
-/** VE-65, VE-70: each mix with its sources and its papers; a pattern reads part by part (A = first source). */
-function MixTable({ mixes }: { mixes: PaperMixView[] }) {
+/**
+ * VE-65, VE-70: each mix with its sources and its papers; a pattern reads part by part (A = first source). B15: a mix
+ * no exam uses can be deleted (a second administrator approves), which frees its sources.
+ */
+function MixTable({ mixes, onDelete }: { mixes: PaperMixView[]; onDelete: (mix: PaperMixView) => void }) {
   return (
     <>
       <h2 className="st-h2">Mixed papers</h2>
@@ -190,6 +193,7 @@ function MixTable({ mixes }: { mixes: PaperMixView[] }) {
             <th>Section</th>
             <th>Sources</th>
             <th>Versions</th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -220,6 +224,9 @@ function MixTable({ mixes }: { mixes: PaperMixView[] }) {
                     </span>
                   </div>
                 ))}
+              </td>
+              <td className="st-row-actions">
+                <ConfirmButton className="st-link st-link--danger" label="Request deletion" confirmLabel="Ask an administrator to delete" onConfirm={() => onDelete(mix)} />
               </td>
             </tr>
           ))}
@@ -373,7 +380,8 @@ function PaperTable({ papers, onPublish, onDelete }: { papers: PaperListItem[]; 
                   Publish
                 </button>
               )}
-              {paper.usedByExams === 0 && !paper.paperMixId && <ConfirmButton className="st-link st-link--danger" label="Request deletion" confirmLabel="Ask an administrator to delete" onConfirm={() => onDelete(paper)} />}
+              {paper.isMixSource && <span className="st-faint">Mixed into a mix: delete the mix first</span>}
+              {paper.usedByExams === 0 && !paper.paperMixId && !paper.isMixSource && <ConfirmButton className="st-link st-link--danger" label="Request deletion" confirmLabel="Ask an administrator to delete" onConfirm={() => onDelete(paper)} />}
             </td>
           </tr>
         ))}

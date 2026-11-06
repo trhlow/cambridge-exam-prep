@@ -29,7 +29,7 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
   const { data: exam, error, reload, setData } = useLoad(() => staffApi.exam(examId), examId)
   // VE-72: only the session's creator (or an administrator) organises it; the server says so per session.
   const manages = access.worksIn('Exams') && exam?.canOrganise !== false
-  const { data: staff } = useLoad(() => (manages ? adminApi.assignableStaff() : Promise.resolve(null)), `staff-${manages}`)
+  const { data: staff } = useLoad(() => (manages ? adminApi.assignableStaff(examId) : Promise.resolve(null)), `staff-${manages}-${examId}`)
   const [actionError, setActionError] = useState<unknown>(null)
   const [sent, setSent] = useState<ApprovalView | null>(null)
   const [endedAll, setEndedAll] = useState<string | null>(null)

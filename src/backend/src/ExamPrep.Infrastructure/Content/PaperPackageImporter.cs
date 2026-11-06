@@ -24,10 +24,14 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
 
     private sealed record StoredOption(string Key, string? Text, int? ImageAssetId, string? Title = null);
 
+    /// <param name="blank">
+    /// The package is a blank layout (<see cref="PaperSkeletons"/>) whose questions have no answer yet; an ordinary
+    /// package must give every answer.
+    /// </param>
     /// <param name="expectedSectionTemplateId">
     /// VE-71: the level and section the person chose before uploading; a package for any other section is refused.
     /// </param>
-    public async Task<PaperImportResult> ImportAsync(Stream zip, int userId, CancellationToken cancellationToken, int? expectedSectionTemplateId = null)
+    public async Task<PaperImportResult> ImportAsync(Stream zip, int userId, CancellationToken cancellationToken, int? expectedSectionTemplateId = null, bool blank = false)
     {
         var read = PaperPackageReader.Read(zip);
         if (read.Package is null)
@@ -57,10 +61,17 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
                 : $"This paper is {examType.Name} {template.Title}, but you chose {expected.ExamType!.Name} {expected.Title}."]);
         }
 
-        var errors = PaperPackageValidator.Validate(read.Package, template);
+        var errors = PaperPackageValidator.Validate(read.Package, template, allowMissingAnswers: blank);
         if (errors.Count > 0)
         {
             return Failed(errors);
+        }
+
+        // A link typed straight into the HTML (not an asset: reference of the package) must be to a file this person uploaded.
+        var linked = PaperAssetLinks.In(paper.Parts.SelectMany(p => p.Groups.SelectMany(g => g.Questions.SelectMany(q => new[] { q.PromptHtml, q.StimulusHtml }).Append(g.BodyHtml)).Append(p.StimulusHtml)));
+        if (await PaperAssetLinks.NotUploadedByAsync(db, linked, userId, cancellationToken) is { Count: > 0 } foreign)
+        {
+            return Failed([PaperAssetLinks.Problem(foreign)]);
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
