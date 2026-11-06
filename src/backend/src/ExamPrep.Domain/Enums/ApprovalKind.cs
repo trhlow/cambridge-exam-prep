@@ -7,6 +7,9 @@ public enum ApprovalKind
     DeleteExam,
     DeleteCandidate,
 
+    /// <summary>A mix of papers no session uses, with its mixed papers; the source papers stay and can be deleted again.</summary>
+    DeleteMix,
+
     /// <summary>Switch a staff account on or off, reset its password, or change its role or areas.</summary>
     ChangeStaffAccount,
 

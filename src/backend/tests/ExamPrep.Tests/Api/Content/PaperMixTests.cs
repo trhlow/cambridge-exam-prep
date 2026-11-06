@@ -204,4 +204,84 @@ public sealed class PaperMixTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Contains(list!, m => (int)m!["id"]! == id && m["sources"]!.AsArray().Select(x => $"{x!["letter"]}{x["id"]}").SequenceEqual(new[] { $"A{a}", $"B{b}" }));
         Assert.Equal(HttpStatusCode.NotFound, (await allowed.GetAsync("/api/admin/paper-mixes/999999", ct)).StatusCode);
     }
+
+    private async Task<(int A, int B, JsonObject Mix)> MixAsync(HttpClient client)
+    {
+        var (a, b) = await SourcesAsync(SamplePackages.ReadingWriting);
+        var mix = await (await client.PostAsJsonAsync("/api/admin/paper-mixes", new { sourcePaperIds = new[] { a, b }, versionCount = 4 }, ct)).Content.ReadFromJsonAsync<JsonObject>(ct);
+        return (a, b, mix!);
+    }
+
+    [Fact]
+    public async Task AMixNoSessionUses_IsDeletedWithTheOtherAdminsApproval_AndFreesItsSources()
+    {
+        api.SkipIfUnavailable();
+        using var client = await api.AdminClientAsync();
+        using var other = await api.SecondAdminClientAsync();
+        var (a, b, mix) = await MixAsync(client);
+        var mixId = (int)mix["id"]!;
+        var versions = mix["versions"]!.AsArray().Select(v => (int)v!["paperId"]!).ToList();
+
+        var blocked = await client.DeleteAsync($"/api/admin/papers/{a}", ct);
+        var request = await client.DeleteAsync($"/api/admin/paper-mixes/{mixId}", ct);
+        var requestId = await ApiFixture.RequestIdOfAsync(request);
+        var stillThere = await client.GetAsync($"/api/admin/paper-mixes/{mixId}", ct);
+        await ApiFixture.ApproveAsync(other, requestId);
+        var gone = await client.GetAsync($"/api/admin/paper-mixes/{mixId}", ct);
+        var goneVersion = await client.GetAsync($"/api/admin/papers/{versions[0]}", ct);
+        var source = await client.GetAsync($"/api/admin/papers/{a}", ct);
+        var freed = await client.DeleteAsync($"/api/admin/papers/{b}", ct);
+
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, request.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, stillThere.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, gone.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, goneVersion.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, source.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, freed.StatusCode);
+    }
+
+    [Fact]
+    public async Task AMixASessionUses_CannotBeDeleted_AndCountsTowardUsedBy()
+    {
+        api.SkipIfUnavailable();
+        using var client = await api.AdminClientAsync();
+        var (a, b, mix) = await MixAsync(client);
+        var mixId = (int)mix["id"]!;
+        var versions = mix["versions"]!.AsArray().Select(v => (int)v!["paperId"]!).ToList();
+        var candidate = await api.CreateCandidateAsync(Password);
+        await api.UseMixInSectionAsync(candidate.ReadingWritingSectionId, mixId, versions[0]);
+
+        var request = await client.DeleteAsync($"/api/admin/paper-mixes/{mixId}", ct);
+        var papers = (await client.GetFromJsonAsync<JsonArray>("/api/admin/papers", ct))!;
+        JsonNode Row(int id) => papers.Single(p => (int)p!["id"]! == id)!;
+
+        Assert.Equal(HttpStatusCode.Conflict, request.StatusCode);
+        Assert.Contains("used by", await request.Content.ReadAsStringAsync(ct));
+        // A source and every version count the session that uses their mix, and the sources say they were mixed.
+        Assert.Equal(1, (int)Row(a)["usedByExams"]!);
+        Assert.Equal(1, (int)Row(versions[2])["usedByExams"]!);
+        Assert.True((bool)Row(a)["isMixSource"]!);
+        Assert.False((bool)Row(versions[0])["isMixSource"]!);
+    }
+
+    [Fact]
+    public async Task OnlyTheMakerOfAMix_CanAskForItToBeDeleted()
+    {
+        api.SkipIfUnavailable();
+        var maker = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        var other = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        var suffix = Guid.NewGuid().ToString("N")[..6];
+        var a = await api.ImportPublishedSampleAsync(SamplePackages.ReadingWriting, $"Mine A {suffix}", maker.Id);
+        var b = await api.ImportPublishedSampleAsync(SamplePackages.ReadingWriting, $"Mine B {suffix}", maker.Id);
+        using var mine = await api.StaffClientAsync(maker.Username, Password);
+        using var theirs = await api.StaffClientAsync(other.Username, Password);
+        var mixId = (int)(await (await mine.PostAsJsonAsync("/api/admin/paper-mixes", new { sourcePaperIds = new[] { a, b }, versionCount = 4 }, ct)).Content.ReadFromJsonAsync<JsonObject>(ct))!["id"]!;
+
+        var foreign = await theirs.DeleteAsync($"/api/admin/paper-mixes/{mixId}", ct);
+        var own = await mine.DeleteAsync($"/api/admin/paper-mixes/{mixId}", ct);
+
+        Assert.Equal(HttpStatusCode.NotFound, foreign.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, own.StatusCode);
+    }
 }

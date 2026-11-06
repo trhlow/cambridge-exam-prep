@@ -63,6 +63,25 @@ public static class ApprovalActions
             : null;
     }
 
+    /// <summary>A mix can go while no session gives it (or one of its papers) and no attempt was made on one of its papers.</summary>
+    public static async Task<string?> MixProblemAsync(ExamPrepDbContext db, int mixId, CancellationToken cancellationToken)
+    {
+        var versions = db.TestPapers.Where(p => p.PaperMixId == mixId).Select(p => p.Id);
+        var sessions = await db.ExamSections
+            .Where(s => s.PaperMixId == mixId || versions.Contains(s.TestPaperId))
+            .Select(s => s.ExamId)
+            .Distinct()
+            .CountAsync(cancellationToken);
+        if (sessions > 0)
+        {
+            return $"This mix is used by {sessions} exam{(sessions == 1 ? string.Empty : "s")} and cannot be deleted.";
+        }
+
+        return await db.Attempts.AnyAsync(a => versions.Contains(a.TestPaperId), cancellationToken)
+            ? "Candidates have taken one of the papers of this mix, so it cannot be deleted."
+            : null;
+    }
+
     public static async Task<string?> ExamProblemAsync(ExamPrepDbContext db, int examId, CancellationToken cancellationToken) =>
         await ExamViews.HasStartedAsync(db, examId, cancellationToken)
             ? "Candidates have already started this exam. It cannot be deleted."
@@ -91,6 +110,25 @@ public static class ApprovalActions
                 if (problem is null)
                 {
                     db.TestPapers.Remove(paper);
+                }
+
+                return problem;
+            }
+
+            case ApprovalKind.DeleteMix:
+            {
+                var mix = await db.PaperMixes.SingleOrDefaultAsync(m => m.Id == id, cancellationToken);
+                if (mix is null)
+                {
+                    return "The mix no longer exists.";
+                }
+
+                var problem = await MixProblemAsync(db, id, cancellationToken);
+                if (problem is null)
+                {
+                    // The mixed papers go with the mix; its record of sources goes too, which frees the source papers.
+                    db.TestPapers.RemoveRange(await db.TestPapers.Where(p => p.PaperMixId == id).ToListAsync(cancellationToken));
+                    db.PaperMixes.Remove(mix);
                 }
 
                 return problem;

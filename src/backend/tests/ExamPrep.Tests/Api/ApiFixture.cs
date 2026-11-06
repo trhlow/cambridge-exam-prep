@@ -187,6 +187,17 @@ public sealed class ApiFixture : IAsyncLifetime
         }
     }
 
+    /// <summary>Makes a section give a mix by seat, as the exam form does (the section keeps the mix's first version as its paper).</summary>
+    public async Task UseMixInSectionAsync(int sectionId, int mixId, int firstVersionPaperId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var section = await db.ExamSections.SingleAsync(s => s.Id == sectionId);
+        section.PaperMixId = mixId;
+        section.TestPaperId = firstVersionPaperId;
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>VE-72: makes a manager of exams the organiser of a session, as if they had created it.</summary>
     public async Task SetExamCreatorAsync(int examId, int userId)
     {

@@ -42,6 +42,12 @@ public sealed record AssignInvigilatorsRequest([Required] List<int> UserIds);
 /// <summary>An invigilator or examiner account that can be assigned to a session.</summary>
 public sealed record AssignableStaffView(int Id, string Username, string FullName, string Role, bool IsActive);
 
+/// <summary>C5: what the exam form needs to offer a paper; a mixed paper carries its mix, so the form can offer the mix instead.</summary>
+public sealed record ExamPaperChoice(int Id, string Title, int SectionTemplateId, string Section, string Status, int? PaperMixId);
+
+/// <summary>C5: what the exam form needs to offer a mix; its sources, patterns and seed stay with the people who made it.</summary>
+public sealed record ExamMixChoice(int Id, string Title, int SectionTemplateId, string Section, int VersionCount);
+
 /// <summary>
 /// VE-21 / VE-23: scheduling exam sessions. Each section of the exam type gets one published paper; the session PIN
 /// and invigilator password are generated unless the administrator types their own. Once any candidate has started,
@@ -75,25 +81,38 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
     /// them without reaching the paper bank itself.
     /// </summary>
     [HttpGet("exam-papers")]
-    public async Task<IReadOnlyList<PaperListItem>> Papers(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ExamPaperChoice>> Papers(CancellationToken cancellationToken)
     {
         var used = await db.ExamSections.Select(s => s.TestPaperId).Distinct().ToListAsync(cancellationToken);
-        var papers = await AdminPapersController.PaperRows(db, db.TestPapers.Where(p => p.Status == PaperStatus.Published || used.Contains(p.Id)))
+        return await db.TestPapers.AsNoTracking()
+            .Where(p => p.Status == PaperStatus.Published || used.Contains(p.Id))
+            .OrderBy(p => p.Title)
+            .Select(p => new ExamPaperChoice(p.Id, p.Title, p.SectionTemplateId, p.SectionTemplate!.Title, p.Status.ToString(), p.PaperMixId))
             .ToListAsync(cancellationToken);
-        return papers.OrderBy(p => p.Title).ToList();
     }
 
     /// <summary>Mixes of papers a section can give by seat (VE-67), for managers of exams as well as of papers.</summary>
     [HttpGet("exam-paper-mixes")]
-    public async Task<IReadOnlyList<PaperMixView>> PaperMixes(CancellationToken cancellationToken) =>
-        (await AdminPaperMixesController.ViewsAsync(db, null, cancellationToken)).OrderBy(m => m.Title).ToList();
+    public async Task<IReadOnlyList<ExamMixChoice>> PaperMixes(CancellationToken cancellationToken) =>
+        await db.PaperMixes.AsNoTracking()
+            .OrderBy(m => m.Title)
+            .Select(m => new ExamMixChoice(m.Id, m.Title, m.SectionTemplateId, m.SectionTemplate!.Title, m.VersionCount))
+            .ToListAsync(cancellationToken);
 
-    /// <summary>Invigilator, examiner and candidates-manager accounts, for the assignment panels of a session.</summary>
+    /// <summary>
+    /// Invigilator, examiner and candidates-manager accounts, for the assignment panels of a session: the active ones,
+    /// plus an account switched off since it was assigned (to the session in <paramref name="examId"/>, or to any session
+    /// when none is named), so the panel can still show and remove it.
+    /// </summary>
     [HttpGet("assignable-staff")]
-    public async Task<IReadOnlyList<AssignableStaffView>> AssignableStaff(CancellationToken cancellationToken) =>
+    public async Task<IReadOnlyList<AssignableStaffView>> AssignableStaff([FromQuery] int? examId, CancellationToken cancellationToken) =>
         await db.Users.AsNoTracking()
             .Where(u => u.Role == UserRole.Invigilator || u.Role == UserRole.Examiner
                 || (u.Role == UserRole.Manager && db.UserAreas.Any(a => a.UserId == u.Id && a.Area == ManagerArea.Candidates)))
+            .Where(u => u.IsActive
+                || db.ExamInvigilators.Any(x => x.UserId == u.Id && (examId == null || x.ExamId == examId))
+                || db.ExamExaminers.Any(x => x.UserId == u.Id && (examId == null || x.ExamId == examId))
+                || db.ExamCandidateManagers.Any(x => x.UserId == u.Id && (examId == null || x.ExamId == examId)))
             .OrderBy(u => u.FullName)
             .Select(u => new AssignableStaffView(u.Id, u.Username, u.FullName, u.Role.ToString(), u.IsActive))
             .ToListAsync(cancellationToken);

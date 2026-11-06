@@ -8,8 +8,8 @@ namespace ExamPrep.Infrastructure.Content;
 
 /// <summary>
 /// VE-25: a blank paper laid out like the real exam, so a paper can be written entirely on the web. Every text that
-/// still has to be written starts with <see cref="Marker"/>, pictures and recordings are placeholder files, and the
-/// answer keys point at the first option; publishing refuses a paper that still has any of them.
+/// still has to be written starts with <see cref="Marker"/>, pictures and recordings are placeholder files, and
+/// no question has an answer yet; publishing refuses a paper that still has any of them.
 /// </summary>
 public static class PaperSkeletons
 {
@@ -116,14 +116,8 @@ public static class PaperSkeletons
             Part(4, "Single", null, null, Group("SingleChoice", choose, Questions(ref number, 5, n => Choice(n, Html($"question {n}")))), audio: 4),
         };
 
-        // Part 5: five people matched with eight cards; each placeholder answer is a different card.
-        var first = number;
-        var drag = Group("DragDropMatch", choose, Questions(ref number, 5, n =>
-        {
-            var question = Base(n, Html($"person for question {n}"));
-            question["answers"] = new JsonArray(((char)('A' + n - first)).ToString());
-            return question;
-        }));
+        // Part 5: five people matched with eight cards.
+        var drag = Group("DragDropMatch", choose, Questions(ref number, 5, n => Base(n, Html($"person for question {n}"))));
         drag["optionPool"] = new JsonArray("ABCDEFGH".Select(k => (JsonNode)Option(k.ToString(), $"card {k}")).ToArray());
         parts.Add(Part(5, "Single", null, null, drag, audio: 5));
         return parts;
@@ -139,17 +133,15 @@ public static class PaperSkeletons
         };
 
         // Part 2: five people (picture and description) matched with eight texts; Part 4: five sentences dragged into
-        // the gaps of a text, three extra. Each placeholder answer is a different card.
-        var firstPerson = number;
-        var people = Group("DragDropMatch", Text("instructions: what the people want and what the texts are"), Questions(ref number, 5, n => Card(n, Html($"person for question {n}"), n - firstPerson, Html($"picture of person {n}"))));
+        // the gaps of a text, three extra.
+        var people = Group("DragDropMatch", Text("instructions: what the people want and what the texts are"), Questions(ref number, 5, n => Card(n, Html($"person for question {n}"), Html($"picture of person {n}"))));
         people["itemsHeading"] = Text("heading for the people");
         people["poolHeading"] = Text("heading for the texts");
         people["optionPool"] = Pool(8, titled: true);
         parts.Add(Part(2, "Single", null, null, people));
         parts.Add(Part(3, "Split", Text("title"), Html("text"), Group("SingleChoice", choose, Questions(ref number, 5, n => Choice(n, Html($"question {n}"), options: 4)))));
 
-        var firstGap = number;
-        var sentences = Gapped("DragDropMatch", "Five sentences have been removed from the text below. For each question, choose the correct answer. There are three extra sentences which you do not need to use.", ref number, 5, n => Card(n, null, n - firstGap));
+        var sentences = Gapped("DragDropMatch", "Five sentences have been removed from the text below. For each question, choose the correct answer. There are three extra sentences which you do not need to use.", ref number, 5, n => Card(n, null));
         sentences["optionPool"] = Pool(8, titled: false);
         parts.Add(Part(4, "Single", Text("title"), null, sentences));
         parts.Add(Part(5, "Single", Text("title"), null, Gapped("InlineChoice", choose, ref number, 6, n => Choice(n, prompt: null, options: 4))));
@@ -180,8 +172,8 @@ public static class PaperSkeletons
         return [pictures, interviews, notes, interview];
     }
 
-    /// <summary>A drag-and-drop question whose answer is card A, B, C… by its place in the group.</summary>
-    private static JsonObject Card(int number, string? prompt, int index, string? stimulus = null)
+    /// <summary>A drag-and-drop question; the card it takes is chosen in the editor.</summary>
+    private static JsonObject Card(int number, string? prompt, string? stimulus = null)
     {
         var question = new JsonObject { ["number"] = number };
         if (stimulus is not null)
@@ -194,7 +186,6 @@ public static class PaperSkeletons
             question["promptHtml"] = prompt;
         }
 
-        question["answers"] = new JsonArray(((char)('A' + index)).ToString());
         return question;
     }
 
@@ -284,16 +275,10 @@ public static class PaperSkeletons
         question["options"] = new JsonArray(new[] { "A", "B", "C", "D" }.Take(options)
             .Select(key => (JsonNode)Option(key, $"option {key}", pictures ? ImagePath : null))
             .ToArray());
-        question["answers"] = new JsonArray("A");
         return question;
     }
 
-    private static JsonObject Typed(int number)
-    {
-        var question = Base(number, null);
-        question["answers"] = new JsonArray(Text("answer"));
-        return question;
-    }
+    private static JsonObject Typed(int number) => Base(number, null);
 
     private static JsonObject Essay(int number, int minWords, int points = 15, string? task = null)
     {

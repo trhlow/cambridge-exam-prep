@@ -65,3 +65,48 @@ describe('PaperEditor (VE-25)', () => {
     expect(await screen.findByDisplayValue(/<img src="\/api\/assets\/42" alt="">/)).toBeInTheDocument()
   })
 })
+
+describe('PaperEditor group headings (B3)', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('edits the column headings and the card titles of a drag-and-drop group', async () => {
+    const save = vi.spyOn(adminApi, 'editGroup').mockResolvedValue(paper)
+    const people: PaperGroupDetail = {
+      orderNo: 1,
+      interactionType: 'DragDropMatch',
+      instructions: '[to write: instructions]',
+      bodyHtml: null,
+      optionPool: [
+        { key: 'A', text: '[to write: text A]', imageUrl: null, title: '[to write: title of text A]' },
+        { key: 'B', text: '[to write: text B]', imageUrl: null, title: '[to write: title of text B]' },
+      ],
+      itemsHeading: '[to write: heading for the people]',
+      poolHeading: '[to write: heading for the texts]',
+      questions: [],
+    }
+    const part = { partNo: 2, title: null, layout: 'Single', stimulusHtml: null, audioUrl: null, groups: [people] }
+    render(<PaperEditor paper={paper} edit={{ kind: 'group', part, group: people }} onClose={() => {}} onSaved={() => {}} />)
+
+    const set = async (name: string | RegExp, value: string) => {
+      const box = screen.getByRole('textbox', { name })
+      await userEvent.clear(box)
+      await userEvent.type(box, value)
+    }
+    await set(/Heading of the left column/, 'Young people')
+    await set(/Heading of the cards/, 'Texts')
+    await set('Title of card A', 'A museum')
+    await set('Text of card A', 'Open every day.')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(save).toHaveBeenCalledWith(5, 2, 1, {
+      instructions: '[to write: instructions]',
+      bodyHtml: null,
+      optionPool: [
+        { key: 'A', text: 'Open every day.', title: 'A museum' },
+        { key: 'B', text: '[to write: text B]', title: '[to write: title of text B]' },
+      ],
+      itemsHeading: 'Young people',
+      poolHeading: 'Texts',
+    })
+  })
+})

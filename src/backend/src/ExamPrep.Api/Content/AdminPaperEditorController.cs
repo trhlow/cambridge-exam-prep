@@ -275,10 +275,21 @@ public sealed class AdminPaperEditorController(ExamPrepDbContext db, IAssetStora
             return Problems.Conflict("Only draft papers can be edited: a published paper may already be in an exam. Import a corrected copy instead.");
         }
 
+        var linkedBefore = PaperAssetLinks.In(paper);
         var errors = change(paper);
         if (errors is null)
         {
             return NotFound();
+        }
+
+        if (errors.Count == 0)
+        {
+            // C1: a picture link new to the paper must be one this person uploaded.
+            var added = PaperAssetLinks.In(paper).Except(linkedBefore).ToList();
+            if (await PaperAssetLinks.NotUploadedByAsync(db, added, User.GetStaffId(), cancellationToken) is { Count: > 0 } foreign)
+            {
+                errors = [PaperAssetLinks.Problem(foreign)];
+            }
         }
 
         if (errors.Count > 0)
@@ -315,7 +326,7 @@ public sealed class AdminPaperEditorController(ExamPrepDbContext db, IAssetStora
     }
 
     /// <summary>The importer's answer rules for one question (PaperPackageValidator).</summary>
-    private static IEnumerable<string> AnswerProblems(QuestionGroup group, string? optionsJson, List<string> answers, string? prompt, int? minWords, string label)
+    internal static IEnumerable<string> AnswerProblems(QuestionGroup group, string? optionsJson, List<string> answers, string? prompt, int? minWords, string label)
     {
         if (answers.Any(a => a.Length > MaxAnswerLength))
         {

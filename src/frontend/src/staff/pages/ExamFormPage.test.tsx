@@ -1,36 +1,18 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { adminApi, type ExamDetail, type PaperListItem, type PaperMixView } from '../api'
+import { adminApi, type ExamDetail, type ExamMixChoice, type ExamPaperChoice } from '../api'
 import { ExamFormPage } from './ExamFormPage'
 
-const paper = (id: number, sectionTemplateId: number, title: string, extra: Partial<PaperListItem> = {}): PaperListItem => ({
+const paper = (id: number, sectionTemplateId: number, title: string, extra: Partial<ExamPaperChoice> = {}): ExamPaperChoice => ({
   id,
   title,
-  examType: 'A2 Key for Schools',
   sectionTemplateId,
   section: sectionTemplateId === 1 ? 'Reading & Writing' : 'Listening',
   status: 'Published',
-  parts: 7,
-  questions: 32,
-  createdAt: '2026-10-21T00:00:00Z',
-  usedByExams: 0,
+  paperMixId: null,
   ...extra,
 })
 
-const mix: PaperMixView = {
-  id: 7,
-  title: 'Mock 1 mix',
-  examType: 'A2 Key for Schools',
-  sectionTemplateId: 1,
-  section: 'Reading & Writing',
-  sources: [
-    { letter: 'A', id: 1, title: 'RW A' },
-    { letter: 'B', id: 2, title: 'RW B' },
-  ],
-  versionCount: 4,
-  seed: 1,
-  createdAt: '2026-10-21T00:00:00Z',
-  versions: [1, 2, 3, 4].map((version) => ({ version, paperId: 10 + version, title: `Mock 1 mix – Version ${version}`, pattern: 'ABABABA' })),
-}
+const mix: ExamMixChoice = { id: 7, title: 'Mock 1 mix', sectionTemplateId: 1, section: 'Reading & Writing', versionCount: 4 }
 
 describe('ExamFormPage with mixed papers (VE-67)', () => {
   afterEach(() => vi.restoreAllMocks())
@@ -40,7 +22,7 @@ describe('ExamFormPage with mixed papers (VE-67)', () => {
       { id: 1, code: 'A2_KEY_FS', name: 'A2 Key for Schools', sections: [{ id: 1, orderNo: 1, title: 'Reading & Writing', durationMinutes: 60 }, { id: 2, orderNo: 2, title: 'Listening', durationMinutes: 35 }] },
     ])
     // The mixed papers are chosen through their mix, never one by one.
-    vi.spyOn(adminApi, 'examPapers').mockResolvedValue([paper(1, 1, 'RW A'), paper(11, 1, 'Mock 1 mix – Version 1', { paperMixId: 7, mixVersion: 1 }), paper(3, 2, 'Listening A')])
+    vi.spyOn(adminApi, 'examPapers').mockResolvedValue([paper(1, 1, 'RW A'), paper(11, 1, 'Mock 1 mix – Version 1', { paperMixId: 7 }), paper(3, 2, 'Listening A')])
     vi.spyOn(adminApi, 'examPaperMixes').mockResolvedValue([mix])
     const create = vi.spyOn(adminApi, 'createExam').mockResolvedValue({ id: 99 } as ExamDetail)
     render(<ExamFormPage />)

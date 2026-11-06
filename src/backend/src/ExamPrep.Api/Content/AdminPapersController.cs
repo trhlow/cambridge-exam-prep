@@ -30,8 +30,10 @@ public sealed record BlankLayoutView(int SectionTemplateId, string ExamType, str
 /// <param name="Skill">Reading, Writing, ReadingWriting or Listening.</param>
 public sealed record PaperSectionView(int SectionTemplateId, string ExamTypeCode, string ExamType, string Section, string Skill, int Parts);
 
-/// <param name="PaperMixId">Set on the four papers of a mix (VE-65), with their <c>MixVersion</c>.</param>
-public sealed record PaperListItem(int Id, string Title, string ExamType, int SectionTemplateId, string Section, string Status, int Parts, int Questions, DateTime CreatedAt, int UsedByExams, int? PaperMixId = null, int? MixVersion = null);
+/// <param name="UsedByExams">Sessions that give this paper, directly or through a mix it belongs to or was mixed into (B15).</param>
+/// <param name="PaperMixId">Set on the mixed papers of a mix (VE-65), with their <c>MixVersion</c>.</param>
+/// <param name="IsMixSource">Papers were mixed from this one, so it cannot be deleted until that mix goes (B15).</param>
+public sealed record PaperListItem(int Id, string Title, string ExamType, int SectionTemplateId, string Section, string Status, int Parts, int Questions, DateTime CreatedAt, int UsedByExams, int? PaperMixId = null, int? MixVersion = null, bool IsMixSource = false);
 
 [ApiController]
 [Route("api/admin/papers")]
@@ -101,7 +103,7 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
             return Problems.Invalid($"There is no blank layout for {template.ExamType.Name} {template.Title} yet. Import a package or the PDFs instead.");
         }
 
-        var result = await importer.ImportAsync(new MemoryStream(zip), User.GetStaffId(), cancellationToken);
+        var result = await importer.ImportAsync(new MemoryStream(zip), User.GetStaffId(), cancellationToken, blank: true);
         if (result.Errors.Count > 0)
         {
             logger.LogError("The blank layout for section template {TemplateId} is invalid: {Errors}", template.Id, string.Join(" | ", result.Errors));
@@ -172,6 +174,11 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
                     else if (stored.Any(o => o.ImageAssetId is { } id && placeholderIds.Contains(id)) || Placeholder(question.StimulusHtml))
                     {
                         problems.Add($"Question {question.Number}: a picture is still the placeholder.");
+                    }
+
+                    if (group.InteractionType != InteractionType.Essay && question.AnswerKeys.Count == 0)
+                    {
+                        problems.Add($"Question {question.Number}: the answer is not set.");
                     }
                 }
             }
@@ -265,9 +272,14 @@ public sealed class AdminPapersController(PaperPackageImporter importer, ExamPre
             p.Parts.Count,
             db.Questions.Count(q => q.QuestionGroup!.PaperPart!.TestPaperId == p.Id),
             p.CreatedAt,
-            db.ExamSections.Where(s => s.TestPaperId == p.Id).Select(s => s.ExamId).Distinct().Count(),
+            db.ExamSections
+                .Where(s => s.TestPaperId == p.Id
+                    || (p.PaperMixId != null && s.PaperMixId == p.PaperMixId)
+                    || (s.PaperMixId != null && db.PaperMixSources.Any(x => x.PaperMixId == s.PaperMixId && x.TestPaperId == p.Id)))
+                .Select(s => s.ExamId).Distinct().Count(),
             p.PaperMixId,
-            p.MixVersion));
+            p.MixVersion,
+            db.PaperMixSources.Any(x => x.TestPaperId == p.Id)));
 
     private BadRequestObjectResult InvalidPackage(IReadOnlyList<string> errors)
     {

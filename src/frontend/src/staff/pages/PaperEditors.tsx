@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { adminApi, type OptionEdit, type PaperDetail, type PaperGroupDetail, type PaperOption, type PaperPartDetail, type PaperQuestionDetail } from '../api'
+import { adminApi, type GroupEdit, type OptionEdit, type PaperDetail, type PaperGroupDetail, type PaperOption, type PaperPartDetail, type PaperQuestionDetail } from '../api'
 import { ErrorBox, Modal } from '../ui'
 
 /** What the editors open on; each saves through the API and hands back the whole paper. */
@@ -165,31 +165,73 @@ function OptionFields({ label, options, onChange }: { label: string; options: Op
     <fieldset className="st-fieldset">
       <legend>{label}</legend>
       {options.map((option, i) => (
-        <label key={option.key} className="st-field st-option-field">
+        <div key={option.key} className="st-field st-option-field">
           <strong>{option.key}</strong>
-          <input value={option.text ?? ''} onChange={(e) => onChange(options.map((o, j) => (j === i ? { ...o, text: e.target.value } : o)))} maxLength={500} />
-        </label>
+          {option.title !== undefined && (
+            <input
+              aria-label={`Title of card ${option.key}`}
+              placeholder="Title"
+              value={option.title ?? ''}
+              onChange={(e) => onChange(options.map((o, j) => (j === i ? { ...o, title: e.target.value } : o)))}
+              maxLength={200}
+            />
+          )}
+          <input
+            aria-label={`${option.title === undefined ? 'Text' : 'Text of card'} ${option.key}`}
+            value={option.text ?? ''}
+            onChange={(e) => onChange(options.map((o, j) => (j === i ? { ...o, text: e.target.value } : o)))}
+            maxLength={500}
+          />
+        </div>
       ))}
     </fieldset>
   )
 }
 
-const asEdits = (options: PaperOption[] | null): OptionEdit[] | undefined => options?.map((o) => ({ key: o.key, text: o.text }))
+/** A card's title is edited only where the cards have one (B1 Reading Part 2); a plain option leaves it out so the server keeps it. */
+const asEdits = (options: PaperOption[] | null): OptionEdit[] | undefined =>
+  options?.map((o) => (o.title ? { key: o.key, text: o.text, title: o.title } : { key: o.key, text: o.text }))
 
-function GroupEditor(props: { group: PaperGroupDetail; partNo: number; upload: Upload; onClose: () => void; onSave: (body: { instructions: string; bodyHtml: string | null; optionPool?: OptionEdit[] }) => Promise<unknown> }) {
+function GroupEditor(props: { group: PaperGroupDetail; partNo: number; upload: Upload; onClose: () => void; onSave: (body: GroupEdit) => Promise<unknown> }) {
   const { group, partNo, upload, onClose, onSave } = props
   const [instructions, setInstructions] = useState(group.instructions)
   const [body, setBody] = useState(group.bodyHtml ?? '')
   const [pool, setPool] = useState(asEdits(group.optionPool))
+  const [itemsHeading, setItemsHeading] = useState(group.itemsHeading ?? '')
+  const [poolHeading, setPoolHeading] = useState(group.poolHeading ?? '')
   const hasGaps = group.interactionType === 'InlineChoice' || group.interactionType === 'InlineText'
+  const isDragDrop = group.interactionType === 'DragDropMatch'
   return (
-    <EditorForm title={`Part ${partNo} · ${group.interactionType}`} onClose={onClose} onSubmit={() => onSave({ instructions: instructions.trim(), bodyHtml: body.trim() || null, optionPool: pool })}>
+    <EditorForm
+      title={`Part ${partNo} · ${group.interactionType}`}
+      onClose={onClose}
+      onSubmit={() =>
+        onSave({
+          instructions: instructions.trim(),
+          bodyHtml: body.trim() || null,
+          optionPool: pool,
+          ...(isDragDrop ? { itemsHeading: itemsHeading.trim(), poolHeading: poolHeading.trim() } : {}),
+        })
+      }
+    >
       <label className="st-field">
         Instructions
         <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={3} required maxLength={1000} />
       </label>
       <HtmlField label="Text" value={body} onChange={setBody} rows={10} upload={upload} />
       {hasGaps && <p className="st-faint">Each question of the group appears once in the text as {'{{q:19}}'}.</p>}
+      {isDragDrop && (
+        <div className="st-grid-2">
+          <label className="st-field">
+            Heading of the left column <span className="st-faint">(optional)</span>
+            <input value={itemsHeading} onChange={(e) => setItemsHeading(e.target.value)} maxLength={128} />
+          </label>
+          <label className="st-field">
+            Heading of the cards <span className="st-faint">(optional)</span>
+            <input value={poolHeading} onChange={(e) => setPoolHeading(e.target.value)} maxLength={128} />
+          </label>
+        </div>
+      )}
       {pool && <OptionFields label="Cards" options={pool} onChange={setPool} />}
     </EditorForm>
   )

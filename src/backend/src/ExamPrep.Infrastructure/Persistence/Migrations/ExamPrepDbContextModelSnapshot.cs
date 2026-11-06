@@ -174,7 +174,7 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_approval_requests_decision", "(status = 'Pending') = (decided_by_user_id IS NULL AND decided_at IS NULL)");
 
-                            t.HasCheckConstraint("CK_approval_requests_kind_values", "kind IN ('DeletePaper', 'DeleteExam', 'DeleteCandidate', 'ChangeStaffAccount', 'CreateAdmin')");
+                            t.HasCheckConstraint("CK_approval_requests_kind_values", "kind IN ('DeletePaper', 'DeleteExam', 'DeleteCandidate', 'DeleteMix', 'ChangeStaffAccount', 'CreateAdmin')");
 
                             t.HasCheckConstraint("CK_approval_requests_status_values", "status IN ('Pending', 'Approved', 'Rejected', 'Cancelled', 'Failed')");
                         });

@@ -143,6 +143,67 @@ public sealed class PaperEditorTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal(HttpStatusCode.BadRequest, publish.StatusCode);
         Assert.Contains("Part 1: the recording is still the placeholder.", errors);
         Assert.Contains("Question 1: the wording, options or answer are still to write.", errors);
+        // A6: a blank paper starts with no answer at all (choice, card or typed), and publishing names each one.
+        Assert.Empty(Question(l, 1)["answers"]!.AsArray());
+        Assert.Empty(Question(l, 7)["answers"]!.AsArray());
+        Assert.Empty(Question(l, 21)["answers"]!.AsArray());
+        Assert.Contains("Question 1: the answer is not set.", errors);
+    }
+
+    [Fact]
+    public async Task PublishingABlankPaper_NeedsEveryAnswerChosen()
+    {
+        api.SkipIfUnavailable();
+        using var client = await api.AdminClientAsync();
+        var paperId = await BlankAsync(client, 5, "B1 Listening — answers");
+        var paper = (await client.GetFromJsonAsync<JsonObject>($"/api/admin/papers/{paperId}", ct))!;
+        var unset = paper["parts"]!.AsArray().SelectMany(p => p!["groups"]!.AsArray()).SelectMany(g => g!["questions"]!.AsArray())
+            .Where(q => q!["answers"]!.AsArray().Count == 0).Select(q => (int)q!["number"]!).ToList();
+
+        Assert.Equal(Enumerable.Range(1, 25), unset);
+        // Setting the answer through the editor is all it takes to clear that question's refusal.
+        var set = await client.PutAsJsonAsync($"/api/admin/papers/{paperId}/questions/1", new
+        {
+            promptHtml = "<p>Where?</p>",
+            options = Options(("A", "the museum"), ("B", "the park"), ("C", "the zoo")),
+            answers = new[] { "B" },
+            points = 1,
+        }, ct);
+        var publish = await client.PostAsync($"/api/admin/papers/{paperId}/publish", null, ct);
+        var errors = (await publish.Content.ReadFromJsonAsync<JsonObject>(ct))!["errors"]!.AsArray().Select(e => (string)e!).ToList();
+
+        Assert.Equal(HttpStatusCode.OK, set.StatusCode);
+        Assert.DoesNotContain("Question 1: the answer is not set.", errors);
+        Assert.Contains("Question 2: the answer is not set.", errors);
+    }
+
+    [Fact]
+    public async Task TheGroupEditor_WritesTheColumnHeadingsAndCardTitles_SoABlankB1ReadingCanBePublished()
+    {
+        api.SkipIfUnavailable();
+        using var client = await api.AdminClientAsync();
+        var paperId = await BlankAsync(client, 3, "B1 Reading — headings");
+
+        var before = await client.PostAsync($"/api/admin/papers/{paperId}/publish", null, ct);
+        var cards = "ABCDEFGH".Select(k => new { key = k.ToString(), text = $"Text {k}", title = $"Title {k}" }).ToArray();
+        var edited = await client.PutAsJsonAsync($"/api/admin/papers/{paperId}/parts/2/groups/1", new
+        {
+            instructions = "Match each person with the right text.",
+            bodyHtml = (string?)null,
+            optionPool = cards,
+            itemsHeading = "Young people",
+            poolHeading = "Texts",
+        }, ct);
+        var paper = await edited.Content.ReadFromJsonAsync<JsonObject>(ct);
+        var group = paper!["parts"]![1]!["groups"]![0]!;
+        var after = await client.PostAsync($"/api/admin/papers/{paperId}/publish", null, ct);
+        var errors = (await after.Content.ReadFromJsonAsync<JsonObject>(ct))!["errors"]!.AsArray().Select(e => (string)e!).ToList();
+
+        Assert.Contains("Part 2: the instructions, text, headings or cards are still to write.", (await before.Content.ReadFromJsonAsync<JsonObject>(ct))!["errors"]!.AsArray().Select(e => (string)e!));
+        Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+        Assert.Equal(("Young people", "Texts"), ((string)group["itemsHeading"]!, (string)group["poolHeading"]!));
+        Assert.Equal("Title C", (string)group["optionPool"]![2]!["title"]!);
+        Assert.DoesNotContain("Part 2: the instructions, text, headings or cards are still to write.", errors);
     }
 
     [Theory]
@@ -239,5 +300,68 @@ public sealed class PaperEditorTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, published.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, missing.StatusCode);
+    }
+
+    [Fact]
+    public async Task HtmlMayLinkOnlyPicturesTheirPaperUsesOrThePersonUploaded()
+    {
+        api.SkipIfUnavailable();
+        var author = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        var other = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        using var mine = await api.StaffClientAsync(author.Username, Password);
+        using var theirs = await api.StaffClientAsync(other.Username, Password);
+        var myPaper = await BlankAsync(mine, 1, "C1 mine");
+        var theirPaper = await BlankAsync(theirs, 1, "C1 theirs");
+        var uploaded = await mine.PostAsync($"/api/admin/papers/{myPaper}/images", Picture(Png, "notice.png"), ct);
+        var url = (string)(await uploaded.Content.ReadFromJsonAsync<JsonObject>(ct))!["url"]!;
+        var withPicture = new { promptHtml = (string?)null, stimulusHtml = $"<p><img src=\"{url}\"></p>", answers = new[] { "A" }, points = 1 };
+
+        var ownUse = await mine.PutAsJsonAsync($"/api/admin/papers/{myPaper}/questions/1", withPicture, ct);
+        // The paper uses the picture now, so any other place in it may use it too.
+        var again = await mine.PutAsJsonAsync($"/api/admin/papers/{myPaper}/parts/2", new { title = "Notices", stimulusHtml = $"<p><img src=\"{url}\"></p>" }, ct);
+        var copied = await theirs.PutAsJsonAsync($"/api/admin/papers/{theirPaper}/questions/1", withPicture, ct);
+        var inPassage = await theirs.PutAsJsonAsync($"/api/admin/papers/{theirPaper}/parts/2", new { title = "Notices", stimulusHtml = $"<p><img src=\"{url}\"></p>" }, ct);
+        var inGroup = await theirs.PutAsJsonAsync($"/api/admin/papers/{theirPaper}/parts/4/groups/1", new { instructions = "x", bodyHtml = $"<p><img src=\"{url}\"> {{{{q:19}}}} {{{{q:20}}}} {{{{q:21}}}} {{{{q:22}}}} {{{{q:23}}}} {{{{q:24}}}}</p>" }, ct);
+        // The same file uploaded by the other person is theirs to use.
+        var theirUpload = await theirs.PostAsync($"/api/admin/papers/{theirPaper}/images", Picture(Png, "notice.png"), ct);
+        var theirUrl = (string)(await theirUpload.Content.ReadFromJsonAsync<JsonObject>(ct))!["url"]!;
+        var theirUse = await theirs.PutAsJsonAsync($"/api/admin/papers/{theirPaper}/questions/1", new { stimulusHtml = $"<p><img src=\"{theirUrl}\"></p>", answers = new[] { "A" }, points = 1 }, ct);
+
+        Assert.Equal(HttpStatusCode.OK, ownUse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, again.StatusCode);
+        Assert.All([copied, inPassage, inGroup], r => Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode));
+        Assert.Contains(url, await copied.Content.ReadAsStringAsync(ct));
+        Assert.NotEqual(url, theirUrl);
+        Assert.Equal(HttpStatusCode.OK, theirUse.StatusCode);
+    }
+
+    [Fact]
+    public async Task AnImportedPackage_CannotLinkAnotherPersonsPicture()
+    {
+        api.SkipIfUnavailable();
+        var author = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        var other = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        using var mine = await api.StaffClientAsync(author.Username, Password);
+        using var theirs = await api.StaffClientAsync(other.Username, Password);
+        var myPaper = await BlankAsync(mine, 1, "C1 import");
+        var uploaded = await mine.PostAsync($"/api/admin/papers/{myPaper}/images", Picture(Png, "notice.png"), ct);
+        var url = (string)(await uploaded.Content.ReadFromJsonAsync<JsonObject>(ct))!["url"]!;
+        var paper = SamplePackages.Load(SamplePackages.ReadingWriting);
+        paper["title"] = $"Linked {Guid.NewGuid():N}";
+        SamplePackages.Question(paper, 1)["stimulusHtml"] = $"<p><img src=\"{url}\"></p>";
+
+        async Task<HttpResponseMessage> ImportAsync(HttpClient client)
+        {
+            var file = new ByteArrayContent(SamplePackages.Zip(paper));
+            file.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
+            return await client.PostAsync("/api/admin/papers/import", new MultipartFormDataContent { { file, "package", "paper.zip" } }, ct);
+        }
+
+        var stolen = await ImportAsync(theirs);
+        var own = await ImportAsync(mine);
+
+        Assert.Equal(HttpStatusCode.BadRequest, stolen.StatusCode);
+        Assert.Contains(url, await stolen.Content.ReadAsStringAsync(ct));
+        Assert.Equal(HttpStatusCode.Created, own.StatusCode);
     }
 }

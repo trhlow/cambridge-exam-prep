@@ -146,6 +146,27 @@ export interface PaperListItem {
   /** Set on the four papers of a mix (VE-65). */
   paperMixId?: number | null
   mixVersion?: number | null
+  /** Papers were mixed from this one, so it cannot be deleted until that mix goes (B15). */
+  isMixSource?: boolean
+}
+
+/** C5: what the exam form needs to offer a paper; a mixed paper carries its mix. */
+export interface ExamPaperChoice {
+  id: number
+  title: string
+  sectionTemplateId: number
+  section: string
+  status: PaperStatus
+  paperMixId: number | null
+}
+
+/** C5: what the exam form needs to offer a mix. */
+export interface ExamMixChoice {
+  id: number
+  title: string
+  sectionTemplateId: number
+  section: string
+  versionCount: number
 }
 
 /** One of the four papers of a mix; the pattern names the source of each part, e.g. "ABBAABA". */
@@ -310,12 +331,26 @@ export interface BlankLayout {
 export interface OptionEdit {
   key: string
   text: string | null
+  /** A card's bold title (B1 Reading 2); left out keeps the current one. */
+  title?: string | null
 }
 
 export interface GroupEdit {
   instructions: string
   bodyHtml: string | null
   optionPool?: OptionEdit[]
+  /** Drag-and-drop column headings; left out keeps them, empty removes them. */
+  itemsHeading?: string | null
+  poolHeading?: string | null
+}
+
+/** A6 repair: the answer key of a published paper was corrected and the marked attempts marked again. */
+export interface AnswersCorrected {
+  number: number
+  answers: string[]
+  attemptsRemarked: number
+  scoresChanged: number
+  skipped: number[]
 }
 
 export interface QuestionEdit {
@@ -507,7 +542,7 @@ export interface CandidateResult {
   examiner?: string | null
 }
 
-export type ApprovalKind = 'DeletePaper' | 'DeleteExam' | 'DeleteCandidate' | 'ChangeStaffAccount' | 'CreateAdmin'
+export type ApprovalKind = 'DeletePaper' | 'DeleteExam' | 'DeleteCandidate' | 'DeleteMix' | 'ChangeStaffAccount' | 'CreateAdmin'
 export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled' | 'Failed'
 
 /** An action waiting for (or decided by) an administrator other than the person who asked for it. */
@@ -585,9 +620,9 @@ export const adminApi = {
   updateExam: (id: number, body: SaveExamRequest) => put<ExamDetail>(`/api/admin/exams/${id}`, body),
   setStatus: (id: number, status: ExamStatus) => post<ExamDetail>(`/api/admin/exams/${id}/status`, { status }),
   deleteExam: (id: number) => requestDeletion(`/api/admin/exams/${id}`),
-  examPapers: () => request<PaperListItem[]>('/api/admin/exam-papers'),
-  examPaperMixes: () => request<PaperMixView[]>('/api/admin/exam-paper-mixes'),
-  assignableStaff: () => request<AssignableStaff[]>('/api/admin/assignable-staff'),
+  examPapers: () => request<ExamPaperChoice[]>('/api/admin/exam-papers'),
+  examPaperMixes: () => request<ExamMixChoice[]>('/api/admin/exam-paper-mixes'),
+  assignableStaff: (examId?: number) => request<AssignableStaff[]>(examId === undefined ? '/api/admin/assignable-staff' : `/api/admin/assignable-staff?examId=${examId}`),
   assignInvigilators: (id: number, userIds: number[]) => put<AssignedStaffView[]>(`/api/admin/exams/${id}/invigilators`, { userIds }),
   assignExaminers: (id: number, userIds: number[]) => put<AssignedStaffView[]>(`/api/admin/exams/${id}/examiners`, { userIds }),
   assignCandidateManagers: (id: number, userIds: number[]) => put<AssignedStaffView[]>(`/api/admin/exams/${id}/candidate-managers`, { userIds }),
@@ -645,6 +680,8 @@ export const adminApi = {
     return request<PaperDetail>(`/api/admin/papers/${id}/parts/${partNo}/audio`, { method: 'POST', body: form })
   },
   deletePaper: (id: number) => requestDeletion(`/api/admin/papers/${id}`),
+  deleteMix: (id: number) => requestDeletion(`/api/admin/paper-mixes/${id}`),
+  correctAnswers: (id: number, number: number, answers: string[]) => put<AnswersCorrected>(`/api/admin/papers/${id}/questions/${number}/answers`, { answers }),
   paperMixes: () => request<PaperMixView[]>('/api/admin/paper-mixes'),
   mixPapers: (sourcePaperIds: number[], versionCount: number, title: string | null) => post<PaperMixView>('/api/admin/paper-mixes', { sourcePaperIds, versionCount, title }),
 

@@ -83,6 +83,21 @@ public sealed class PaperPackageValidatorTests
     }
 
     [Fact]
+    public void Validate_AcceptsQuestionsWithoutAnswers_OnlyForABlankPaper()
+    {
+        var paper = ReadingWriting();
+        SamplePackages.Question(paper, 14).Remove("answers");
+        SamplePackages.Question(paper, 25)["answers"] = new JsonArray();
+        var read = PaperPackageReader.Read(new MemoryStream(SamplePackages.Zip(paper)));
+
+        var ordinary = PaperPackageValidator.Validate(read.Package!, Template(paper));
+        var blank = PaperPackageValidator.Validate(read.Package!, Template(paper), allowMissingAnswers: true);
+
+        Assert.Contains("Part 3, question 14: choice questions need exactly one answer.", ordinary);
+        Assert.Empty(blank);
+    }
+
+    [Fact]
     public void Validate_ReportsTypedGapWithoutAnswer()
     {
         var paper = ReadingWriting();

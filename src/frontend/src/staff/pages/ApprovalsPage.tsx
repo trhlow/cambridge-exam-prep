@@ -9,6 +9,7 @@ const KIND_TEXT: Record<ApprovalKind, string> = {
   DeletePaper: 'Delete paper',
   DeleteExam: 'Delete exam',
   DeleteCandidate: 'Remove candidate',
+  DeleteMix: 'Delete mix',
   ChangeStaffAccount: 'Change staff account',
   CreateAdmin: 'New administrator',
 }
