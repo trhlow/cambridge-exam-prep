@@ -215,6 +215,59 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Counts the commands that read the questions table, to show how often the marker loads a paper.</summary>
+    private sealed class QuestionQueryCounter : Microsoft.EntityFrameworkCore.Diagnostics.DbCommandInterceptor
+    {
+        public int Count { get; private set; }
+
+        public override System.Data.Common.DbDataReader ReaderExecuted(System.Data.Common.DbCommand command, Microsoft.EntityFrameworkCore.Diagnostics.CommandExecutedEventData eventData, System.Data.Common.DbDataReader result)
+        {
+            Count += command.CommandText.Contains("FROM `questions`", StringComparison.Ordinal) ? 1 : 0;
+            return result;
+        }
+
+        public override ValueTask<System.Data.Common.DbDataReader> ReaderExecutedAsync(System.Data.Common.DbCommand command, Microsoft.EntityFrameworkCore.Diagnostics.CommandExecutedEventData eventData, System.Data.Common.DbDataReader result, CancellationToken cancellationToken = default)
+        {
+            Count += command.CommandText.Contains("FROM `questions`", StringComparison.Ordinal) ? 1 : 0;
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    /// <summary>
+    /// When a section ends for the whole room, hundreds of attempts of one paper wait for marking at once; the marker
+    /// used to load the paper's questions and answer keys again for every attempt (about 400 queries at 200 candidates).
+    /// </summary>
+    [Fact]
+    public async Task MarkPending_LoadsTheQuestionsOncePerPaper_NotOncePerAttempt()
+    {
+        api.SkipIfUnavailable();
+        var first = await api.CreateCandidateAsync(Password, withSamplePapers: true);
+        var ids = new List<int> { first.CandidateId };
+        for (var i = 0; i < 3; i++)
+        {
+            ids.Add((await api.AddCandidateAsync(first.ExamId, Password, "Mai", $"Zz{Guid.NewGuid():N}"[..10])).CandidateId);
+        }
+
+        foreach (var id in ids)
+        {
+            await api.StartAttemptAsync(id, first.ReadingWritingSectionId);
+            await api.SubmitStartedAttemptAsync(id, first.ReadingWritingSectionId);
+        }
+
+        using var scope = api.Factory.Services.CreateScope();
+        var connection = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>().Database.GetConnectionString()!;
+        var counter = new QuestionQueryCounter();
+        await using var db = new ExamPrepDbContext(new DbContextOptionsBuilder<ExamPrepDbContext>().UseMySQL(connection).AddInterceptors(counter).Options);
+        var papers = await db.Attempts
+            .Where(a => a.Status == AttemptStatus.Submitted && a.GradingStatus == GradingStatus.NotGraded)
+            .Select(a => a.TestPaperId).Distinct().CountAsync(ct);
+
+        var marked = await new AttemptMarker(db).MarkPendingAsync(ct);
+
+        Assert.True(marked >= 1);
+        Assert.True(counter.Count <= papers, $"{counter.Count} question queries for {papers} papers and {marked} attempts");
+    }
+
     /// <summary>
     /// The background sweep and a caller can mark at the same time. When one attempt of a batch was changed meanwhile,
     /// its conflict used to throw the whole batch away (and report 0), so the others stayed ungraded until the next

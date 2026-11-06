@@ -14,6 +14,7 @@ internal sealed class ExamConfiguration : IEntityTypeConfiguration<Exam>
         builder.Property(e => e.SessionPin).HasMaxLength(16);
         builder.Property(e => e.InvigilatorPassword).HasMaxLength(64);
         builder.Property(e => e.SebConfigKeyHash).HasMaxLength(64).IsFixedLength();
+        builder.Property(e => e.IsDemo).HasDefaultValue(false);
         builder.HasOne(e => e.ExamType).WithMany().HasForeignKey(e => e.ExamTypeId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(e => e.ScheduledDate);
