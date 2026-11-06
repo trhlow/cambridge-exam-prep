@@ -6,7 +6,7 @@ export type AssignedRole = 'Invigilator' | 'Examiner' | 'CandidatesManager'
 
 const TEXT: Record<AssignedRole, { title: string; help: string; none: string }> = {
   Invigilator: { title: 'Invigilators', help: 'They open this session, print the slips and monitor its sections.', none: 'No invigilator accounts yet.' },
-  Examiner: { title: 'Examiners', help: 'They review the finished work, mark Writing and see the results.', none: 'No examiner accounts yet.' },
+  Examiner: { title: 'Examiners', help: 'Writing scripts are dealt to them at random and evenly, known by a code only. They mark them under Marking and see no names, other parts or results.', none: 'No examiner accounts yet.' },
   CandidatesManager: { title: 'Candidates managers', help: 'They enter and correct the candidates of this session and print their slips.', none: 'No manager works on candidates yet.' },
 }
 

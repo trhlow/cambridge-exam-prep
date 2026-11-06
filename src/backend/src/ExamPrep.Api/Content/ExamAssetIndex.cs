@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -54,11 +55,15 @@ public sealed partial class ExamAssetIndex(ExamPrepDbContext db, IMemoryCache ca
     private async Task<HashSet<int>> StaffAssetsAsync(int userId, CancellationToken cancellationToken)
     {
         var markedExams = db.Exams.Where(e => e.Examiners.Any(x => x.UserId == userId)).Select(e => e.Id);
-        var paperIds = await db.TestPapers.Where(p => p.CreatedByUserId == userId).Select(p => p.Id)
-            .Concat(db.Attempts.Where(a => markedExams.Contains(a.ExamSection!.ExamId) && a.Candidate!.ExaminerUserId == userId).Select(a => a.TestPaperId))
+        var ownPapers = await db.TestPapers.Where(p => p.CreatedByUserId == userId).Select(p => p.Id).ToListAsync(cancellationToken);
+        // An examiner needs the Writing tasks of the scripts dealt to them, not the Reading pictures or Listening audio.
+        var scriptPapers = await db.Attempts
+            .Where(a => markedExams.Contains(a.ExamSection!.ExamId) && a.Candidate!.ExaminerUserId == userId)
+            .Select(a => a.TestPaperId)
             .Distinct()
             .ToListAsync(cancellationToken);
-        var assets = await AssetsOfAsync(paperIds, cancellationToken);
+        var assets = await AssetsOfAsync(ownPapers, writingOnly: false, cancellationToken);
+        assets.UnionWith(await AssetsOfAsync(scriptPapers, writingOnly: true, cancellationToken));
         assets.UnionWith(await db.Assets.Where(a => a.UploadedByUserId == userId).Select(a => a.Id).ToListAsync(cancellationToken));
         return assets;
     }
@@ -74,23 +79,22 @@ public sealed partial class ExamAssetIndex(ExamPrepDbContext db, IMemoryCache ca
             paperIds.AddRange(await db.TestPapers.Where(p => p.PaperMixId != null && mixIds.Contains(p.PaperMixId.Value)).Select(p => p.Id).ToListAsync(cancellationToken));
         }
 
-        return await AssetsOfAsync(paperIds, cancellationToken);
+        return await AssetsOfAsync(paperIds, writingOnly: false, cancellationToken);
     }
 
-    /// <summary>Every stored file these papers use.</summary>
-    private async Task<HashSet<int>> AssetsOfAsync(List<int> paperIds, CancellationToken cancellationToken)
+    /// <summary>Every stored file these papers use; with <paramref name="writingOnly"/>, only those of their Writing parts.</summary>
+    private async Task<HashSet<int>> AssetsOfAsync(List<int> paperIds, bool writingOnly, CancellationToken cancellationToken)
     {
-
         var parts = await db.PaperParts.AsNoTracking()
-            .Where(p => paperIds.Contains(p.TestPaperId))
+            .Where(p => paperIds.Contains(p.TestPaperId) && (!writingOnly || p.Groups.Any(g => g.InteractionType == InteractionType.Essay)))
             .Select(p => new { p.AudioAssetId, p.StimulusHtml })
             .ToListAsync(cancellationToken);
         var groups = await db.QuestionGroups.AsNoTracking()
-            .Where(g => paperIds.Contains(g.PaperPart!.TestPaperId))
+            .Where(g => paperIds.Contains(g.PaperPart!.TestPaperId) && (!writingOnly || g.InteractionType == InteractionType.Essay))
             .Select(g => new { g.BodyHtml, g.OptionPoolJson })
             .ToListAsync(cancellationToken);
         var questions = await db.Questions.AsNoTracking()
-            .Where(q => paperIds.Contains(q.QuestionGroup!.PaperPart!.TestPaperId))
+            .Where(q => paperIds.Contains(q.QuestionGroup!.PaperPart!.TestPaperId) && (!writingOnly || q.QuestionGroup.InteractionType == InteractionType.Essay))
             .Select(q => new { q.PromptHtml, q.StimulusHtml, q.OptionsJson })
             .ToListAsync(cancellationToken);
 

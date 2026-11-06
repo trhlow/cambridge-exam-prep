@@ -21,7 +21,11 @@ public sealed record CandidateResult(int CandidateId, string CandidateNumber, st
 /// <param name="Comment">Writing: the teacher's comment with the mark.</param>
 /// <param name="Selection">Where the candidate chooses which questions to answer: Yes, No or Undecided; null elsewhere.</param>
 /// <param name="Counts">False for a question the candidate did not choose: it is not marked.</param>
-public sealed record QuestionMark(int Number, int PartNo, string InteractionType, string? Response, IReadOnlyList<string> AcceptedAnswers, bool? IsCorrect, decimal? Score, decimal Points, string? Comment, string? Selection = null, bool Counts = true);
+/// <param name="PromptHtml">The task the candidate answered, from the paper the attempt sat (sanitised on import).</param>
+/// <param name="StimulusHtml">The question's own pictures or text.</param>
+/// <param name="PassageHtml">The part's passage or instructions shown with the question.</param>
+public sealed record QuestionMark(int Number, int PartNo, string InteractionType, string? Response, IReadOnlyList<string> AcceptedAnswers, bool? IsCorrect, decimal? Score, decimal Points, string? Comment, string? Selection = null, bool Counts = true,
+    string? PromptHtml = null, string? StimulusHtml = null, string? PassageHtml = null);
 
 /// <param name="PaperTitle">The paper the candidate sat: with mixed papers, the version of their seat (VE-67).</param>
 /// <param name="RawScore">VE-73: the Writing marks so far (the examiner sees no other part of the test).</param>
@@ -128,7 +132,9 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
             return Problem(title: "The candidate's work can be reviewed once the section has ended.", statusCode: StatusCodes.Status409Conflict);
         }
 
-        return (await WritingMarks.MarkingAsync(db, attemptId, cancellationToken))!;
+        // A section without Writing (Reading, Listening) has nothing to mark.
+        var marking = await WritingMarks.MarkingAsync(db, attemptId, cancellationToken);
+        return marking is null || marking.Questions.Count == 0 ? NotFound() : marking;
     }
 }
 
@@ -198,11 +204,11 @@ public static class WritingMarks
         {
             var type = q.QuestionGroup!.InteractionType;
             var response = responses.GetValueOrDefault(q.Id);
-            var manual = response?.ManualMarks.OrderByDescending(m => m.MarkedAt).FirstOrDefault();
+            var manual = Latest(response?.ManualMarks);
             bool? isCorrect = AnswerMatcher.CanAutoMark(type) ? AnswerMatcher.IsCorrect(type, response?.Value, q.AnswerKeys.ToList()) : null;
             decimal? score = isCorrect is null ? manual?.Score : isCorrect.Value ? q.Points : 0;
             var selection = q.QuestionGroup.ChooseCount is null ? null : (response?.Selection ?? QuestionSelection.Undecided).ToString();
-            return new QuestionMark(q.Number, q.QuestionGroup.PaperPart!.PartNo, type.ToString(), response?.Value, q.AnswerKeys.Select(k => k.Value).ToList(), isCorrect, score, q.Points, manual?.Comment, selection, counted.Contains(q.Id));
+            return new QuestionMark(q.Number, q.QuestionGroup.PaperPart!.PartNo, type.ToString(), response?.Value, q.AnswerKeys.Select(k => k.Value).ToList(), isCorrect, score, q.Points, manual?.Comment, selection, counted.Contains(q.Id), q.PromptHtml, q.StimulusHtml, q.QuestionGroup.PaperPart.StimulusHtml);
         }).ToList();
 
         var counting = marks.Where(m => m.Counts).ToList();
@@ -226,13 +232,40 @@ public static class WritingMarks
             return group.Where(q => numbers.Contains(q.Number)).Select(q => q.Id);
         }).ToHashSet();
 
+    /// <summary>The mark that counts: the latest one (marks are never deleted, so a re-mark is a new row).</summary>
+    private static ManualMark? Latest(IEnumerable<ManualMark>? marks) =>
+        marks?.OrderByDescending(m => m.MarkedAt).ThenByDescending(m => m.Id).FirstOrDefault();
+
     /// <summary>
-    /// Records (or replaces) the mark of one Writing question and recomputes the attempt's score. Returns the status
-    /// code, with a sentence for the teacher when the mark is refused.
+    /// Records a mark of one Writing question (a new row; earlier marks stay as history) and recomputes the attempt's
+    /// score, in one transaction. Returns the status code, with a sentence for the teacher when the mark is refused.
+    /// A concurrent change of the attempt is reloaded and retried once.
     /// </summary>
     public static async Task<(int Status, string? Error)> SaveAsync(ExamPrepDbContext db, int attemptId, WritingMarkRequest request, int markerId, DateTime now, CancellationToken cancellationToken)
     {
-        var attempt = await db.Attempts.Include(a => a.ExamSection).SingleOrDefaultAsync(a => a.Id == attemptId, cancellationToken);
+        for (var attemptNo = 1; ; attemptNo++)
+        {
+            try
+            {
+                return await SaveOnceAsync(db, attemptId, request, markerId, now, cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException) when (attemptNo == 1)
+            {
+                db.ChangeTracker.Clear();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                db.ChangeTracker.Clear();
+                return (StatusCodes.Status409Conflict, "The script changed while the mark was being saved. Try again.");
+            }
+        }
+    }
+
+    private static async Task<(int Status, string? Error)> SaveOnceAsync(ExamPrepDbContext db, int attemptId, WritingMarkRequest request, int markerId, DateTime now, CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        // Locking the attempt first makes two marks of one script wait for each other instead of deadlocking.
+        var attempt = await db.Attempts.FromSql($"SELECT * FROM attempts WHERE id = {attemptId} FOR UPDATE").SingleOrDefaultAsync(cancellationToken);
         if (attempt is null)
         {
             return (StatusCodes.Status404NotFound, null);
@@ -266,8 +299,7 @@ public static class WritingMarks
             return (StatusCodes.Status400BadRequest, $"The mark must be between 0 and {question.Points:0.##}.");
         }
 
-        var response = await db.Responses.Include(r => r.ManualMarks)
-            .SingleOrDefaultAsync(r => r.AttemptId == attemptId && r.QuestionId == question.Id, cancellationToken);
+        var response = await db.Responses.SingleOrDefaultAsync(r => r.AttemptId == attemptId && r.QuestionId == question.Id, cancellationToken);
         if (response is null)
         {
             // Nothing was written: the mark (usually 0) still needs a response to belong to.
@@ -275,7 +307,6 @@ public static class WritingMarks
             db.Responses.Add(response);
         }
 
-        db.ManualMarks.RemoveRange(response.ManualMarks);
         response.ManualMarks.Add(new ManualMark
         {
             MarkerUserId = markerId,
@@ -288,15 +319,16 @@ public static class WritingMarks
 
         await RecomputeAsync(db, attempt, counted.ToList(), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return (StatusCodes.Status200OK, null);
     }
 
-    /// <summary>Automatic marks plus the marks of the Writing questions that count; Final once each of them has a mark.</summary>
+    /// <summary>Automatic marks plus the latest marks of the Writing questions that count; Final once each of them has a mark.</summary>
     private static async Task RecomputeAsync(ExamPrepDbContext db, Attempt attempt, List<int> essayIds, CancellationToken cancellationToken)
     {
         var responses = await db.Responses.AsNoTracking().Include(r => r.ManualMarks).Where(r => r.AttemptId == attempt.Id).ToListAsync(cancellationToken);
         var automatic = responses.Sum(r => r.AutoScore ?? 0);
-        var writing = responses.Where(r => essayIds.Contains(r.QuestionId)).Select(r => r.ManualMarks.FirstOrDefault()).OfType<ManualMark>().ToList();
+        var writing = responses.Where(r => essayIds.Contains(r.QuestionId)).Select(r => Latest(r.ManualMarks)).OfType<ManualMark>().ToList();
         attempt.RawScore = automatic + writing.Sum(m => m.Score);
         attempt.GradingStatus = writing.Count == essayIds.Count ? GradingStatus.Final : GradingStatus.NeedsManualMarking;
     }

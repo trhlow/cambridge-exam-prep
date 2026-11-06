@@ -465,6 +465,11 @@ export interface QuestionMark {
   selection?: string | null
   /** False for a question the candidate did not choose: it is not marked. */
   counts?: boolean
+  /** The task the candidate answered, from the paper they sat (HTML, sanitised on import and again where shown). */
+  promptHtml?: string | null
+  stimulusHtml?: string | null
+  /** The part's passage or instructions shown with the question. */
+  passageHtml?: string | null
 }
 
 export interface AttemptMarking {

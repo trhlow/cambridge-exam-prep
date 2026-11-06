@@ -18,9 +18,9 @@ describe('resultsCsv', () => {
 
     expect(csv.startsWith(String.fromCharCode(0xfeff))).toBe(true)
     expect(csv.slice(1).split('\r\n')).toEqual([
-      '"Candidate number","Name","Writing script","Examiner","Reading & Writing","Reading & Writing max","Listening","Listening max"',
-      '"0001","An Nguyễn","K7P2QX","Ms Hoa",21,60,18,25',
-      '"0002","Bình ""B"" Trần","","",,,,',
+      '"Candidate number","Name","Writing script","Examiner","Reading & Writing","Reading & Writing max","Reading & Writing status","Listening","Listening max","Listening status"',
+      '"0001","An Nguyễn","K7P2QX","Ms Hoa",21,60,"Writing to mark",18,25,"Marked"',
+      '"0002","Bình ""B"" Trần","","",,,"",,,""',
     ])
   })
 
@@ -29,9 +29,18 @@ describe('resultsCsv', () => {
     mixed.sections[0].paperVersion = 3
 
     expect(resultsCsv([mixed]).slice(1).split(String.fromCharCode(13, 10))).toEqual([
-      '"Candidate number","Name","Writing script","Examiner","Reading & Writing","Reading & Writing max","Reading & Writing version","Listening","Listening max"',
-      '"0004","Chi Lê","","",30,60,3,20,25',
+      '"Candidate number","Name","Writing script","Examiner","Reading & Writing","Reading & Writing max","Reading & Writing status","Reading & Writing version","Listening","Listening max","Listening status"',
+      '"0004","Chi Lê","","",30,60,"Writing to mark",3,20,25,"Marked"',
     ])
+  })
+
+  it('says per section whether a score is final or still provisional (A13)', () => {
+    const finalRw = result('0005', 'Dung Võ', ['Submitted', 40, 60], ['Submitted', 20, 25])
+    finalRw.sections[0].gradingStatus = 'Final'
+
+    const rows = resultsCsv([finalRw]).slice(1).split(String.fromCharCode(13, 10))
+
+    expect(rows[1]).toBe('"0005","Dung Võ","","",40,60,"Final",20,25,"Marked"')
   })
 
   it('neutralises text that Excel would run as a formula', () => {
