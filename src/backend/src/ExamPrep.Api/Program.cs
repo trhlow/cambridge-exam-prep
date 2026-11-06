@@ -75,7 +75,15 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
     var demo = (app.Configuration.GetSection("Demo").Get<DemoOptions>() ?? new DemoOptions()).WithFoldersUnder(app.Environment.ContentRootPath);
-    await DemoSeeder.SeedAsync(app.Services, demo, CancellationToken.None);
+    try
+    {
+        await DemoSeeder.SeedAsync(app.Services, demo, CancellationToken.None);
+    }
+    catch (Exception e)
+    {
+        // The demo is only a convenience (Review B12): whatever it hits, the API still starts.
+        app.Logger.LogError(e, "The demo seeder failed; the API starts without the demo exam.");
+    }
 }
 
 if (!app.Environment.IsDevelopment())

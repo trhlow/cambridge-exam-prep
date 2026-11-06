@@ -412,10 +412,16 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ExamSectionId");
 
+                    b.HasIndex("LastHeartbeatAt");
+
                     b.HasIndex("TestPaperId");
 
                     b.HasIndex("CandidateId", "ExamSectionId")
                         .IsUnique();
+
+                    b.HasIndex("Status", "EndsAt");
+
+                    b.HasIndex("Status", "GradingStatus");
 
                     b.ToTable("attempts", t =>
                         {
@@ -618,6 +624,12 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)")
                         .HasColumnName("invigilator_password");
+
+                    b.Property<bool>("IsDemo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_demo");
 
                     b.Property<string>("Name")
                         .IsRequired()

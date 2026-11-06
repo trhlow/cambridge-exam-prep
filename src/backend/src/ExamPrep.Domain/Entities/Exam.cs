@@ -34,6 +34,9 @@ public class Exam
     /// </summary>
     public int? SeatsPerRow { get; set; }
 
+    /// <summary>Made by the development demo seeder. Only such exams are ever deleted by the demo reset, never by name alone.</summary>
+    public bool IsDemo { get; set; }
+
     public int CreatedByUserId { get; set; }
 
     public DateTime CreatedAt { get; set; }

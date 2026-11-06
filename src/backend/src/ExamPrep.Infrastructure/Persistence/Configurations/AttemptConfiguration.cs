@@ -32,6 +32,10 @@ internal sealed class AttemptConfiguration : IEntityTypeConfiguration<Attempt>
         builder.HasOne(a => a.Candidate).WithMany(c => c.Attempts).HasForeignKey(a => a.CandidateId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(a => a.ExamSection).WithMany(s => s.Attempts).HasForeignKey(a => a.ExamSectionId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(a => new { a.CandidateId, a.ExamSectionId }).IsUnique();
+        // The sweeps that run every 2-5 seconds: expiry (status, ends_at), marking (status, grading_status), heartbeats going quiet.
+        builder.HasIndex(a => new { a.Status, a.EndsAt });
+        builder.HasIndex(a => new { a.Status, a.GradingStatus });
+        builder.HasIndex(a => a.LastHeartbeatAt);
         builder.HasOne(a => a.TestPaper).WithMany().HasForeignKey(a => a.TestPaperId).OnDelete(DeleteBehavior.Restrict);
     }
 }

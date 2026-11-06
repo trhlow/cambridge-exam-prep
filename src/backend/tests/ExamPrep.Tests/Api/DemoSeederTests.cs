@@ -89,6 +89,92 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Empty(fresh.Candidates.Single().Attempts);
     }
 
+    /// <summary>
+    /// Review D4: ResetOnStart used to delete whichever exam bore the demo's name, attempts included. It now removes only
+    /// exams the seeder made (<c>exams.is_demo</c>); a real session that happens to share the name is left alone.
+    /// </summary>
+    [Fact]
+    public async Task Seed_WithResetOnStart_NeverTouchesAnExamTheSeederDidNotMake()
+    {
+        api.SkipIfUnavailable();
+        var options = Options();
+        var real = await api.CreateCandidateAsync("kq7m-2xpt");
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var exam = await db.Exams.SingleAsync(e => e.Id == real.ExamId, ct);
+            exam.Name = options.ExamName;
+            await db.SaveChangesAsync(ct);
+        }
+
+        await api.SubmitSectionAsync(real.CandidateId, real.ReadingWritingSectionId);
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options with { ResetOnStart = true }, ct);
+
+        using var check = api.Factory.Services.CreateScope();
+        var checkDb = check.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var kept = await checkDb.Exams.SingleAsync(e => e.Name == options.ExamName, ct);
+        Assert.Equal(real.ExamId, kept.Id);
+        Assert.False(kept.IsDemo);
+        Assert.True(await checkDb.Attempts.AnyAsync(a => a.CandidateId == real.CandidateId, ct));
+    }
+
+    [Fact]
+    public async Task Seed_MarksTheExamsItMakes_AndResetRemovesThemEvenAfterARename()
+    {
+        api.SkipIfUnavailable();
+        var options = Options();
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+        int firstId;
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var exam = await db.Exams.SingleAsync(e => e.Name == options.ExamName, ct);
+            Assert.True(exam.IsDemo);
+            firstId = exam.Id;
+            exam.Name = $"Renamed {Guid.NewGuid():N}";
+            await db.SaveChangesAsync(ct);
+        }
+
+        // The renamed demo exam still holds the demo candidate's username: the seeder must neither crash nor stack a copy.
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+        await DemoSeeder.SeedAsync(api.Factory.Services, options with { ResetOnStart = true }, ct);
+
+        using var check = api.Factory.Services.CreateScope();
+        var checkDb = check.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        Assert.False(await checkDb.Exams.AnyAsync(e => e.Id == firstId, ct));
+        var fresh = await checkDb.Exams.SingleAsync(e => e.Name == options.ExamName, ct);
+        Assert.True(fresh.IsDemo);
+    }
+
+    /// <summary>Review B12: a demo exam that cannot be built is logged; it must not stop the API from starting.</summary>
+    [Fact]
+    public async Task Seed_WhenADemoSampleIsInvalid_LogsAndReturns_AndStillSeedsTheOtherExam()
+    {
+        api.SkipIfUnavailable();
+        var folder = Directory.CreateTempSubdirectory("demo-bad-").FullName;
+        await File.WriteAllTextAsync(Path.Combine(folder, "paper.json"), "{ not json", ct);
+        var samples = Path.Combine(AppContext.BaseDirectory, "Samples");
+        var options = Options() with
+        {
+            ReadingWritingFolder = folder,
+            B1 = new DemoB1Options
+            {
+                Enabled = true,
+                ExamName = $"Demo B1 {Guid.NewGuid():N}",
+                CandidateUsername = $"demob1{Guid.NewGuid():N}"[..14],
+                Reading = new() { Folder = Path.Combine(samples, "b1-pfs-reading") },
+            },
+        };
+
+        await DemoSeeder.SeedAsync(api.Factory.Services, options, ct);
+
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        Assert.False(await db.Exams.AnyAsync(e => e.Name == options.ExamName, ct));
+        Assert.True(await db.Exams.AnyAsync(e => e.Name == options.B1.ExamName, ct));
+    }
+
     [Fact]
     public async Task Seed_WithSecondSourcePapers_GivesEachSectionAMixBySeat_AndResetRemovesIt()
     {

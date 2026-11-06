@@ -83,8 +83,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
         }
 
         /// <summary>
-        /// Back to two sources and four papers: a mix of more papers makes the restored check on <c>mix_version</c> fail,
-        /// so the database refuses to go back while one exists.
+        /// Back to two sources and four papers. Only a mix of more than four papers stops this: the restored check on
+        /// <c>mix_version</c> (1 to 4) fails and the database refuses to go back while one exists. A mix of three to six
+        /// sources that made four papers or fewer does go back, but keeps only its first two sources (A and B); the others
+        /// are dropped with <c>paper_mix_sources</c>, so its papers then no longer match their sources.
         /// </summary>
         protected override void Down(MigrationBuilder migrationBuilder)
         {

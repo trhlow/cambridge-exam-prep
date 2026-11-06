@@ -16,6 +16,9 @@ public sealed class AttemptMarker(ExamPrepDbContext db)
     /// <summary>Marks every submitted attempt that has not been graded yet; returns how many were marked.</summary>
     public async Task<int> MarkPendingAsync(CancellationToken cancellationToken)
     {
+        // The whole room finishes together, so hundreds of attempts share a few papers: load each paper's questions and
+        // answer keys once for the call, not once per attempt.
+        var papers = new Dictionary<int, List<Question>>();
         var pending = await db.Attempts
             .Include(a => a.ExamSection)
             .Where(a => a.Status == AttemptStatus.Submitted && a.GradingStatus == GradingStatus.NotGraded)
@@ -23,7 +26,7 @@ public sealed class AttemptMarker(ExamPrepDbContext db)
 
         foreach (var attempt in pending)
         {
-            await MarkAsync(attempt, cancellationToken);
+            await MarkAsync(attempt, papers, cancellationToken);
         }
 
         if (pending.Count == 0)
@@ -54,7 +57,7 @@ public sealed class AttemptMarker(ExamPrepDbContext db)
                 continue;
             }
 
-            await MarkAsync(attempt, cancellationToken);
+            await MarkAsync(attempt, papers, cancellationToken);
             try
             {
                 await db.SaveChangesAsync(cancellationToken);
@@ -70,14 +73,19 @@ public sealed class AttemptMarker(ExamPrepDbContext db)
         return marked;
     }
 
-    private async Task MarkAsync(Attempt attempt, CancellationToken cancellationToken)
+    private async Task MarkAsync(Attempt attempt, Dictionary<int, List<Question>> papers, CancellationToken cancellationToken)
     {
-        var questions = await db.Questions
-            .AsNoTracking()
-            .Include(q => q.AnswerKeys)
-            .Include(q => q.QuestionGroup)
-            .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.TestPaperId)
-            .ToListAsync(cancellationToken);
+        if (!papers.TryGetValue(attempt.TestPaperId, out var questions))
+        {
+            questions = await db.Questions
+                .AsNoTracking()
+                .Include(q => q.AnswerKeys)
+                .Include(q => q.QuestionGroup)
+                .Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == attempt.TestPaperId)
+                .ToListAsync(cancellationToken);
+            papers[attempt.TestPaperId] = questions;
+        }
+
         var responses = await db.Responses
             .Where(r => r.AttemptId == attempt.Id)
             .ToDictionaryAsync(r => r.QuestionId, cancellationToken);

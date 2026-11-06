@@ -68,7 +68,10 @@ public sealed record DemoOptions
     public string? InvigilatorUsername { get; init; }
     public string? InvigilatorPassword { get; init; }
 
-    /// <summary>Delete the demo exam (and its papers, attempts and answers) and create it again on every start.</summary>
+    /// <summary>
+    /// Delete the demo exams the seeder made (and their papers, attempts and answers) and create them again on every API
+    /// start, which includes a restart after a crash. Exams made by people are never touched.
+    /// </summary>
     public bool ResetOnStart { get; init; }
 
     /// <summary>VE-68: a second demo exam, B1 Preliminary for Schools (section <c>Demo:B1</c>).</summary>
@@ -145,24 +148,43 @@ public static class DemoSeeder
         var db = provider.GetRequiredService<ExamPrepDbContext>();
         var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(DemoSeeder));
 
-        await EnsureStaffAsync(provider, db, options.AdminUsername, options.AdminPassword, "Demo Administrator", UserRole.Admin, cancellationToken);
-        await EnsureStaffAsync(provider, db, options.SecondAdminUsername, options.SecondAdminPassword, "Demo Administrator 2", UserRole.Admin, cancellationToken);
-        await EnsureStaffAsync(provider, db, options.ManagerUsername, options.ManagerPassword, "Demo Manager", UserRole.Manager, cancellationToken, Enum.GetValues<ManagerArea>());
+        // The demo is a convenience: whatever goes wrong here (a bad sample, a name already taken) is logged and the API
+        // starts anyway. The unit of work is one exam, so a broken A2 paper does not stop the B1 exam.
+        await TryAsync("the demo staff accounts", db, logger, async () =>
+        {
+            await EnsureStaffAsync(provider, db, options.AdminUsername, options.AdminPassword, "Demo Administrator", UserRole.Admin, cancellationToken);
+            await EnsureStaffAsync(provider, db, options.SecondAdminUsername, options.SecondAdminPassword, "Demo Administrator 2", UserRole.Admin, cancellationToken);
+            await EnsureStaffAsync(provider, db, options.ManagerUsername, options.ManagerPassword, "Demo Manager", UserRole.Manager, cancellationToken, Enum.GetValues<ManagerArea>());
+        });
 
-        await SeedExamAsync(provider, db, options, options.ExamName, options.CandidateUsername,
+        await TryAsync(options.ExamName, db, logger, () => SeedExamAsync(provider, db, options, options.ExamName, options.CandidateUsername,
         [
             new("a2-key-fs-reading-writing", "Reading & Writing", new() { Folder = options.ReadingWritingFolder, SecondFolder = options.SecondReadingWritingFolder }),
             new("a2-key-fs-listening", "Listening", new() { Folder = options.ListeningFolder, SecondFolder = options.SecondListeningFolder }),
-        ], logger, cancellationToken);
+        ], logger, cancellationToken));
 
         if (options.B1.Enabled)
         {
-            await SeedExamAsync(provider, db, options, options.B1.ExamName, options.B1.CandidateUsername,
+            await TryAsync(options.B1.ExamName, db, logger, () => SeedExamAsync(provider, db, options, options.B1.ExamName, options.B1.CandidateUsername,
             [
                 new("b1-pfs-reading", "Reading", options.B1.Reading),
                 new("b1-pfs-writing", "Writing", options.B1.Writing),
                 new("b1-pfs-listening", "Listening", options.B1.Listening),
-            ], logger, cancellationToken);
+            ], logger, cancellationToken));
+        }
+    }
+
+    /// <summary>Runs one piece of seeding; a failure is logged with its reason and the half-done changes are dropped.</summary>
+    private static async Task TryAsync(string what, ExamPrepDbContext db, ILogger logger, Func<Task> work)
+    {
+        try
+        {
+            await work();
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            db.ChangeTracker.Clear();
+            logger.LogError(e, "The demo seeder could not set up {What}; the API starts without it.", what);
         }
     }
 
@@ -173,10 +195,12 @@ public static class DemoSeeder
     {
         if (options.ResetOnStart)
         {
-            await DeleteDemoExamAsync(db, examName, cancellationToken);
+            await DeleteDemoExamAsync(db, examName, candidateUsername, logger, cancellationToken);
         }
 
-        if (await db.Exams.AnyAsync(e => e.Name == examName, cancellationToken))
+        // Found by name or by the demo candidate: a renamed demo exam still holds the candidate's username, and making a
+        // second one would fail on it (Review B12).
+        if (await db.Exams.AnyAsync(e => e.Name == examName || e.Candidates.Any(c => c.Username == candidateUsername), cancellationToken))
         {
             return;
         }
@@ -229,6 +253,7 @@ public static class DemoSeeder
             ScheduledDate = DateOnly.FromDateTime(DateTime.UtcNow),
             Room = "Demo room",
             Status = ExamStatus.Active,
+            IsDemo = true,
             SessionPin = options.SessionPin,
             InvigilatorPassword = Guid.NewGuid().ToString("N")[..10],
             SeatsPerRow = options.SeatsPerRow,
@@ -245,12 +270,22 @@ public static class DemoSeeder
         logger.LogInformation("Demo exam {ExamName} is open; candidate {Username} can sign in (see the Demo section of appsettings.Development.json).", exam.Name, candidate.Username);
     }
 
-    /// <summary>Removes the demo exam with its candidates, attempts and answers, then the papers only it used.</summary>
-    private static async Task DeleteDemoExamAsync(ExamPrepDbContext db, string examName, CancellationToken cancellationToken)
+    /// <summary>
+    /// Removes the demo exam the seeder made (<see cref="Exam.IsDemo"/>, found by its name or its candidate, so a renamed
+    /// one goes too) with its candidates, attempts and answers, then the papers only it used. An exam of the same name that
+    /// the seeder did not make is a real session and is left alone.
+    /// </summary>
+    private static async Task DeleteDemoExamAsync(ExamPrepDbContext db, string examName, string candidateUsername, ILogger logger, CancellationToken cancellationToken)
     {
-        var exam = await db.Exams.Include(e => e.Sections).SingleOrDefaultAsync(e => e.Name == examName, cancellationToken);
+        var exam = await db.Exams.Include(e => e.Sections)
+            .SingleOrDefaultAsync(e => e.IsDemo && (e.Name == examName || e.Candidates.Any(c => c.Username == candidateUsername)), cancellationToken);
         if (exam is null)
         {
+            if (await db.Exams.AnyAsync(e => !e.IsDemo && e.Name == examName, cancellationToken))
+            {
+                logger.LogWarning("Demo reset skipped: the exam {ExamName} was not made by the demo seeder and is kept.", examName);
+            }
+
             return;
         }
 
