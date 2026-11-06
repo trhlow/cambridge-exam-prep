@@ -321,6 +321,105 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
         Assert.Null(await ParentEndOfAsync(room.First.CandidateId));
     }
 
+    private async Task<HttpResponseMessage> UseTestEndTimeAsync(HttpClient client, int examId, params int[] candidateIds) =>
+        await client.PostAsJsonAsync($"/api/staff/exams/{examId}/use-test-end-time", new { candidateIds, reason = "Ended by mistake" }, ct);
+
+    /// <summary>Seconds pass after End all: the parent-level end and the cut section end are a minute ago.</summary>
+    private async Task MoveParentEndBackAsync(int examId, TimeSpan earlier)
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var then = DateTime.UtcNow - earlier;
+        await db.Candidates.Where(c => c.ExamId == examId && c.ParentEndOverrideAt != null)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.ParentEndOverrideAt, then), ct);
+        var sectionIds = await db.ExamSections.Where(s => s.ExamId == examId).Select(s => s.Id).ToListAsync(ct);
+        await db.Attempts.Where(a => sectionIds.Contains(a.ExamSectionId) && a.Status == AttemptStatus.InProgress)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.EndsAt, then), ct);
+    }
+
+    [Fact]
+    public async Task UseTestEndTime_ForTheWholeTest_AfterEndAllAndTheSweep_LetsTheNextSectionStartWithItsFullTime()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        using var candidate = api.CreateClient();
+        (await candidate.PostAsJsonAsync("/api/candidate/auth/login", new LoginRequest(room.First.Username, Password), ct)).EnsureSuccessStatusCode();
+        (await candidate.PostAsJsonAsync("/api/candidate/auth/pin", new PinRequest(room.First.SessionPin), ct)).EnsureSuccessStatusCode();
+        (await candidate.PostAsync($"/api/candidate/sections/{room.First.ReadingWritingSectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
+        (await EndAllAsync(room.Invigilator, room.First.ExamId)).EnsureSuccessStatusCode();
+        await MoveParentEndBackAsync(room.First.ExamId, TimeSpan.FromMinutes(1));
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ExamPrep.Api.Delivery.AttemptExpiry>().SubmitExpiredAsync(ct);
+        }
+
+        var response = await UseTestEndTimeAsync(room.Invigilator, room.First.ExamId);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var outcome = (await response.Content.ReadFromJsonAsync<ActionOutcome>(ct))!;
+        Assert.Equal(2, outcome.Applied);
+        Assert.Null(await ParentEndOfAsync(room.First.CandidateId));
+        Assert.Null(await ParentEndOfAsync(room.SecondId));
+        // The section the sweep submitted is an exam record and stays submitted; the next one runs with its full time.
+        Assert.Equal(AttemptStatus.Submitted, (await api.GetAttemptAsync(room.First.CandidateId, room.First.ReadingWritingSectionId)).Status);
+        var listening = await candidate.PostAsync($"/api/candidate/sections/{room.First.ListeningSectionId}/attempt", null, ct);
+        Assert.Equal(HttpStatusCode.OK, listening.StatusCode);
+        var state = (await listening.Content.ReadFromJsonAsync<CandidateAttemptState>(ct))!;
+        Assert.Equal("InProgress", state.Status);
+        Assert.InRange(state.RemainingSeconds, 30 * 60 - 10, 30 * 60);
+
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var log = await db.InvigilatorActions.Where(a => a.ExamId == room.First.ExamId && a.ActionType == InvigilatorActionType.UseTestEndTime).ToListAsync(ct);
+            Assert.Equal(2, log.Count);
+            Assert.All(log, a => Assert.Equal("Ended by mistake", a.Reason));
+        }
+    }
+
+    [Fact]
+    public async Task UseTestEndTime_ForTheWholeTest_GivesARunningSectionItsOwnEndBackAndSkipsCandidatesNeverEnded()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var sectionId = room.First.ReadingWritingSectionId;
+        await api.StartAttemptAsync(room.First.CandidateId, sectionId);
+        await EndAllAsync(room.Invigilator, room.First.ExamId, room.First.CandidateId);
+
+        var outcome = (await (await UseTestEndTimeAsync(room.Invigilator, room.First.ExamId)).Content.ReadFromJsonAsync<ActionOutcome>(ct))!;
+
+        Assert.Equal(1, outcome.Applied);
+        Assert.Equal(room.SecondId, Assert.Single(outcome.Skipped).CandidateId);
+        var row = (await MonitorAsync(room.Invigilator, room.First, sectionId))!.Candidates.Single(c => c.CandidateId == room.First.CandidateId);
+        Assert.InRange(row.RemainingSeconds!.Value, 3500, 3600);
+    }
+
+    [Fact]
+    public async Task UseTestEndTime_ForTheWholeTest_IsRefusedAsEndAllIs()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        await EndAllAsync(room.Invigilator, room.First.ExamId);
+        var stranger = await api.CreateCandidateAsync(Password);
+        var outsider = await api.CreateStaffAsync(UserRole.Invigilator, Password);
+        using var client = await api.StaffClientAsync(outsider.Username, Password);
+        var examiner = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        await api.AssignExaminerAsync(room.First.ExamId, examiner.Id);
+        using var examinerClient = await api.StaffClientAsync(examiner.Username, Password);
+
+        var hidden = await UseTestEndTimeAsync(client, room.First.ExamId);
+        var byExaminer = await UseTestEndTimeAsync(examinerClient, room.First.ExamId);
+        var foreign = await UseTestEndTimeAsync(room.Invigilator, room.First.ExamId, stranger.CandidateId);
+        await SetExamStatusAsync(room.First.ExamId, ExamStatus.Closed);
+        var closed = await UseTestEndTimeAsync(room.Invigilator, room.First.ExamId);
+
+        Assert.Equal(HttpStatusCode.NotFound, hidden.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, byExaminer.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, foreign.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, closed.StatusCode);
+        Assert.NotNull(await ParentEndOfAsync(room.First.CandidateId));
+    }
+
     [Fact]
     public async Task IncidentTime_AddsMinutesEvenForOfflineCandidates()
     {
