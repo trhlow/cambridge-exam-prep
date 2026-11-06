@@ -257,7 +257,7 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
             </button>
           </div>
         )}
-        {needsPlay && <ListeningIntro isResuming={isResumingAudio} onPlay={() => void play()} />}
+        {needsPlay && <ListeningIntro isResuming={isResumingAudio} onPlay={() => play().catch(() => undefined)} />}
         {isNotesOpen && canNote && !isReviewing && (
           <NotesPanel
             notes={annotations.notes}
