@@ -5,7 +5,7 @@ namespace ExamPrep.Domain.Papers;
 /// <summary>
 /// Whether two papers have the same layout, so that any part of one can stand in for the same part of the other
 /// (Victory 20/10, paper shuffling): same section, same parts, and in each part the same groups with the same
-/// way of answering and the same question numbers; a Listening part has a recording in both or in neither.
+/// way of answering and the same question numbers; every question is worth the same points; a Listening part has a recording in both or in neither.
 /// </summary>
 public static class PaperShape
 {
@@ -52,6 +52,10 @@ public static class PaperShape
                 {
                     problems.Add($"Part {partA.PartNo} has questions {Range(numbersA)} in \"{a.Title}\" but {Range(numbersB)} in \"{b.Title}\".");
                 }
+                else if (!PointsOf(groupA).SequenceEqual(PointsOf(groupB)))
+                {
+                    problems.Add($"Part {partA.PartNo}, questions {Range(numbersA)}: the questions are worth different points in \"{a.Title}\" and \"{b.Title}\".");
+                }
                 else if (groupA.ChooseCount != groupB.ChooseCount)
                 {
                     problems.Add($"Part {partA.PartNo}, questions {Range(numbersA)}: candidates answer {Choice(groupA)} in \"{a.Title}\" but {Choice(groupB)} in \"{b.Title}\".");
@@ -69,6 +73,8 @@ public static class PaperShape
     }
 
     private static string Choice(QuestionGroup group) => group.ChooseCount is { } n ? $"{n} of them" : "all of them";
+
+    private static List<decimal> PointsOf(QuestionGroup group) => group.Questions.OrderBy(q => q.Number).Select(q => q.Points).ToList();
 
     private static List<int> Numbers(QuestionGroup group) => group.Questions.Select(q => q.Number).Order().ToList();
 

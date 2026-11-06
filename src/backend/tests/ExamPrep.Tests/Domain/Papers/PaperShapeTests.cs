@@ -62,4 +62,16 @@ public sealed class PaperShapeTests
 
         Assert.Equal(["Part 2 has a recording in \"A\" but not in \"B\"."], PaperShape.Differences(a, b));
     }
+
+    [Fact]
+    public void QuestionsWorthDifferentPoints_AreRefused()
+    {
+        var a = Paper(1, "A", (InteractionType.SingleChoice, 3));
+        var b = Paper(2, "B", (InteractionType.SingleChoice, 3));
+        b.Parts.Single().Groups.Single().Questions.Single(q => q.Number == 2).Points = 2;
+
+        var problem = Assert.Single(PaperShape.Differences(a, b));
+        Assert.Contains("Part 1", problem);
+        Assert.Contains("points", problem);
+    }
 }
