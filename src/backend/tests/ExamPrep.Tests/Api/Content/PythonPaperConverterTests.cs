@@ -25,6 +25,9 @@ public sealed class PythonPaperConverterTests : IDisposable
             raise ValueError("bad layout")
         pathlib.Path(args.o).mkdir(parents=True)
         (pathlib.Path(args.o) / "paper.json").write_text("{}", encoding="utf-8")
+        if args.title == "garbage":
+            pathlib.Path(args.report).write_text("{ not json", encoding="utf-8")
+            raise SystemExit(0)
         audio = sorted(p.name for p in pathlib.Path(args.audio_dir).iterdir())
         with open(args.report, "w", encoding="utf-8") as report:
             json.dump({"warnings": [], "checks": ["title=" + args.title, "audio=" + ",".join(audio), "key=" + str(args.key is not None)]}, report)
@@ -87,6 +90,17 @@ public sealed class PythonPaperConverterTests : IDisposable
 
         Assert.Empty(report.Errors);
         Assert.Contains("key=False", report.Checks);
+    }
+
+    [Fact]
+    public async Task Convert_ASummaryThatIsNotJson_IsAFailureOfTheConverter_NotAnException()
+    {
+        SkipWithoutPython();
+        await File.WriteAllTextAsync(Path.Combine(folder, "fake.py"), FakeScript, ct);
+
+        var failure = await Assert.ThrowsAsync<PaperConverterFailedException>(() => Converter("fake.py").ConvertAsync(Input("garbage"), ct));
+
+        Assert.Equal("The converter wrote a summary the server cannot read. Check pdf2package.py and its version on the server.", failure.Message);
     }
 
     [Fact]

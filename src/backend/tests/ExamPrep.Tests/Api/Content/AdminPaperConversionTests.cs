@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -212,6 +212,21 @@ public sealed class AdminPaperConversionTests(ApiFixture api) : IClassFixture<Ap
         var response = await ConvertAsync(client);
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Convert_AnswersBadGateway_WithASentence_WhenTheConverterBreaksDown()
+    {
+        api.SkipIfUnavailable();
+        var converter = new FakeConverter(_ => throw new PaperConverterFailedException("The converter wrote a summary the server cannot read."));
+        using var factory = WithConverter(converter);
+        using var client = await AdminClientAsync(factory);
+
+        var response = await ConvertAsync(client);
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        var problem = (await response.Content.ReadFromJsonAsync<JsonObject>(ct))!;
+        Assert.Equal("The converter wrote a summary the server cannot read.", (string)problem["title"]!);
     }
 
     [Fact]

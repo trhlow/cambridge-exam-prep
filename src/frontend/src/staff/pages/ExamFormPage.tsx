@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { adminApi, staffApi, type ExamMixChoice, type ExamPaperChoice, type ExamTypeView } from '../api'
+import { localDate } from '../format'
 import { Link } from '../Link'
 import { navigate } from '../router'
 import { ErrorBox, PageHeader } from '../ui'
@@ -19,7 +20,7 @@ type Form = {
   seatsPerRow: string
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localDate()
 
 /**
  * VE-21: create or edit a session. Each section of the exam type gets one published paper, or a mix of papers given
