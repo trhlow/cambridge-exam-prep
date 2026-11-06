@@ -5,7 +5,9 @@ using ExamPrep.Api.Delivery;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Marking;
 using ExamPrep.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamPrep.Tests.Api.Content;
@@ -143,5 +145,102 @@ public sealed class PaperAnswerCorrectionTests(ApiFixture api) : IClassFixture<A
         var import = await admin.PostAsync("/api/admin/papers/import", new MultipartFormDataContent { { file, "package", "paper.zip" } }, ct);
         import.EnsureSuccessStatusCode();
         return (int)(await import.Content.ReadFromJsonAsync<JsonObject>(ct))!["id"]!;
+    }
+
+    /// <summary>Runs <see cref="During"/> once, the first time the matching save of the correction request is about to run.</summary>
+    private sealed class SaveHook(Func<DbContext, bool> matches) : SaveChangesInterceptor
+    {
+        private int fired;
+
+        public Func<DbContext, Task>? During;
+
+        public bool Fired => fired == 1;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (During is not null && matches(eventData.Context!) && Interlocked.Exchange(ref fired, 1) == 0)
+            {
+                await During(eventData.Context!);
+            }
+
+            return result;
+        }
+    }
+
+    private async Task<HttpClient> AdminThroughAsync(SaveHook hook)
+    {
+        var factory = api.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            services.ConfigureDbContext<ExamPrepDbContext>(options => options.AddInterceptors(hook))));
+        var client = factory.CreateClient();
+        (await client.PostAsJsonAsync("/api/staff/auth/login", new { username = ApiFixture.AdminUsername, password = ApiFixture.AdminPassword }, ct)).EnsureSuccessStatusCode();
+        return client;
+    }
+
+    /// <summary>
+    /// Final review A6: a second candidate's section ends, and the marker marks it, while the correction is marking the
+    /// first one again. That attempt was not in the list of attempts to mark again, so it must have been marked with the
+    /// corrected key: the key is committed before the re-mark starts.
+    /// </summary>
+    [Fact]
+    public async Task AnAttemptMarkedWhileTheCorrectionIsMarkingAgain_EndsWithTheNewKey()
+    {
+        api.SkipIfUnavailable();
+        var (candidate, paperId, admin) = await MarkedAttemptAsync();
+        admin.Dispose();
+        var (secondId, _) = await api.AddCandidateAsync(candidate.ExamId, Password);
+        var secondAttempt = await api.StartAttemptAsync(secondId, candidate.ReadingWritingSectionId, durationMinutes: 1);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var question2 = await db.Questions.Where(q => q.Number == 2 && q.QuestionGroup!.PaperPart!.TestPaperId == paperId).Select(q => q.Id).SingleAsync(ct);
+            db.Responses.Add(new ExamPrep.Domain.Entities.Response { AttemptId = secondAttempt, QuestionId = question2, Value = "A", UpdatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync(ct);
+        }
+
+        var hook = new SaveHook(context => context.ChangeTracker.Entries<ExamPrep.Domain.Entities.Response>().Any(e => e.State == EntityState.Modified));
+        hook.During = async _ =>
+        {
+            // The second candidate's time runs out now and the marker marks the attempt, on its own connection.
+            await api.SubmitStartedAttemptAsync(secondId, candidate.ReadingWritingSectionId);
+            using var scope = api.Factory.Services.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<AttemptMarker>().MarkPendingAsync(CancellationToken.None);
+        };
+        using var client = await AdminThroughAsync(hook);
+
+        var fix = await client.PutAsJsonAsync($"/api/admin/papers/{paperId}/questions/2/answers", new { answers = new[] { "A" } }, ct);
+
+        Assert.Equal(HttpStatusCode.OK, fix.StatusCode);
+        Assert.True(hook.Fired, "The correction marked nobody again, so the marker never ran during it.");
+        Assert.NotEqual(GradingStatus.NotGraded, (await api.GetAttemptAsync(secondId, candidate.ReadingWritingSectionId)).GradingStatus);
+        Assert.Equal((true, 1m), await ResponseOfAsync(secondAttempt, 2));
+        var first = await api.GetAttemptAsync(candidate.CandidateId, candidate.ReadingWritingSectionId);
+        Assert.Equal((true, 1m), await ResponseOfAsync(first.Id, 2));
+
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var log = await db.AnswerCorrections.AsNoTracking().Where(c => c.TestPaperId == paperId && c.QuestionNumber == 2).SingleAsync(ct);
+            Assert.Equal(1, log.AttemptsRemarked);
+            Assert.Equal(0, log.AttemptsSkipped);
+        }
+    }
+
+    /// <summary>Final review 9: two administrators correct the same question at once; the one who loses the race is told to reload.</summary>
+    [Fact]
+    public async Task TwoCorrectionsOfTheSameQuestionAtOnce_TheLoserGets409NotA500()
+    {
+        api.SkipIfUnavailable();
+        var (_, paperId, admin) = await MarkedAttemptAsync();
+        admin.Dispose();
+        var hook = new SaveHook(context => context.ChangeTracker.Entries<ExamPrep.Domain.Entities.AnswerKey>().Any(e => e.State == EntityState.Deleted));
+        // The other administrator's correction removed these keys a moment ago.
+        hook.During = context => context.Database.ExecuteSqlInterpolatedAsync(
+            $"DELETE k FROM answer_keys k JOIN questions q ON q.id = k.question_id JOIN question_groups g ON g.id = q.question_group_id JOIN paper_parts p ON p.id = g.paper_part_id WHERE p.test_paper_id = {paperId} AND q.number = 2");
+        using var client = await AdminThroughAsync(hook);
+
+        var fix = await client.PutAsJsonAsync($"/api/admin/papers/{paperId}/questions/2/answers", new { answers = new[] { "A" } }, ct);
+
+        Assert.Equal(HttpStatusCode.Conflict, fix.StatusCode);
+        Assert.Contains("Someone else corrected this question; reload the paper.", await fix.Content.ReadAsStringAsync(ct));
     }
 }
