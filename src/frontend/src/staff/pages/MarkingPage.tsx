@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { HtmlContent } from '../../ui/HtmlContent'
 import { countWords } from '../../exam/paperLogic'
 import { adminApi, type AttemptMarking, type QuestionMark } from '../api'
 import { Link } from '../Link'
@@ -68,6 +69,21 @@ export function MarkingPage({ attemptId }: { attemptId: number }) {
   )
 }
 
+/** A5: what the candidate was asked, from the paper they sat (mixed papers differ by version). */
+function Task({ question }: { question: QuestionMark }) {
+  if (!question.passageHtml && !question.promptHtml && !question.stimulusHtml) {
+    return null
+  }
+
+  return (
+    <div className="st-task">
+      <HtmlContent html={question.passageHtml ?? null} />
+      <HtmlContent html={question.promptHtml ?? null} />
+      <HtmlContent html={question.stimulusHtml ?? null} />
+    </div>
+  )
+}
+
 function WritingMark({ attemptId, question, onSaved }: { attemptId: number; question: QuestionMark; onSaved: (marking: AttemptMarking) => void }) {
   const [score, setScore] = useState(question.score === null ? '' : String(question.score))
   const [comment, setComment] = useState(question.comment ?? '')
@@ -96,6 +112,7 @@ function WritingMark({ attemptId, question, onSaved }: { attemptId: number; ques
           {question.response ? `${countWords(question.response)} words` : 'nothing written'}
         </span>
       </div>
+      <Task question={question} />
       <div className="st-essay">{question.response || <span className="st-faint">The candidate wrote nothing.</span>}</div>
       <form className="st-mark-form" onSubmit={submit}>
         <label className="st-field">

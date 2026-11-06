@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Marking;
+using ExamPrep.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamPrep.Tests.Api.Results;
@@ -180,5 +182,260 @@ public sealed class AnonymousMarkingTests(ApiFixture api) : IClassFixture<ApiFix
         (await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}/examiners", new { userIds = new[] { stays.Id } }, ct)).EnsureSuccessStatusCode();
 
         Assert.Equal(6, (await ScriptsAsync(staying)).Count(s => (int)s!["examId"]! == exam.ExamId));
+    }
+
+    private async Task<int> AttemptIdAsync(int candidateId, int sectionId)
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        return await db.Attempts.Where(a => a.CandidateId == candidateId && a.ExamSectionId == sectionId).Select(a => a.Id).SingleAsync(ct);
+    }
+
+    private async Task<int> CandidateOfAsync(int attemptId)
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        return await db.Attempts.Where(a => a.Id == attemptId).Select(a => a.CandidateId).SingleAsync(ct);
+    }
+
+    private Task<HttpResponseMessage> MarkAsync(HttpClient examiner, int attemptId, int question, decimal score) =>
+        examiner.PostAsJsonAsync($"/api/staff/attempts/{attemptId}/writing-marks", new { questionNumber = question, score }, ct);
+
+    private async Task<int?> ExaminerOfAsync(int candidateId)
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        return await db.Candidates.Where(c => c.Id == candidateId).Select(c => c.ExaminerUserId).SingleAsync(ct);
+    }
+
+    private async Task DeactivateAsync(int userId)
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        await db.Users.Where(u => u.Id == userId).ExecuteUpdateAsync(s => s.SetProperty(u => u.IsActive, false), ct);
+    }
+
+    [Fact]
+    public async Task TheMarkingView_CarriesEachWritingQuestionsPrompt_StimulusAndThePartsPassage_OfTheAttemptsPaper()
+    {
+        api.SkipIfUnavailable();
+        var (exam, candidates) = await FinishedSessionAsync(1);
+        var attemptId = await AttemptIdAsync(candidates[0].Id, exam.ReadingWritingSectionId);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var paperId = await db.Attempts.Where(a => a.Id == attemptId).Select(a => a.TestPaperId).SingleAsync(ct);
+            var question = await db.Questions.SingleAsync(q => q.Number == 31 && q.QuestionGroup!.PaperPart!.TestPaperId == paperId, ct);
+            question.PromptHtml = "<p>PROMPT-31</p>";
+            question.StimulusHtml = "<p>STIMULUS-31</p>";
+            await db.SaveChangesAsync(ct);
+        }
+
+        var examiners = await ExaminersAsync(exam.ExamId, 1);
+        var marking = (await examiners[0].GetFromJsonAsync<JsonObject>($"/api/staff/attempts/{attemptId}/marking", ct))!;
+
+        var q31 = marking["questions"]!.AsArray().Single(q => (int)q!["number"]! == 31)!;
+        var q32 = marking["questions"]!.AsArray().Single(q => (int)q!["number"]! == 32)!;
+        Assert.Equal("<p>PROMPT-31</p>", (string)q31["promptHtml"]!);
+        Assert.Equal("<p>STIMULUS-31</p>", (string)q31["stimulusHtml"]!);
+        Assert.Contains("Write an email to Jo", (string)q31["passageHtml"]!);
+        Assert.Contains("Look at the three pictures", (string)q32["passageHtml"]!);
+        examiners.ForEach(e => e.Dispose());
+    }
+
+    [Fact]
+    public async Task AMarkIsKeptInHistory_AndTheLatestCounts_AlsoForTheScore()
+    {
+        api.SkipIfUnavailable();
+        var (exam, candidates) = await FinishedSessionAsync(1);
+        var attemptId = await AttemptIdAsync(candidates[0].Id, exam.ReadingWritingSectionId);
+        var examiners = await ExaminersAsync(exam.ExamId, 1);
+
+        (await MarkAsync(examiners[0], attemptId, 31, 5)).EnsureSuccessStatusCode();
+        (await MarkAsync(examiners[0], attemptId, 31, 9)).EnsureSuccessStatusCode();
+        (await MarkAsync(examiners[0], attemptId, 31, 9)).EnsureSuccessStatusCode();
+        var final = await MarkAsync(examiners[0], attemptId, 32, 0);
+
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var scores = await db.ManualMarks.Where(m => m.Response!.AttemptId == attemptId && m.Response.Question!.Number == 31).OrderBy(m => m.Id).Select(m => m.Score).ToListAsync(ct);
+        var attempt = await db.Attempts.AsNoTracking().SingleAsync(a => a.Id == attemptId, ct);
+        Assert.Equal([5m, 9m, 9m], scores);
+        Assert.Equal(9m, (decimal)(await final.Content.ReadFromJsonAsync<JsonObject>(ct))!["rawScore"]!);
+        Assert.Equal(GradingStatus.Final, attempt.GradingStatus);
+        examiners.ForEach(e => e.Dispose());
+    }
+
+    [Fact]
+    public async Task TwoMarksSavedAtOnce_BothSucceed_AndTheScoreAddsUp()
+    {
+        api.SkipIfUnavailable();
+        var (exam, candidates) = await FinishedSessionAsync(1);
+        var attemptId = await AttemptIdAsync(candidates[0].Id, exam.ReadingWritingSectionId);
+        var examiners = await ExaminersAsync(exam.ExamId, 1);
+
+        var both = await Task.WhenAll(MarkAsync(examiners[0], attemptId, 31, 7), MarkAsync(examiners[0], attemptId, 32, 4));
+
+        Assert.All(both, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var attempt = await db.Attempts.AsNoTracking().SingleAsync(a => a.Id == attemptId, ct);
+        Assert.Equal(GradingStatus.Final, attempt.GradingStatus);
+        Assert.Equal(11m, attempt.RawScore - await db.Responses.Where(r => r.AttemptId == attemptId).SumAsync(r => r.AutoScore ?? 0, ct));
+        examiners.ForEach(e => e.Dispose());
+    }
+
+    [Fact]
+    public async Task WhenAnExaminerLeaves_AFinalScriptStays_AndAPartMarkedOneIsDealtAgainKeepingItsMarks()
+    {
+        api.SkipIfUnavailable();
+        var (exam, candidates) = await FinishedSessionAsync(2);
+        var stays = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        var leaves = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        using var admin = await api.AdminClientAsync();
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}/examiners", new { userIds = new[] { stays.Id, leaves.Id } }, ct)).EnsureSuccessStatusCode();
+        using var leaving = await api.StaffClientAsync(leaves.Username, Password);
+        var leavingScripts = (await ScriptsAsync(leaving)).Where(s => (int)s!["examId"]! == exam.ExamId).Select(s => (int)s!["attemptId"]!).ToList();
+        Assert.Single(leavingScripts);
+        // The leaving examiner finishes their script (Final) ...
+        (await MarkAsync(leaving, leavingScripts[0], 31, 10)).EnsureSuccessStatusCode();
+        (await MarkAsync(leaving, leavingScripts[0], 32, 6)).EnsureSuccessStatusCode();
+        var finalCandidate = await CandidateOfAsync(leavingScripts[0]);
+        var otherCandidate = candidates.Single(c => c.Id != finalCandidate).Id;
+
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}/examiners", new { userIds = new[] { stays.Id } }, ct)).EnsureSuccessStatusCode();
+
+        Assert.Equal(leaves.Id, await ExaminerOfAsync(finalCandidate));
+        Assert.Equal(stays.Id, await ExaminerOfAsync(otherCandidate));
+
+        // ... and a part-marked script of an examiner who leaves moves on with its marks.
+        var second = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}/examiners", new { userIds = new[] { stays.Id, second.Id } }, ct)).EnsureSuccessStatusCode();
+        // Adding an examiner deals unmarked scripts again, so either of the two may hold it now.
+        var holder = await ExaminerOfAsync(otherCandidate) == stays.Id ? stays : second;
+        var successor = holder == stays ? second : stays;
+        using var staying = await api.StaffClientAsync(holder.Username, Password);
+        var mine = (await ScriptsAsync(staying)).Where(s => (int)s!["examId"]! == exam.ExamId).Select(s => (int)s!["attemptId"]!).ToList();
+        Assert.Single(mine);
+        (await MarkAsync(staying, mine[0], 31, 8)).EnsureSuccessStatusCode();
+
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}/examiners", new { userIds = new[] { successor.Id } }, ct)).EnsureSuccessStatusCode();
+
+        using var next = await api.StaffClientAsync(successor.Username, Password);
+        var moved = (await next.GetFromJsonAsync<JsonObject>($"/api/staff/attempts/{mine[0]}/marking", ct))!;
+        Assert.Equal(8m, (decimal)moved["questions"]!.AsArray().Single(q => (int)q!["number"]! == 31)!["score"]!);
+        Assert.Equal(successor.Id, await ExaminerOfAsync(otherCandidate));
+        Assert.Equal(leaves.Id, await ExaminerOfAsync(finalCandidate));
+    }
+
+    [Fact]
+    public async Task ADeactivatedExaminer_NoLongerHoldsScripts_TheirUnmarkedOnesMoveOn()
+    {
+        api.SkipIfUnavailable();
+        var (exam, candidates) = await FinishedSessionAsync(4);
+        var first = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        var second = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        using var admin = await api.AdminClientAsync();
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}/examiners", new { userIds = new[] { first.Id, second.Id } }, ct)).EnsureSuccessStatusCode();
+        await DeactivateAsync(first.Id);
+
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<MarkingAllocator>().EnsureAllAsync(ct);
+        }
+
+        foreach (var candidate in candidates)
+        {
+            Assert.Equal(second.Id, await ExaminerOfAsync(candidate.Id));
+        }
+    }
+
+    [Fact]
+    public async Task ASessionWithoutAnEligibleExaminer_IsSkipped_AndScriptsStayWhereTheyAre()
+    {
+        api.SkipIfUnavailable();
+        var (exam, candidates) = await FinishedSessionAsync(2);
+        var only = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        using var admin = await api.AdminClientAsync();
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}/examiners", new { userIds = new[] { only.Id } }, ct)).EnsureSuccessStatusCode();
+        await DeactivateAsync(only.Id);
+
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<MarkingAllocator>().EnsureAllAsync(ct);
+        }
+
+        foreach (var candidate in candidates)
+        {
+            Assert.Equal(only.Id, await ExaminerOfAsync(candidate.Id));
+        }
+    }
+
+    [Fact]
+    public async Task AnAccountThatIsNoLongerAnExaminer_IsNotDealtScripts()
+    {
+        api.SkipIfUnavailable();
+        var (exam, _) = await FinishedSessionAsync(2);
+        var wrongRole = await api.CreateStaffAsync(UserRole.Invigilator, Password);
+        var examiner = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            db.ExamExaminers.Add(new ExamPrep.Domain.Entities.ExamExaminer { ExamId = exam.ExamId, UserId = wrongRole.Id, AssignedAt = DateTime.UtcNow });
+            db.ExamExaminers.Add(new ExamPrep.Domain.Entities.ExamExaminer { ExamId = exam.ExamId, UserId = examiner.Id, AssignedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync(ct);
+        }
+
+        using var client = await api.StaffClientAsync(examiner.Username, Password);
+        Assert.Equal(2, (await ScriptsAsync(client)).Count(s => (int)s!["examId"]! == exam.ExamId));
+    }
+
+    [Fact]
+    public async Task TheMarkingEndpoint_Answers404_ForASectionWithoutWriting()
+    {
+        api.SkipIfUnavailable();
+        var (exam, candidates) = await FinishedSessionAsync(1);
+        await api.StartAttemptAsync(candidates[0].Id, exam.ListeningSectionId);
+        await api.SubmitStartedAttemptAsync(candidates[0].Id, exam.ListeningSectionId);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<AttemptMarker>().MarkPendingAsync(ct);
+        }
+
+        var examiners = await ExaminersAsync(exam.ExamId, 1);
+        var listening = await AttemptIdAsync(candidates[0].Id, exam.ListeningSectionId);
+
+        var response = await examiners[0].GetAsync($"/api/staff/attempts/{listening}/marking", ct);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        examiners.ForEach(e => e.Dispose());
+    }
+
+    [Fact]
+    public async Task AnExaminer_ReadsOnlyTheWritingFilesOfTheirScripts()
+    {
+        api.SkipIfUnavailable();
+        var (exam, candidates) = await FinishedSessionAsync(1);
+        var attemptId = await AttemptIdAsync(candidates[0].Id, exam.ReadingWritingSectionId);
+        var examiners = await ExaminersAsync(exam.ExamId, 1);
+        int writing, reading;
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var paperId = await db.Attempts.Where(a => a.Id == attemptId).Select(a => a.TestPaperId).SingleAsync(ct);
+            var part7 = await db.PaperParts.SingleAsync(p => p.TestPaperId == paperId && p.PartNo == 7, ct);
+            writing = int.Parse(System.Text.RegularExpressions.Regex.Match(part7.StimulusHtml!, @"/api/assets/(\d+)").Groups[1].Value);
+            var part1 = await db.Questions.Where(q => q.QuestionGroup!.PaperPart!.TestPaperId == paperId && q.QuestionGroup.PaperPart.PartNo == 1)
+                .Select(q => (q.OptionsJson ?? "") + (q.PromptHtml ?? "") + (q.StimulusHtml ?? "") + (q.QuestionGroup!.BodyHtml ?? "") + (q.QuestionGroup.OptionPoolJson ?? ""))
+                .ToListAsync(ct);
+            reading = int.Parse(System.Text.RegularExpressions.Regex.Match(string.Concat(part1), @"(?:imageAssetId""\s*:\s*|/api/assets/)(\d+)").Groups[1].Value);
+        }
+
+        var writingFile = await examiners[0].GetAsync($"/api/assets/{writing}", ct);
+        var readingFile = await examiners[0].GetAsync($"/api/assets/{reading}", ct);
+
+        Assert.Equal(HttpStatusCode.OK, writingFile.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, readingFile.StatusCode);
+        examiners.ForEach(e => e.Dispose());
     }
 }

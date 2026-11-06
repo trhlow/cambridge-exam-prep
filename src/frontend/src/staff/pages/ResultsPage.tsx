@@ -1,15 +1,8 @@
 import { staffApi } from '../api'
 import { Link } from '../Link'
 import { Badge, ErrorBox, PageHeader, VersionBadge } from '../ui'
-import { resultsCsv } from '../resultsCsv'
+import { GRADING_TEXT, resultsCsv } from '../resultsCsv'
 import { useLoad } from '../useLoad'
-
-const GRADING_TEXT: Record<string, string> = {
-  NotGraded: 'Not marked yet',
-  AutoGraded: 'Marked',
-  NeedsManualMarking: 'Writing to mark',
-  Final: 'Final',
-}
 
 /**
  * Scores per candidate and section (VE-11 auto-marking), for administrators. Writing is dealt at random to the
@@ -19,6 +12,8 @@ export function ResultsPage({ examId }: { examId: number }) {
   const { data: exam } = useLoad(() => staffApi.exam(examId), `exam-${examId}`)
   const { data: results, error } = useLoad(() => staffApi.results(examId), examId)
   const sections = results?.[0]?.sections ?? []
+  // B11: Writing finished but held by nobody (no examiner on the session, or the one it had was switched off).
+  const undealt = (results ?? []).filter((c) => !c.examiner && c.sections.some((s) => s.status === 'Submitted' && s.gradingStatus === 'NeedsManualMarking')).length
   const download = () => {
     if (!results) {
       return
@@ -45,6 +40,11 @@ export function ResultsPage({ examId }: { examId: number }) {
       />
       <p className="st-faint">Reading and Listening are marked automatically when a section ends. Writing is dealt at random and evenly to the session's examiners, who see only its code; the score is final once every Writing question has a mark.</p>
       <ErrorBox error={error} />
+      {undealt > 0 && (
+        <p className="st-error" role="alert">
+          {undealt} Writing script{undealt === 1 ? ' has' : 's have'} no examiner. Assign an active examiner to the session and they will be dealt.
+        </p>
+      )}
       {results && results.length === 0 && <p className="st-empty">No candidates.</p>}
       {results && results.length > 0 && (
         <table className="st-table">
