@@ -31,7 +31,7 @@ export interface AutosaveOptions {
   saveOnPageHide?: (items: SaveItem[]) => void
 }
 
-/** Statuses after which saving again would never succeed. A 409 with code 'paused' is not one of them. */
+/** Statuses after which saving again would never succeed. A 409 with code 'paused' or 'busy' is not one of them. */
 const CLOSING_STATUSES = new Set([401, 403, 409])
 
 /** Answers an earlier page left in the mirror; empty when there are none or the copy is damaged. */
@@ -180,6 +180,13 @@ export class AutosaveQueue {
       // Answers typed just before the pause: keep them all and send them after Resume.
       this.options.onStatus('saving')
       this.options.onPaused?.()
+      this.schedule(this.options.retryMs)
+      return
+    }
+
+    if (error instanceof ApiError && error.status === 409 && error.code === 'busy') {
+      // The server was held up by a lock (a status change in progress): nothing was lost, try again shortly.
+      this.options.onStatus('saving')
       this.schedule(this.options.retryMs)
       return
     }
