@@ -30,6 +30,9 @@ function trackDuration(url: string): Promise<number> {
   })
 }
 
+/** A track that has not loaded by then counts as failed, so a later restart can try again. */
+export const TRACK_LOAD_TIMEOUT_MS = 10_000
+
 const IGNORED_MEDIA_ACTIONS: MediaSessionAction[] = ['pause', 'stop', 'seekbackward', 'seekforward', 'seekto', 'previoustrack', 'nexttrack']
 
 /**
@@ -131,11 +134,21 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
 
     trackRef.current = point.trackIndex
     audio.src = urlsRef.current[point.trackIndex]
-    await new Promise<void>((resolve) => {
-      audio.addEventListener('loadedmetadata', () => resolve(), { once: true })
+    const isLoaded = await new Promise<boolean>((resolve) => {
+      const done = (loaded: boolean) => {
+        clearTimeout(timer)
+        audio.removeEventListener('loadedmetadata', onLoaded)
+        audio.removeEventListener('error', onError)
+        resolve(loaded)
+      }
+      const onLoaded = () => done(true)
+      const onError = () => done(false)
+      const timer = setTimeout(() => done(false), TRACK_LOAD_TIMEOUT_MS)
+      audio.addEventListener('loadedmetadata', onLoaded)
+      audio.addEventListener('error', onError)
       audio.load()
     })
-    if (turn !== turnRef.current) {
+    if (!isLoaded || turn !== turnRef.current) {
       return false
     }
 

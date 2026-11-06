@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { useRecordingPlayer } from './useRecordingPlayer'
+import { TRACK_LOAD_TIMEOUT_MS, useRecordingPlayer } from './useRecordingPlayer'
 
 /** Stands in for HTMLAudioElement: metadata arrives when load() is called, as the test decides. */
 class FakeAudio {
@@ -173,6 +173,42 @@ describe('useRecordingPlayer', () => {
 
     await expect(started).rejects.toThrow('blocked')
     expect(result.current.state).toBe('idle')
+  })
+
+  it('gives up on a track whose load fails, so a later restart can still happen', async () => {
+    const { result } = renderHook(() => useRecordingPlayer(['a.mp3']))
+    await settle()
+    let started: Promise<boolean> = Promise.resolve(true)
+    await act(async () => {
+      started = result.current.start(0)
+    })
+    await settle()
+
+    act(() => playerAudio().emit('error'))
+
+    await expect(started).resolves.toBe(false)
+    expect(playerAudio().playCalls).toBe(0)
+  })
+
+  it('gives up on a track that never finishes loading', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const { result } = renderHook(() => useRecordingPlayer(['a.mp3']))
+      await settle()
+      let started: Promise<boolean> = Promise.resolve(true)
+      await act(async () => {
+        started = result.current.start(0)
+      })
+      await settle()
+
+      await act(async () => {
+        vi.advanceTimersByTime(TRACK_LOAD_TIMEOUT_MS)
+      })
+
+      await expect(started).resolves.toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('does not play on an element left behind by an unmount during a load', async () => {
