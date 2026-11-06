@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Common;
 using ExamPrep.Domain.Entities;
@@ -71,7 +72,9 @@ public sealed class AdminPaperAnswersController(ExamPrepDbContext db, AnswerRema
         var attempts = 0;
         var changed = 0;
         var skipped = new List<int>();
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        // READ COMMITTED: the re-mark retries a lost race by reading the attempt again, and under REPEATABLE READ that
+        // read would return the snapshot taken at the first SELECT, so a stamp changed by the sweep worker never shows.
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
         foreach (var target in targets)
         {
             var current = await db.Questions
@@ -97,8 +100,8 @@ public sealed class AdminPaperAnswersController(ExamPrepDbContext db, AnswerRema
             });
             await db.SaveChangesAsync(cancellationToken);
             logger.LogWarning(
-                "Staff {UserId} corrected the answers of question {Number} of published paper {PaperId} from [{Before}] to [{After}]: {Attempts} attempts marked again, {Changed} scores changed, {Skipped} skipped",
-                User.GetStaffId(), number, target, string.Join(" | ", before), string.Join(" | ", answers), result.Attempts, result.Changed, result.Skipped.Count);
+                "Staff {UserId} corrected the answers of question {Number} of published paper {PaperId} from [{Before}] to [{After}]: {Attempts} attempts marked again, {Changed} scores changed, {Skipped} skipped ({SkippedIds})",
+                User.GetStaffId(), number, target, string.Join(" | ", before), string.Join(" | ", answers), result.Attempts, result.Changed, result.Skipped.Count, string.Join(", ", result.Skipped));
             attempts += result.Attempts;
             changed += result.Changed;
             skipped.AddRange(result.Skipped);
