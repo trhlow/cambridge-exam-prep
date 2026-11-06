@@ -31,11 +31,13 @@ Thi máy khó ở khâu vận hành: giám thị phải tạm dừng đúng thí
 - **Đồng hồ làm bài do server nắm**, tự nộp khi hết giờ.
 - **Cổng giám thị thời gian thực (SignalR):** bảng theo dõi cả phòng, chọn nhiều thí sinh thao tác cùng lúc; tạm dừng / làm tiếp, cộng giờ bù, sửa giờ kết thúc (*End now / End at / End in*), tua lại phần nghe.
 - **Màn hình thí sinh:** vào thi bằng mã PIN, làm bài, ghi chú, đánh dấu câu, đổi cỡ chữ và độ tương phản.
-- **Safe Exam Browser:** server kiểm tra cấu hình SEB (Browser Exam Key) mới cho vào thi; vi phạm hiển thị cảnh báo cho giám thị.
+- **Safe Exam Browser:** server kiểm tra cấu hình SEB (Config Key trong header của mọi yêu cầu) mới cho vào thi; vi phạm hiển thị cảnh báo cho giám thị.
 - **Năm vai trò** (theo yêu cầu Victory 16/10/2026): **admin** tạo mọi tài khoản nhân sự; **quản trị viên** phụ trách từng mảng (đề thi, kỳ thi, thí sinh, trung tâm) — được tạo và sửa, không được xoá; **giám khảo** chấm Writing của những bài được chia cho mình; **giám thị**; **thí sinh**. Mỗi vai trò có thể có nhiều người và **mỗi người chỉ thấy phần mình làm** (Victory 29/10): quản lý đề chỉ thấy đề và đề trộn mình tạo (kể cả hình, file nghe), quản lý kỳ thi chỉ thấy phiên mình tạo, quản lý thí sinh chỉ thấy phiên được gán, giám thị chỉ thấy phiên được gán; admin thấy tất cả. Phiên thi cảnh báo khi thiếu giám thị (Cambridge: ít nhất 1 giám thị cho 25 thí sinh mỗi phòng).
 - **Chấm Writing ẩn danh** (Victory 29/10): bài Writing được chia ngẫu nhiên và đều cho các giám khảo của phiên (20 bài, 4 giám khảo → mỗi người 5 bài); giám khảo chỉ thấy mã bài 6 ký tự và phần Writing, không thấy tên thí sinh, Reading hay bảng điểm; bảng điểm có tên chỉ admin xem, kèm mã bài và giám khảo chấm.
 - **Trộn đề** (theo yêu cầu Victory 20/10, mở rộng 29/10/2026): 2–6 đề gốc cùng khuôn được trộn theo từng part thành số đề người quản lý đề chọn, từ 4 đến 3 × số đề gốc; các đề cùng nhóm không trùng part nào và ngồi cạnh nhau trong cùng dãy; hai máy kề nhau — ngang, dọc, chéo — không bao giờ cùng đề; thí sinh đổi máy giữa giờ vẫn giữ đề đã làm.
 - **Nhập đề A2/B1**: trang Papers lọc theo cấp độ, phần thi, trạng thái, tên; Import from PDF chọn cấp độ và phần thi trước rồi chỉ hỏi những file cần (B1 Writing không có đáp án, Listening một file nghe mỗi part), server từ chối PDF có trang bìa khác lựa chọn; đề trắng soạn trên web có cho cả 5 phần thi A2 và B1.
+- **Kết thúc cả kỳ thi và sửa đáp án:** giám thị có nút *End all* (kết thúc cả bài thi cho mọi thí sinh, hai lần bấm để xác nhận; *Use test end time* trả lại giờ kết thúc); *End now* chỉ rút ngắn giờ, không bao giờ kéo dài. Admin sửa đáp án của đề đã xuất bản, các bài đã chấm được chấm lại và mỗi lần sửa được ghi nhật ký.
+- **Không mất bài làm:** bài gõ dở được lưu lại khi tạm dừng, mất mạng hay đóng tab, và gửi lại khi vào lại; sau khi tạm dừng hoặc tua lại, đoạn nghe tự phát lại.
 - **Hai admin duyệt chéo:** mọi thao tác xoá (đề, kỳ thi, thí sinh) và thay đổi tài khoản (khoá/mở, đổi vai trò, đặt lại mật khẩu, thêm admin) thành yêu cầu chờ một admin *khác* duyệt; ai yêu cầu không tự duyệt được, mọi yêu cầu được lưu làm nhật ký.
 
 **Ngoài phạm vi:** các cấp B2 First, C1 Advanced, C2 Proficiency; phần Speaking (thi trực tiếp); máy Mac/Chromebook; chạy nhiều server.
@@ -95,11 +97,11 @@ Sơ đồ nguồn `.drawio` mở bằng [draw.io](https://www.drawio.com/); file
 
 ### Sơ đồ thực thể – quan hệ (ERD)
 
-27 bảng chia bốn nhóm. Sơ đồ tổng quan cho thấy các nhóm tham chiếu nhau ra sao; mỗi nhóm có một ERD chi tiết, chỉ vẽ khoá ngoại trong nhóm, khoá ngoại sang nhóm khác ghi ngay sau cột (“→ exams”).
+28 bảng chia bốn nhóm (hai sơ đồ ERD dưới đây vẽ lúc còn 27 bảng, chưa có bảng nhật ký sửa đáp án `answer_corrections`; sẽ vẽ lại). Sơ đồ tổng quan cho thấy các nhóm tham chiếu nhau ra sao; mỗi nhóm có một ERD chi tiết, chỉ vẽ khoá ngoại trong nhóm, khoá ngoại sang nhóm khác ghi ngay sau cột (“→ exams”).
 
 ![ERD tổng quan](thesis/diagrams/erd.drawio.png)
 
-- **[ERD toàn bộ](thesis/diagrams/erd-full.drawio.png)**: đủ 27 bảng với mọi cột và mọi quan hệ trên một sơ đồ (chỉ các khoá ngoại ghi người tạo, duyệt, chấm, gửi về `users` được ghi bằng chữ “→ users”).
+- **[ERD toàn bộ](thesis/diagrams/erd-full.drawio.png)**: đủ 27 bảng (lúc vẽ) với mọi cột và mọi quan hệ trên một sơ đồ (chỉ các khoá ngoại ghi người tạo, duyệt, chấm, gửi về `users` được ghi bằng chữ “→ users”).
 - [Nội dung đề thi](thesis/diagrams/erd-content.drawio.png) · [Kỳ thi và thí sinh](thesis/diagrams/erd-exams.drawio.png) · [Làm bài, chấm điểm và giám sát](thesis/diagrams/erd-delivery.drawio.png) · [Tài khoản nhân sự và cấu hình](thesis/diagrams/erd-accounts.drawio.png)
 
 Mọi cột trạng thái chỉ nhận đúng các giá trị của enum (ràng buộc CHECK sinh từ code); trạng thái lượt làm bài và các mốc thời gian phải khớp nhau; bài làm không bao giờ bị xoá dây chuyền khi xoá thí sinh, phần thi hay kỳ thi.
@@ -136,7 +138,7 @@ Người không có chuyên môn: xem [setup/HuongDan_CaiDat_ChayThu.docx](setup
 
 Hướng dẫn đầy đủ cho phòng thi (máy thí sinh qua mạng LAN, sao lưu, xử lý sự cố): [setup/INSTALL.md](setup/INSTALL.md).
 
-Chỉ cần Docker Desktop. MySQL, API và giao diện chạy trong ba container; API tự tạo bảng, tạo tài khoản admin đầu tiên và kỳ thi demo A2.
+Chỉ cần Docker Desktop. MySQL, API và giao diện chạy trong ba container; API tự tạo bảng, tạo tài khoản admin đầu tiên và hai kỳ thi demo (A2 Key for Schools và B1 Preliminary for Schools). **Đây là bản demo: không dùng cho kỳ thi thật.** Kỳ thi thật dùng thêm `docker/docker-compose.prod.yml` (HTTPS, không có tài khoản demo), xem dưới và [setup/INSTALL.md](setup/INSTALL.md).
 
 ```bash
 cp docker/.env.example docker/.env        # rồi đổi mật khẩu MySQL và BOOTSTRAP_ADMIN_* trong docker/.env
@@ -157,7 +159,18 @@ Mở http://localhost:8080 (thí sinh) và http://localhost:8080/staff (nhân s�
 
 Có hai kỳ thi demo: A2 Key for Schools và B1 Preliminary for Schools (Reading → Writing → Listening). Mỗi phần thi trộn từ hai đề gốc theo vị trí máy khi có đề thật trong `setup/exam-package/sources/`, nếu không thì dùng đề mẫu tự soạn.
 
-Thí sinh thật vẫn nhận tên đăng nhập kiểu Cambridge và mật khẩu ngẫu nhiên in trên phiếu. Dừng bằng `docker compose -f docker/docker-compose.yml down` (dữ liệu vẫn giữ).
+Mỗi lần API khởi động (kể cả khi container tự chạy lại sau lỗi), hai kỳ thi demo bị xoá và tạo lại cùng bài làm của thí sinh demo (`Demo:ResetOnStart`); chỉ những kỳ thi do bộ tạo demo tạo (cột `exams.is_demo`) bị xoá, kỳ thi tự tạo thì không bao giờ. Lỗi khi tạo demo chỉ được ghi vào nhật ký, API vẫn chạy.
+
+Thí sinh thật vẫn nhận tên đăng nhập kiểu Cambridge và mật khẩu ngẫu nhiên in trên phiếu. Dừng bằng `docker compose -f docker/docker-compose.yml down` (dữ liệu vẫn giữ). MySQL chỉ mở trên `127.0.0.1` của máy chủ, máy khác trong LAN không nối được.
+
+### Kỳ thi thật (Production, HTTPS)
+
+```bash
+# docker/.env: đặt BOOTSTRAP_ADMIN_USERNAME và BOOTSTRAP_ADMIN_PASSWORD (≥ 12 ký tự); chứng chỉ ở docker/certs/server.crt, server.key (không đưa lên Git)
+docker compose -p examprep-prod -f docker/docker-compose.yml -f docker/docker-compose.prod.yml --env-file docker/.env up -d --build
+```
+
+Mở `https://<địa chỉ máy chủ>`. Không có kỳ thi demo hay tài khoản mẫu; cookie đăng nhập chỉ chạy qua HTTPS. Cách tạo chứng chỉ cho địa chỉ LAN, sao lưu và khôi phục (không dùng ống dẫn PowerShell): [setup/INSTALL.md](setup/INSTALL.md).
 
 ### Chạy từng phần để phát triển
 
@@ -188,7 +201,7 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Tài liệu tham khảo quy trình thi máy
 - [x] Sơ đồ use case tổng quát, ERD
 - [x] Khảo sát giao diện bài thi mẫu A2 Key for Schools
-- [x] Cơ sở dữ liệu: 25 bảng (EF Core + MySQL), migration, dữ liệu mẫu A2/B1, 16 test tích hợp
+- [x] Cơ sở dữ liệu: 25 bảng lúc đó, nay 28 (EF Core + MySQL), migration, dữ liệu mẫu A2/B1, 16 test tích hợp
 - [x] Đặc tả yêu cầu, sơ đồ trạng thái, sơ đồ tuần tự, đặc tả API; hướng dẫn cài đặt (`setup/INSTALL.md`)
 - [x] Backend: đăng nhập nhân viên (admin, giám thị) và thí sinh (username/password + PIN phòng thi), phân quyền, đồng hồ server — 78 test
 - [x] Nhập đề: định dạng gói đề (`setup/exam-package/FORMAT.md`), import có kiểm tra lỗi, đề mẫu A2 tự soạn — 116 test
@@ -211,9 +224,10 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] B1 Listening 4 part: Part 2 mỗi câu một trang (cờ `questionPerPage` trên part), đề mẫu tự soạn có audio đọc máy
 - [x] B1 Writing: Part 2 chọn 1 trong 2 câu ("Answering this question? Yes/No/Undecided"), giám khảo chỉ chấm câu được chọn, đề mẫu tự soạn
 - [x] Kỳ thi B1 ba phần thi chạy đầu-cuối và trộn đề B1 (máy kề nhau khác đề), kiểm thử Playwright; kỳ thi demo B1
-- [ ] Triển khai HTTPS cho phòng thi thật
+- [x] Triển khai HTTPS cho phòng thi thật: `docker/docker-compose.prod.yml` (Production, nginx 443, không demo), MySQL chỉ ở 127.0.0.1, API chạy bằng người dùng không phải root; sao lưu và khôi phục trong container
 - [x] Test đầu-cuối Playwright (`npm run e2e`, stack Docker riêng cổng 8090): thí sinh đăng nhập + PIN + làm bài + tải lại trang; giám thị tạm dừng/cho làm tiếp và máy thí sinh nhận ngay; quản trị viên tạo đề trắng, gửi yêu cầu xoá, admin khác duyệt; giám thị End now → chấm tự động → giám khảo chấm Writing → điểm Final (chạy lại thì `down -v` stack trước)
 - [x] Kiểm thử tải: 100 và 200 thí sinh đồng thời không lỗi (`setup/loadtest/`, kết quả trong `setup/loadtest/results/TONG_KET.md`); sửa kết nối SignalR bị cắt mỗi 12 giây và pool kết nối CSDL
 - [x] Buổi thi thử 16 tình huống theo `setup/mock-exam/KICH_BAN_THI_THU.md`, chạy tự động bằng trình duyệt (`npm run mock-exam`): mỗi vai một trình duyệt (2 quản trị viên, giám thị, giám khảo, 6 thí sinh A2 và 1 thí sinh B1), Listening chạy hết giờ thật. Tìm ra và đã sửa 4 lỗi: máy cũ không bị đăng xuất khi thí sinh đổi máy; End now đôi khi ghi lý do "hết giờ"; thông báo đã đọc bật lại khi sang phần thi sau; cột Audio vẫn đếm sau khi nộp bài. Lần chạy cuối đạt 16/16; biên bản, ảnh chụp và CSV trong `setup/mock-exam/results/`
 - [x] Yêu cầu mới của Victory 29/10 (VE-70…73): trộn N đề gốc thành số đề tuỳ chọn (tối đa 3N), lọc và nhập đề theo A2/B1, đề trắng B1, mỗi người chỉ thấy phần mình làm, chia bài Writing ngẫu nhiên cho giám khảo và chấm ẩn danh theo mã bài
+- [x] Rà soát toàn hệ thống 2–6/11/2026 (`.planning/2026-11-02-review/`, 8 nhóm sửa): tự lưu không mất bài, End all và End now chỉ rút ngắn, phát lại Listening, chấm Writing ẩn danh có lịch sử, vòng đời kỳ thi có khoá hàng, sửa đáp án của admin, phân quyền theo vai trò hiện tại, triển khai HTTPS và chỉ xoá kỳ thi demo do bộ tạo demo tạo ra
 - [ ] Quyển báo cáo: đã có phần đầu (cam đoan, cảm ơn, mục lục, danh mục, tóm tắt), Mở đầu, Chương 1 Tổng quan, Chương 2 Cơ sở lý thuyết và 52 tài liệu tham khảo; còn Chương 3–5

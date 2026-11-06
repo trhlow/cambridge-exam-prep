@@ -5,11 +5,11 @@ React 19 + TypeScript + Vite. Giao diện dựng theo trình thi Inspera mà Cam
 ## Chạy thử
 
 ```bash
-# 1. MySQL (từ thư mục gốc repo)
-docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
+# 1. Chỉ MySQL (từ thư mục gốc repo); không chạy cả bộ Docker cùng lúc với dotnet run
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d mysql
 
-# 2. API ở môi trường Development, cổng 5180. Lần chạy đầu tự tạo kỳ thi demo
-#    (mục "Demo" trong src/backend/src/ExamPrep.Api/appsettings.Development.json)
+# 2. API ở môi trường Development, cổng 5180. Mỗi lần khởi động xoá và tạo lại hai kỳ thi demo do bộ tạo demo làm
+#    (mục "Demo" trong src/backend/src/ExamPrep.Api/appsettings.Development.json); kỳ thi tự tạo không bị đụng đến
 cd src/backend
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/ExamPrep.Api --launch-profile http
 
@@ -29,6 +29,7 @@ Mở http://localhost:5173. Đăng nhập bằng tài khoản thí sinh demo và
 | `npm test` | Chạy test (Vitest + Testing Library) |
 | `npm run build` | Kiểm tra kiểu và build |
 | `npm run lint` | oxlint |
+| `npm run e2e` | Playwright trên stack Docker riêng cổng 8090 (xem CLAUDE.md) |
 
 ## Cấu trúc
 
