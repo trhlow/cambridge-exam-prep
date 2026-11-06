@@ -111,8 +111,8 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
         var seeded = await api.CreateCandidateAsync("x-pass-1234");
         await api.StartAttemptAsync(seeded.CandidateId, seeded.ReadingWritingSectionId);
 
-        var extra = await admin.PutAsJsonAsync($"/api/admin/candidates/{seeded.CandidateId}", new { firstName = "An", lastName = "Nguyen", plannedExtraPercent = 25 }, ct);
-        var nameOnly = await admin.PutAsJsonAsync($"/api/admin/candidates/{seeded.CandidateId}", new { firstName = "An", lastName = "Nguyễn", plannedExtraPercent = 0 }, ct);
+        var extra = await admin.PutAsJsonAsync($"/api/admin/candidates/{seeded.CandidateId}", new { firstName = "An", lastName = "Nguyen", plannedExtraPercent = 25, seatNo = "1" }, ct);
+        var nameOnly = await admin.PutAsJsonAsync($"/api/admin/candidates/{seeded.CandidateId}", new { firstName = "An", lastName = "Nguyễn", plannedExtraPercent = 0, seatNo = "1" }, ct);
 
         Assert.Equal(HttpStatusCode.Conflict, extra.StatusCode);
         Assert.Equal(HttpStatusCode.OK, nameOnly.StatusCode);
@@ -129,7 +129,7 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
         var fresh = (await added.Content.ReadFromJsonAsync<List<CandidateView>>(ct))![0];
         await api.StartAttemptAsync(seeded.CandidateId, seeded.ReadingWritingSectionId);
 
-        var update = await admin.PutAsJsonAsync($"/api/admin/candidates/{fresh.Id}", new { firstName = "Cuong", lastName = "Do", plannedExtraPercent = 50, seatNo = "B4" }, ct);
+        var update = await admin.PutAsJsonAsync($"/api/admin/candidates/{fresh.Id}", new { firstName = "Cuong", lastName = "Do", plannedExtraPercent = 50, seatNo = "4" }, ct);
         var deleteStarted = await admin.DeleteAsync($"/api/admin/candidates/{seeded.CandidateId}", ct);
         var deleteFresh = await admin.DeleteAsync($"/api/admin/candidates/{fresh.Id}", ct);
         using var otherAdmin = await api.SecondAdminClientAsync();
@@ -138,7 +138,7 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
 
         var updated = await update.Content.ReadFromJsonAsync<CandidateView>(ct);
         Assert.Equal(50, updated!.PlannedExtraPercent);
-        Assert.Equal("B4", updated.SeatNo);
+        Assert.Equal("4", updated.SeatNo);
         Assert.Equal(fresh.Username, updated.Username);
         Assert.Equal(HttpStatusCode.Conflict, deleteStarted.StatusCode);
         Assert.Equal(HttpStatusCode.Accepted, deleteFresh.StatusCode);

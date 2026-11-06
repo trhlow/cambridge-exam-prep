@@ -262,4 +262,84 @@ public sealed class ExamLifecycleTests(ApiFixture api) : IClassFixture<ApiFixtur
         Assert.Equal(HttpStatusCode.OK, keepOwn.StatusCode);
         Assert.Equal(HttpStatusCode.OK, freeSeat.StatusCode);
     }
+
+    [Fact]
+    public async Task OnceTheExamIsActive_AnEditKeepsAFreeNumericSeat()
+    {
+        api.SkipIfUnavailable();
+        var (exam, admin) = await ReadyExamAsync();
+        using var _ = admin;
+        var other = await api.AddCandidateAsync(exam.ExamId, Password);
+        await api.SetSeatAsync(exam.CandidateId, "1");
+        await api.SetSeatAsync(other.CandidateId, "2");
+        (await SetStatusAsync(admin, exam.ExamId, "Active")).EnsureSuccessStatusCode();
+
+        Task<HttpResponseMessage> Edit(string? seat) =>
+            admin.PutAsJsonAsync($"/api/admin/candidates/{other.CandidateId}", new { firstName = "Binh", lastName = "Tran", plannedExtraPercent = 0, seatNo = seat }, ct);
+        var blank = await Edit(null);
+        var label = await Edit("A3");
+        var taken = await Edit("1");
+        var keep = await Edit("2");
+        var move = await Edit("8");
+
+        Assert.Equal(HttpStatusCode.BadRequest, blank.StatusCode);
+        Assert.Contains("computer number", await blank.Content.ReadAsStringAsync(ct));
+        Assert.Equal(HttpStatusCode.BadRequest, label.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, taken.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, keep.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, move.StatusCode);
+    }
+
+    [Fact]
+    public async Task GoingActive_IsRefused_ForATypedSeatThatIsNotANumber_AndNamesTheCandidate()
+    {
+        api.SkipIfUnavailable();
+        var (exam, admin) = await ReadyExamAsync();
+        using var _ = admin;
+        await api.SetSeatAsync(exam.CandidateId, "A3");
+
+        var refused = await SetStatusAsync(admin, exam.ExamId, "Active");
+
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        var errors = (await refused.Content.ReadFromJsonAsync<JsonObject>(ct))!["errors"]!.AsArray().Select(e => (string)e!).ToList();
+        var line = Assert.Single(errors);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            var candidate = await db.Candidates.AsNoTracking().SingleAsync(c => c.Id == exam.CandidateId, ct);
+            Assert.StartsWith($"Candidate {candidate.FirstName} {candidate.LastName} ({candidate.CandidateNumber}):", line);
+        }
+
+        Assert.Contains("seat \"A3\" is not a number", line);
+        Assert.Equal("Scheduled", await StatusOfAsync(exam.ExamId));
+
+        await api.SetSeatAsync(exam.CandidateId, "3");
+        Assert.Equal(HttpStatusCode.OK, (await SetStatusAsync(admin, exam.ExamId, "Active")).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("Active", "Draft")]
+    [InlineData("Draft", "Closed")]
+    [InlineData("Scheduled", "Closed")]
+    [InlineData("Closed", "Scheduled")]
+    [InlineData("Draft", "Draft")]
+    [InlineData("Scheduled", "Scheduled")]
+    [InlineData("Active", "Active")]
+    [InlineData("Closed", "Closed")]
+    public async Task EveryOtherTransition_AndASameStatusChange_IsRefusedWith409(string from, string to)
+    {
+        api.SkipIfUnavailable();
+        var exam = await api.CreateCandidateAsync(Password, ExamStatus.Draft, withSamplePapers: true);
+        using var admin = await api.AdminClientAsync();
+        await AssignInvigilatorAsync(admin, exam.ExamId);
+        foreach (var step in new[] { "Scheduled", "Active", "Closed" }.TakeWhile(_ => from != "Draft").Take(from == "Scheduled" ? 1 : from == "Active" ? 2 : 3))
+        {
+            (await SetStatusAsync(admin, exam.ExamId, step)).EnsureSuccessStatusCode();
+        }
+
+        var refused = await SetStatusAsync(admin, exam.ExamId, to);
+
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Equal(from, await StatusOfAsync(exam.ExamId));
+    }
 }
