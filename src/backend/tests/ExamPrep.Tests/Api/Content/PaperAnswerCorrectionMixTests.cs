@@ -24,7 +24,7 @@ public sealed class PaperAnswerCorrectionMixTests(ApiFixture api) : IClassFixtur
     private const string Password = "kq7m-2xpt";
     private readonly CancellationToken ct = TestContext.Current.CancellationToken;
 
-    /// <summary>Changes the attempt's concurrency stamp behind the request's back, a set number of times.</summary>
+    /// <summary>Changes the attempt's concurrency stamp from another connection, committed outside the request's transaction, a set number of times.</summary>
     private sealed class ConflictMaker : SaveChangesInterceptor
     {
         public int Remaining;
@@ -37,7 +37,13 @@ public sealed class PaperAnswerCorrectionMixTests(ApiFixture api) : IClassFixtur
             {
                 Remaining--;
                 var id = attempt.Entity.Id;
-                await context.Database.ExecuteSqlInterpolatedAsync($"UPDATE attempts SET concurrency_stamp = UUID() WHERE id = {id}", cancellationToken);
+                // A second connection that commits at once, as the sweep worker does: the correction's own transaction does not see its own write.
+                var connectionString = new MySql.Data.MySqlClient.MySqlConnectionStringBuilder(context.Database.GetConnectionString()) { Pooling = false, DefaultCommandTimeout = 10 }.ConnectionString;
+                using var other = new MySql.Data.MySqlClient.MySqlConnection(connectionString);
+                other.Open();
+                using var command = other.CreateCommand();
+                command.CommandText = $"UPDATE attempts SET concurrency_stamp = UUID() WHERE id = {id}";
+                command.ExecuteNonQuery();
             }
 
             return result;
@@ -256,7 +262,7 @@ public sealed class PaperAnswerCorrectionMixTests(ApiFixture api) : IClassFixtur
         var attemptId = await MarkedAttemptAsync(setup, setup.A);
         var (admin, conflicts) = await ClientWithConflictsAsync();
         using var _ = admin;
-        conflicts.Remaining = 2;
+        conflicts.Remaining = 1;
 
         var fix = await admin.PutAsJsonAsync($"/api/admin/papers/{setup.A}/questions/2/answers", new { answers = new[] { "A" } }, ct);
 
