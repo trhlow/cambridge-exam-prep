@@ -1,0 +1,27 @@
+# PRODUCTION: a real exam in the exam room. Added on top of docker-compose.yml, always under its own project name so it
+# never shares the database of the demo stack (Review D1, D2):
+#   docker compose -p examprep-prod -f docker/docker-compose.yml -f docker/docker-compose.prod.yml --env-file docker/.env up -d --build
+# What it changes: Production environment (no demo exam, no sample accounts, Secure-only cookies, no stack traces), the first
+# administrator comes from BOOTSTRAP_ADMIN_* in docker/.env (required here), HTTPS on 443 from docker/certs/server.crt and
+# server.key (git-ignored; setup/INSTALL.md makes a certificate for the room's address), port 80 only redirects, uploads and
+# keys live in a Docker volume instead of the source tree, and the sample papers are not mounted.
+services:
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Demo__Enabled: "false"
+      Bootstrap__AdminUsername: ${BOOTSTRAP_ADMIN_USERNAME:?set BOOTSTRAP_ADMIN_USERNAME in docker/.env}
+      Bootstrap__AdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:?set BOOTSTRAP_ADMIN_PASSWORD in docker/.env (at least 12 characters)}
+    volumes: !override
+      - api-data:/app/App_Data
+
+  web:
+    ports: !override
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ../src/frontend/nginx.tls.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+
+volumes:
+  api-data:
