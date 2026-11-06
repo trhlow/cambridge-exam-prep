@@ -33,8 +33,12 @@ public sealed class LockContentionFilterTests
 
         new LockContentionFilter().OnException(context);
 
-        var result = Assert.IsType<ConflictObjectResult>(context.Result);
-        Assert.Equal("The session is being changed; try again.", Assert.IsType<ProblemDetails>(result.Value).Title);
+        var result = Assert.IsType<ObjectResult>(context.Result);
+        Assert.Equal(StatusCodes.Status409Conflict, result.StatusCode);
+        var problem = Assert.IsType<ProblemDetails>(result.Value);
+        Assert.Equal("The session is being changed; try again.", problem.Title);
+        // The candidate's autosave keeps its answers and tries again on this code instead of closing (Task 5 review).
+        Assert.Equal("busy", problem.Extensions["code"]);
         Assert.True(context.ExceptionHandled);
     }
 

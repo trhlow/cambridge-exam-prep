@@ -101,6 +101,22 @@ describe('AutosaveQueue', () => {
       expect(statuses.at(-1)).toBe('saved')
     })
 
+    it('keeps the answers and tries again when the server was busy with a lock (code busy)', async () => {
+      const busy = new ApiError(409, 'The session is being changed; try again.', [], 'busy')
+      const save = vi.fn().mockRejectedValueOnce(busy).mockResolvedValue(undefined)
+      const { queue, statuses, onClosed } = setup(save)
+
+      queue.push(1, 'B')
+      await vi.advanceTimersByTimeAsync(800)
+      expect(onClosed).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(3000)
+
+      expect(save).toHaveBeenCalledTimes(2)
+      expect(save).toHaveBeenLastCalledWith([{ questionNumber: 1, value: 'B' }])
+      expect(statuses.at(-1)).toBe('saved')
+    })
+
     it('still closes when the server says the section has finished', async () => {
       const save = vi.fn().mockRejectedValue(new ApiError(409, 'This part of the test has finished.', [], 'finished'))
       const { queue, onClosed } = setup(save)
