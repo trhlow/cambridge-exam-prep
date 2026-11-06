@@ -58,6 +58,15 @@ describe('candidate steps before a test', () => {
     expect(screen.getByText('Opens when Reading & Writing has finished')).toBeInTheDocument()
   })
 
+  it('reopens a running or paused component without the readiness check (a changed computer, review B14)', async () => {
+    vi.spyOn(candidateApi, 'sections').mockResolvedValue([
+      { id: 1, orderNo: 1, title: 'Reading & Writing', durationMinutes: 60, status: 'InProgress' },
+      { id: 2, orderNo: 2, title: 'Listening', durationMinutes: 30, status: 'Locked' },
+    ])
+    render(<SectionsScreen profile={profile} onStart={noop} onReadiness={noop} onExit={noop} />)
+    expect(await screen.findByRole('button', { name: 'Open Reading & Writing' })).toBeEnabled()
+  })
+
   it('starts a component only after "I confirm"', () => {
     const onStart = vi.fn()
     render(<InstructionsScreen profile={profile} section={{ id: 2, orderNo: 2, title: 'Listening', durationMinutes: 30, status: 'NotStarted' }} onStart={onStart} onBack={noop} />)

@@ -25,6 +25,7 @@ const exam: ExamDetail = {
 }
 
 const invigilator = accessOf({ id: 7, username: 'giamthi', fullName: 'Invigilator', email: null, role: 'Invigilator', isActive: true, areas: [] })
+const admin = accessOf({ id: 1, username: 'admin', fullName: 'Admin', email: null, role: 'Admin', isActive: true, areas: [] })
 const examiner = accessOf({ id: 8, username: 'giamkhao', fullName: 'Examiner', email: null, role: 'Examiner', isActive: true, areas: [] })
 
 describe('ExamPage end of the whole test (B4)', () => {
@@ -54,6 +55,17 @@ describe('ExamPage end of the whole test (B4)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Click again: the test ends now for all 3 candidates' }))
 
     expect(await screen.findByText(/2 are paused and will end when resumed/)).toBeInTheDocument()
+  })
+
+  it('changes the status only after a second click (B1)', async () => {
+    const setStatus = vi.spyOn(adminApi, 'setStatus').mockResolvedValue({ ...exam, status: 'Closed' })
+    render(<ExamPage examId={4} access={admin} />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Closed' }))
+    expect(setStatus).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Click again: set Closed' }))
+
+    expect(setStatus).toHaveBeenCalledWith(4, 'Closed')
   })
 
   it('is not offered to people who do not run the room', async () => {

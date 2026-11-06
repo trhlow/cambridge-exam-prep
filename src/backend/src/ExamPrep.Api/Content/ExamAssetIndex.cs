@@ -8,9 +8,9 @@ using Microsoft.Extensions.Caching.Memory;
 namespace ExamPrep.Api.Content;
 
 /// <summary>
-/// Which stored files an exam's papers use (pictures in HTML, picture options, audio tracks), so a candidate
-/// can fetch those and nothing else — not, for example, the audio of next month's paper. Cached per exam
-/// because a whole room loads the same pictures at the start of a section.
+/// Which stored files a paper uses (pictures in HTML, picture options, audio tracks), so a candidate can fetch those of
+/// the paper they are sitting and nothing else — not the audio of the next section, of another version, or of next
+/// month's paper. Cached per paper because a whole room loads the same pictures at the start of a section.
 /// </summary>
 public sealed partial class ExamAssetIndex(ExamPrepDbContext db, IMemoryCache cache)
 {
@@ -18,14 +18,30 @@ public sealed partial class ExamAssetIndex(ExamPrepDbContext db, IMemoryCache ca
 
     private sealed record StoredOption(int? ImageAssetId);
 
-    public async Task<bool> ExamUsesAsync(int examId, int assetId, CancellationToken cancellationToken)
+    /// <summary>
+    /// A candidate reads the files of the papers of their running attempts (in progress or paused) and no others: nothing
+    /// before Start, nothing of a locked section, nothing of another version, nothing once the section has ended.
+    /// </summary>
+    public async Task<bool> CandidateMayReadAsync(int candidateId, int assetId, CancellationToken cancellationToken)
     {
-        var assets = await cache.GetOrCreateAsync($"exam-assets:{examId}", entry =>
+        var paperIds = await db.Attempts.AsNoTracking()
+            .Where(a => a.CandidateId == candidateId && (a.Status == AttemptStatus.InProgress || a.Status == AttemptStatus.Paused))
+            .Select(a => a.TestPaperId)
+            .ToListAsync(cancellationToken);
+        foreach (var paperId in paperIds)
         {
-            entry.AbsoluteExpirationRelativeToNow = CacheLifetime;
-            return LoadAsync(examId, cancellationToken);
-        });
-        return assets!.Contains(assetId);
+            var assets = await cache.GetOrCreateAsync($"paper-assets:{paperId}", entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = CacheLifetime;
+                return AssetsOfAsync([paperId], writingOnly: false, cancellationToken);
+            });
+            if (assets!.Contains(assetId))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -66,20 +82,6 @@ public sealed partial class ExamAssetIndex(ExamPrepDbContext db, IMemoryCache ca
         assets.UnionWith(await AssetsOfAsync(scriptPapers, writingOnly: true, cancellationToken));
         assets.UnionWith(await db.Assets.Where(a => a.UploadedByUserId == userId).Select(a => a.Id).ToListAsync(cancellationToken));
         return assets;
-    }
-
-    private async Task<HashSet<int>> LoadAsync(int examId, CancellationToken cancellationToken)
-    {
-        var sections = await db.ExamSections.Where(s => s.ExamId == examId).Select(s => new { s.TestPaperId, s.PaperMixId }).ToListAsync(cancellationToken);
-        var paperIds = sections.Select(s => s.TestPaperId).ToList();
-        // A section with a mix delivers all four of its papers.
-        var mixIds = sections.Where(s => s.PaperMixId != null).Select(s => s.PaperMixId!.Value).ToList();
-        if (mixIds.Count > 0)
-        {
-            paperIds.AddRange(await db.TestPapers.Where(p => p.PaperMixId != null && mixIds.Contains(p.PaperMixId.Value)).Select(p => p.Id).ToListAsync(cancellationToken));
-        }
-
-        return await AssetsOfAsync(paperIds, writingOnly: false, cancellationToken);
     }
 
     /// <summary>Every stored file these papers use; with <paramref name="writingOnly"/>, only those of their Writing parts.</summary>

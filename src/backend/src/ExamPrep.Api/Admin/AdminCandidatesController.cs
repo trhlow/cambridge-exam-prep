@@ -62,7 +62,7 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
         if (mixed.Count > 0)
         {
             var seatsPerRow = await db.Exams.Where(e => e.Id == examId).Select(e => e.SeatsPerRow).SingleAsync(cancellationToken);
-            var versions = Delivery.PaperAssignment.SectionVersionsOf(candidates, seatsPerRow, mixed);
+            var versions = await Delivery.PaperAssignment.SectionVersionsWithStartedAsync(db, examId, candidates, seatsPerRow, mixed, cancellationToken);
             views = views.Select(v => v with { PaperVersions = versions[v.Id] }).ToList();
         }
 
@@ -80,6 +80,10 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
 
         var existingNumbers = await db.Candidates.Where(c => c.ExamId == examId).Select(c => c.CandidateNumber).ToListAsync(cancellationToken);
         var errors = Validate(request.Candidates, existingNumbers.ToHashSet(StringComparer.OrdinalIgnoreCase));
+        errors.AddRange(SeatProblems(
+            request.Candidates,
+            await db.Candidates.Where(c => c.ExamId == examId && c.SeatNo != null).Select(c => c.SeatNo!).ToListAsync(cancellationToken),
+            await ExamViews.HasStartedAsync(db, examId, cancellationToken)));
         if (errors.Count > 0)
         {
             return Problems.Invalid("No candidates were added.", errors);
@@ -142,6 +146,15 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
         if (hasStarted && request.PlannedExtraPercent != candidate.PlannedExtraPercent)
         {
             return Problems.Conflict("This candidate has started the test, so the planned extra time can no longer change. Add incident extra time on the monitoring page instead.");
+        }
+
+        if (Blank(request.SeatNo) is { } seat)
+        {
+            var others = await db.Candidates.Where(c => c.ExamId == candidate.ExamId && c.Id != candidateId && c.SeatNo != null).Select(c => c.SeatNo!).ToListAsync(cancellationToken);
+            if (others.Any(o => SeatKey(o) == SeatKey(seat)))
+            {
+                return Problems.Invalid($"Seat {seat} is already taken by another candidate of this exam.");
+            }
         }
 
         // The username stays as printed on the slip even when a misspelt name is corrected.
@@ -244,6 +257,46 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
             if (row.SeatNo?.Trim().Length > MaxNumberLength)
             {
                 errors.Add($"{label}: the seat number can be at most {MaxNumberLength} characters.");
+            }
+        }
+
+        return errors;
+    }
+
+    private static string? Blank(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
+    /// <summary>"07" and " 7 " are the same computer; other labels compare ignoring case.</summary>
+    private static string SeatKey(string seat) =>
+        Domain.Papers.SeatPattern.Parse(seat)?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? seat.Trim().ToUpperInvariant();
+
+    /// <summary>
+    /// B16 and A12: a seat already used in the session is refused; once someone has started, a new candidate needs a free
+    /// computer number, because a seat without one takes its place in the list and would shift the others.
+    /// </summary>
+    private static List<string> SeatProblems(List<NewCandidate> rows, List<string> takenSeats, bool hasStarted)
+    {
+        var errors = new List<string>();
+        var taken = takenSeats.Select(SeatKey).ToHashSet();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var label = $"Row {i + 1}";
+            if (Blank(rows[i].SeatNo) is not { } seat)
+            {
+                if (hasStarted)
+                {
+                    errors.Add($"{label}: candidates have already started this exam, so enter a free computer number.");
+                }
+
+                continue;
+            }
+
+            if (hasStarted && Domain.Papers.SeatPattern.Parse(seat) is null)
+            {
+                errors.Add($"{label}: candidates have already started this exam, so the seat must be a computer number.");
+            }
+            else if (!taken.Add(SeatKey(seat)))
+            {
+                errors.Add($"{label}: seat {seat} is already taken in this exam.");
             }
         }
 

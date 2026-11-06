@@ -154,9 +154,13 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
     return () => clearTimeout(timer)
   }, [audioNotice])
 
+  // The server hands out the questions only to a running attempt, so they are asked for once the section has started.
+  const mayReadPaper = attempt.isLoaded && (attempt.status === 'InProgress' || attempt.status === 'Paused')
   useEffect(() => {
-    candidateApi.paper(section.id).then(setPaper, (e: Error) => setPaperError(e.message))
-  }, [section.id])
+    if (mayReadPaper) {
+      candidateApi.paper(section.id).then(setPaper, (e: Error) => setPaperError(e.message))
+    }
+  }, [section.id, mayReadPaper])
 
   useEffect(() => {
     if (attempt.isSignedOut) {
@@ -175,13 +179,13 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
     return <div className="screen-message">The test could not be loaded: {error}</div>
   }
 
-  if (!paper || pages.length === 0 || !attempt.isLoaded) {
-    return <div className="screen-message">Loading the test…</div>
-  }
-
-  if (attempt.status === 'Submitted') {
+  if (attempt.isLoaded && attempt.status === 'Submitted') {
     // Inspera closes the component and takes the candidate back to the dashboard.
     return <FinishWhenSubmitted onFinished={onFinished} />
+  }
+
+  if (!paper || pages.length === 0 || !attempt.isLoaded) {
+    return <div className="screen-message">Loading the test…</div>
   }
 
   const page = pages[pageIndex]

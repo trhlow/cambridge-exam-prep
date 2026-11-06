@@ -71,7 +71,7 @@ public sealed class StaffExamsController(ExamPrepDbContext db, CandidateCredenti
             .ToListAsync(cancellationToken);
         var mixes = await AdminPaperMixesController.ViewsAsync(db, null, cancellationToken);
         var seats = PaperAssignment.SeatsOf(candidates);
-        var versions = PaperAssignment.SectionVersionsOf(candidates, exam.SeatsPerRow, await PaperAssignment.MixedSectionsAsync(db, examId, cancellationToken));
+        var versions = await PaperAssignment.SectionVersionsWithStartedAsync(db, examId, candidates, exam.SeatsPerRow, await PaperAssignment.MixedSectionsAsync(db, examId, cancellationToken), cancellationToken);
 
         var plan = candidates
             .Select(c => new RoomSeat(seats[c.Id], c.Id, c.CandidateNumber, $"{c.FirstName} {c.LastName}", Domain.Papers.SeatPattern.Parse(c.SeatNo) is not null, versions.GetValueOrDefault(c.Id) ?? []))

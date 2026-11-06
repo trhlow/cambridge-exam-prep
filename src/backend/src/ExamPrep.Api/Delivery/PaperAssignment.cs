@@ -59,6 +59,34 @@ public sealed class PaperAssignment(ExamPrepDbContext db)
                 p => p.Key,
                 p => (IReadOnlyList<SectionVersion>)mixed.Select(m => new SectionVersion(m.SectionId, m.Title, SeatPattern.VersionFor(p.Value, seatsPerRow, m.Shape))).ToList());
 
+    /// <summary>
+    /// <see cref="SectionVersionsOf"/> with the version actually sat wherever an attempt exists: a seat changed after Start
+    /// must not make the list or the room plan show a paper the candidate never had (A12).
+    /// </summary>
+    public static async Task<Dictionary<int, IReadOnlyList<SectionVersion>>> SectionVersionsWithStartedAsync(
+        ExamPrepDbContext db, int examId, IReadOnlyCollection<Candidate> candidates, int? seatsPerRow, IReadOnlyList<(int SectionId, string Title, MixShape Shape)> mixed, CancellationToken cancellationToken)
+    {
+        var versions = SectionVersionsOf(candidates, seatsPerRow, mixed);
+        if (mixed.Count == 0)
+        {
+            return versions;
+        }
+
+        var sectionIds = mixed.Select(m => m.SectionId).ToList();
+        var started = await db.Attempts.AsNoTracking()
+            .Where(a => a.Candidate!.ExamId == examId && sectionIds.Contains(a.ExamSectionId) && a.TestPaper!.MixVersion != null)
+            .Select(a => new { a.CandidateId, a.ExamSectionId, Version = a.TestPaper!.MixVersion!.Value })
+            .ToListAsync(cancellationToken);
+        foreach (var byCandidate in started.GroupBy(a => a.CandidateId).Where(g => versions.ContainsKey(g.Key)))
+        {
+            versions[byCandidate.Key] = versions[byCandidate.Key]
+                .Select(v => byCandidate.FirstOrDefault(a => a.ExamSectionId == v.SectionId) is { } a ? v with { Version = a.Version } : v)
+                .ToList();
+        }
+
+        return versions;
+    }
+
     private async Task<int> SeatOfAsync(Candidate candidate, CancellationToken cancellationToken)
     {
         if (SeatPattern.Parse(candidate.SeatNo) is { } seat)

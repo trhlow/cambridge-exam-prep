@@ -229,8 +229,13 @@ async function prepareExam(page: Page, options: { name: string; type: string; se
     await page.getByRole('checkbox', { name: account }).click()
     await expect(page.getByRole('checkbox', { name: account })).toBeChecked()
   }
-  await page.getByRole('group', { name: 'Change status' }).getByRole('button', { name: 'Active' }).click()
-  await expect(page.getByRole('group', { name: 'Change status' }).getByRole('button', { name: 'Active' })).toBeDisabled()
+  // Draft → Scheduled → Active, each with the portal's second click (the exam needs its candidates and invigilator first).
+  const statusGroup = page.getByRole('group', { name: 'Change status' })
+  for (const next of ['Scheduled', 'Active']) {
+    await statusGroup.getByRole('button', { name: next, exact: true }).click()
+    await statusGroup.getByRole('button', { name: `Click again: set ${next}`, exact: true }).click()
+    await expect(statusGroup.getByRole('button', { name: next, exact: true })).toBeDisabled()
+  }
 
   const [slipsPage] = await Promise.all([page.waitForEvent('popup'), page.getByRole('link', { name: 'Print login slips' }).click()])
   await expect(slipsPage.locator('article.slip')).toHaveCount(options.people.length)

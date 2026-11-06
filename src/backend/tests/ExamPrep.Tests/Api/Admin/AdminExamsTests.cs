@@ -183,20 +183,21 @@ public sealed class AdminExamsTests(ApiFixture api) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task SetStatus_OpensTheSession_AndAnApprovedDeleteRemovesAnUnusedOne()
+    public async Task SetStatus_SchedulesTheSession_AndAnApprovedDeleteRemovesAnUnusedOne()
     {
         api.SkipIfUnavailable();
         using var admin = await api.AdminClientAsync();
         var exam = await CreateExamAsync(admin, A2Exam(await api.CreatePublishedPapersAsync()));
 
-        var open = await admin.PostAsJsonAsync($"/api/admin/exams/{exam.Id}/status", new { status = "Active" }, ct);
+        // Draft → Active in one step is refused since the review of 2 November (ExamLifecycleTests has the rest).
+        var open = await admin.PostAsJsonAsync($"/api/admin/exams/{exam.Id}/status", new { status = "Scheduled" }, ct);
         var bogus = await admin.PostAsJsonAsync($"/api/admin/exams/{exam.Id}/status", new { status = "Exploded" }, ct);
         var delete = await admin.DeleteAsync($"/api/admin/exams/{exam.Id}", ct);
         using var otherAdmin = await api.SecondAdminClientAsync();
         await ApiFixture.ApproveAsync(otherAdmin, await ApiFixture.RequestIdOfAsync(delete));
         var gone = await admin.GetAsync($"/api/staff/exams/{exam.Id}", ct);
 
-        Assert.Equal("Active", (await open.Content.ReadFromJsonAsync<ExamDetail>(ct))!.Status);
+        Assert.Equal("Scheduled", (await open.Content.ReadFromJsonAsync<ExamDetail>(ct))!.Status);
         Assert.Equal(HttpStatusCode.BadRequest, bogus.StatusCode);
         Assert.Equal(HttpStatusCode.Accepted, delete.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, gone.StatusCode);

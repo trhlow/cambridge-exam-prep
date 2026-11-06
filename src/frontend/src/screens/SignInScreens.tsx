@@ -181,15 +181,18 @@ export function SectionsScreen(props: {
           const isDone = section.status === 'Submitted'
           const previous = sections?.[i - 1]
           const label = isLocked ? `${section.title} is locked` : isDone ? `${section.title} submitted` : `Open ${section.title}`
+          // A section already running (a changed computer, a reload) reopens at once: its clock is not waiting for a video.
+          const isRunning = section.status === 'InProgress' || section.status === 'Paused'
+          const isClosed = !isReady && !isRunning
           return (
-            <li key={section.id} className={isLocked || !isReady ? 'section-item is-locked' : 'section-item'}>
+            <li key={section.id} className={isLocked || isClosed ? 'section-item is-locked' : 'section-item'}>
               <div>
                 <div className="section-title">{section.title}</div>
                 <div className="section-meta">
                   {isLocked && previous ? `Opens when ${previous.title} has finished` : isDone ? 'Submitted' : `${section.durationMinutes} minutes`}
                 </div>
               </div>
-              <button type="button" className="btn btn--primary" aria-label={label} onClick={() => onStart(section)} disabled={isLocked || isDone || !isReady}>
+              <button type="button" className="btn btn--primary" aria-label={label} onClick={() => onStart(section)} disabled={isLocked || isDone || isClosed}>
                 {isLocked ? 'Locked' : isDone ? 'Submitted' : 'Open'}
               </button>
             </li>

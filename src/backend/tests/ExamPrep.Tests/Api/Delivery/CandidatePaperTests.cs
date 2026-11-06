@@ -36,8 +36,10 @@ public sealed partial class CandidatePaperTests(ApiFixture api) : IClassFixture<
         return (client, candidate);
     }
 
+    /// <summary>Starts the section first, as the candidate screen does: the paper is served only for a running attempt.</summary>
     private async Task<JsonObject> GetPaperAsync(HttpClient client, int sectionId)
     {
+        (await client.PostAsync($"/api/candidate/sections/{sectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
         var response = await client.GetAsync($"/api/candidate/sections/{sectionId}/paper", ct);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<JsonObject>(ct))!;
@@ -118,6 +120,38 @@ public sealed partial class CandidatePaperTests(ApiFixture api) : IClassFixture<
         var response = await client.GetAsync($"/api/candidate/sections/{candidate.ReadingWritingSectionId}/paper", ct);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Paper_Returns409_UntilTheSectionIsStarted_AndOnceItHasEnded()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await CandidateWithPinAsync();
+        using var _ = client;
+
+        var beforeStart = await client.GetAsync($"/api/candidate/sections/{candidate.ReadingWritingSectionId}/paper", ct);
+        (await client.PostAsync($"/api/candidate/sections/{candidate.ReadingWritingSectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
+        var running = await client.GetAsync($"/api/candidate/sections/{candidate.ReadingWritingSectionId}/paper", ct);
+        await api.SubmitStartedAttemptAsync(candidate.CandidateId, candidate.ReadingWritingSectionId);
+        var ended = await client.GetAsync($"/api/candidate/sections/{candidate.ReadingWritingSectionId}/paper", ct);
+
+        Assert.Equal(HttpStatusCode.Conflict, beforeStart.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, running.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, ended.StatusCode);
+    }
+
+    [Fact]
+    public async Task Paper_IsServedWhileTheAttemptIsPaused()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await CandidateWithPinAsync();
+        using var _ = client;
+        await GetPaperAsync(client, candidate.ReadingWritingSectionId);
+        await api.PauseAttemptAsync(candidate.CandidateId, candidate.ReadingWritingSectionId);
+
+        var response = await client.GetAsync($"/api/candidate/sections/{candidate.ReadingWritingSectionId}/paper", ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -202,6 +236,33 @@ public sealed partial class CandidatePaperTests(ApiFixture api) : IClassFixture<
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("audio/mpeg", response.Content.Headers.ContentType!.MediaType);
+    }
+
+    [Fact]
+    public async Task Asset_Returns404_UntilTheSectionIsStarted_AndOnceItHasEnded_AndForALockedSection()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await CandidateWithPinAsync();
+        using var _ = client;
+        int AssetOf(string html) => int.Parse(AssetUrl().Match(html).Value["/api/assets/".Length..]);
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var readingPaper = db.ExamSections.Where(x => x.Id == candidate.ReadingWritingSectionId).Select(x => x.TestPaperId).Single();
+        var listeningPaper = db.ExamSections.Where(x => x.Id == candidate.ListeningSectionId).Select(x => x.TestPaperId).Single();
+        var readingPicture = AssetOf(db.Questions.Where(q => q.StimulusHtml != null && q.QuestionGroup!.PaperPart!.TestPaperId == readingPaper).Select(q => q.StimulusHtml!).First());
+        var listeningAudio = db.PaperParts.Where(p => p.AudioAssetId != null && p.TestPaperId == listeningPaper).Select(p => p.AudioAssetId!.Value).First();
+
+        var beforeStart = await client.GetAsync($"/api/assets/{readingPicture}", ct);
+        (await client.PostAsync($"/api/candidate/sections/{candidate.ReadingWritingSectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
+        var running = await client.GetAsync($"/api/assets/{readingPicture}", ct);
+        var locked = await client.GetAsync($"/api/assets/{listeningAudio}", ct);
+        await api.SubmitStartedAttemptAsync(candidate.CandidateId, candidate.ReadingWritingSectionId);
+        var ended = await client.GetAsync($"/api/assets/{readingPicture}", ct);
+
+        Assert.Equal(HttpStatusCode.NotFound, beforeStart.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, running.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, locked.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, ended.StatusCode);
     }
 
     [Fact]

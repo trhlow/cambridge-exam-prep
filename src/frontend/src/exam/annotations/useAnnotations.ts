@@ -16,6 +16,19 @@ function read(sectionId: number): AnnotationState {
   }
 }
 
+const KEY_PREFIX = 'victory.annotations.'
+
+/** Exit: the notes and highlights of every section go, so the next person at this computer cannot read them (review B13). */
+export function clearAnnotations() {
+  try {
+    Object.keys(sessionStorage)
+      .filter((key) => key.startsWith(KEY_PREFIX))
+      .forEach((key) => sessionStorage.removeItem(key))
+  } catch {
+    // Storage blocked: nothing was kept.
+  }
+}
+
 /**
  * The candidate's highlights and notes for one section. Private to this tab and kept only for the test, as in
  * Inspera ("only available during the test"); a reload keeps them.

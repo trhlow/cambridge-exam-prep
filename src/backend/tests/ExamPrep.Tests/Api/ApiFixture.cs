@@ -305,6 +305,15 @@ public sealed class ApiFixture : IAsyncLifetime
         return (candidate.Id, candidate.Username);
     }
 
+    /// <summary>Opens a session for sign-in directly, without the lifecycle rules of the status endpoint (those have their own tests).</summary>
+    public async Task OpenExamAsync(int examId)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        (await db.Exams.SingleAsync(e => e.Id == examId)).Status = ExamStatus.Active;
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Marks a section as finished for the candidate (submitted, or its time ran out).</summary>
     public async Task SubmitSectionAsync(int candidateId, int sectionId)
     {
@@ -332,6 +341,7 @@ public sealed class ApiFixture : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
         var attempt = db.Attempts.Single(a => a.CandidateId == candidateId && a.ExamSectionId == sectionId);
         attempt.Status = AttemptStatus.Submitted;
+        attempt.PausedAt = null;
         attempt.SubmittedAt = DateTime.UtcNow;
         attempt.SubmitReason = SubmitReason.TimeExpired;
         await db.SaveChangesAsync();

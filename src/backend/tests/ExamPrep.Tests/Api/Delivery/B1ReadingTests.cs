@@ -75,6 +75,7 @@ public sealed class B1ReadingTests(ApiFixture api) : IClassFixture<ApiFixture>
         var (client, _, sectionId) = await CandidateAsync();
 
         var sections = (await client.GetFromJsonAsync<JsonArray>("/api/candidate/sections", ct))!;
+        (await client.PostAsync($"/api/candidate/sections/{sectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
         var paper = (await client.GetFromJsonAsync<JsonObject>($"/api/candidate/sections/{sectionId}/paper", ct))!;
         var parts = paper["parts"]!.AsArray();
         var people = parts[1]!["groups"]![0]!;

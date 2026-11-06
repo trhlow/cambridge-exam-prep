@@ -89,6 +89,7 @@ public sealed class B1WritingTests(ApiFixture api) : IClassFixture<ApiFixture>
         api.SkipIfUnavailable();
         var (client, _, _, sectionId) = await CandidateAsync();
 
+        (await client.PostAsync($"/api/candidate/sections/{sectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
         var paper = (await client.GetFromJsonAsync<JsonObject>($"/api/candidate/sections/{sectionId}/paper", ct))!;
         var yes = await SelectAsync(client, sectionId, 2, "Yes");
         var second = await SelectAsync(client, sectionId, 3, "Yes");

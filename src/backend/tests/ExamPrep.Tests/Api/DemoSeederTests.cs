@@ -46,6 +46,7 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
         var sections = (await client.GetFromJsonAsync<List<Section>>("/api/candidate/sections", ct))!;
         Assert.Equal(["Reading & Writing", "Listening"], sections.Select(s => s.Title));
 
+        (await client.PostAsync($"/api/candidate/sections/{sections[0].Id}/attempt", null, ct)).EnsureSuccessStatusCode();
         var paper = await client.GetFromJsonAsync<JsonObject>($"/api/candidate/sections/{sections[0].Id}/paper", ct);
         Assert.Equal(7, paper!["parts"]!.AsArray().Count);
     }
