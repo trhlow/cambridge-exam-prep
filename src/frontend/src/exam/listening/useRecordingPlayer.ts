@@ -5,8 +5,12 @@ export type PlayerState = 'idle' | 'playing' | 'finished'
 
 export interface RecordingPlayer {
   state: PlayerState
-  /** Starts (or resumes) the whole recording at a position given by the server. Call from a click. */
-  start: (positionMs: number) => Promise<void>
+  /**
+   * Starts (or resumes) the whole recording at a position given by the server. Call from a click. Resolves true
+   * when the recording plays, false when nothing plays (a stop or a newer start came first, or the position is past
+   * the end); rejects when the browser refuses to play, leaving the player idle.
+   */
+  start: (positionMs: number) => Promise<boolean>
   /** Only for an invigilator pause; the candidate has no way to stop the recording. */
   stop: () => void
   /** Where the recording is now (ms from its start), or null while it is not playing. */
@@ -63,6 +67,11 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
     })
 
     const playNext = () => {
+      // A track that ends just after an invigilator pause does not start the next one.
+      if (!shouldPlayRef.current) {
+        return
+      }
+
       trackRef.current += 1
       if (trackRef.current >= tracks.length) {
         shouldPlayRef.current = false
@@ -71,12 +80,12 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
       }
 
       audio.src = tracks[trackRef.current]
-      void audio.play()
+      audio.play().catch(() => undefined)
     }
     // Anything that pauses the recording other than the end of a track (media keys, headset buttons) is undone.
     const keepPlaying = () => {
       if (shouldPlayRef.current && !audio.ended) {
-        void audio.play()
+        audio.play().catch(() => undefined)
       }
     }
     audio.addEventListener('ended', playNext)
@@ -90,6 +99,8 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
     })
 
     return () => {
+      // A start still loading on this element gives up.
+      turnRef.current += 1
       shouldPlayRef.current = false
       audio.removeEventListener('ended', playNext)
       audio.removeEventListener('pause', keepPlaying)
@@ -102,20 +113,20 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
   const start = useCallback(async (positionMs: number) => {
     const audio = audioRef.current
     if (!audio || !durationsRef.current) {
-      return
+      return false
     }
 
-    // A stop() (or a newer start) while a track is loading cancels this start.
+    // A stop() (or a newer start, or an unmount) while a track is loading cancels this start.
     const turn = ++turnRef.current
     const point = locateInRecording(positionMs, await durationsRef.current)
     if (turn !== turnRef.current) {
-      return
+      return false
     }
 
     if (!point) {
       shouldPlayRef.current = false
       setState('finished')
-      return
+      return false
     }
 
     trackRef.current = point.trackIndex
@@ -125,7 +136,7 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
       audio.load()
     })
     if (turn !== turnRef.current) {
-      return
+      return false
     }
 
     audio.currentTime = point.offsetMs / 1000
@@ -133,13 +144,22 @@ export function useRecordingPlayer(urls: string[]): RecordingPlayer {
     try {
       await audio.play()
     } catch (e) {
-      // Refused by the browser: stay idle so the Continue listening button shows.
+      if (turn !== turnRef.current) {
+        // A newer start or a stop took over; it decides what happens.
+        return false
+      }
+
+      // Refused by the browser: idle, so the Continue listening button shows (also after a finished recording).
       shouldPlayRef.current = false
+      setState('idle')
       throw e
     }
-    if (turn === turnRef.current) {
-      setState('playing')
+    if (turn !== turnRef.current) {
+      return false
     }
+
+    setState('playing')
+    return true
   }, [])
 
   const stop = useCallback(() => {

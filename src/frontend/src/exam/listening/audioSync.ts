@@ -33,7 +33,7 @@ export function useResumeAfterPause(
   status: string | null,
   playerState: PlayerState,
   positionNow: () => number | null,
-  start: (positionMs: number) => Promise<void>,
+  start: (positionMs: number) => Promise<boolean>,
 ) {
   const previousStatus = useRef(status)
   const hasPlayed = useRef(false)
@@ -56,4 +56,55 @@ export function useResumeAfterPause(
       start(position).catch(() => undefined)
     }
   }, [status, playerState, positionNow, start])
+}
+
+interface FollowServerPosition {
+  status: string | null
+  /** Changes on every heartbeat reply. */
+  syncedAt: number | null
+  playerState: PlayerState
+  serverPosition: () => number | null
+  localPosition: () => number | null
+  start: (positionMs: number) => Promise<boolean>
+  /** The recording really went back (VE-16 rewind), so the candidate is told. */
+  onRewound: () => void
+}
+
+/**
+ * VE-16: after an invigilator rewind the server's position jumps back and the recording follows it; a recording that
+ * already finished plays again when the rewind put the server position back inside it. Nothing restarts while the
+ * candidate is not in progress, a restart still loading is not started again on the next heartbeat, and the candidate
+ * is told only when the recording really played from an earlier point.
+ */
+export function useFollowServerPosition({ status, syncedAt, playerState, serverPosition, localPosition, start, onRewound }: FollowServerPosition) {
+  const isStarting = useRef(false)
+  const onRewoundRef = useRef(onRewound)
+  useEffect(() => {
+    onRewoundRef.current = onRewound
+  }, [onRewound])
+
+  useEffect(() => {
+    if (syncedAt === null || status !== 'InProgress' || isStarting.current) {
+      return
+    }
+
+    const local = localPosition()
+    const target = realignTarget(playerState, serverPosition(), local)
+    if (target === null) {
+      return
+    }
+
+    const isBack = local === null || target < local
+    isStarting.current = true
+    start(target)
+      .then((played) => {
+        if (played && isBack) {
+          onRewoundRef.current()
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        isStarting.current = false
+      })
+  }, [syncedAt, status, playerState, serverPosition, localPosition, start])
 }
