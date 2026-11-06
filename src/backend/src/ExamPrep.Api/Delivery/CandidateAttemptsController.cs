@@ -72,7 +72,11 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         // A candidate signed in before the exam was closed (or taken back to Scheduled) cannot start or resume anything.
         // The shared lock lasts until the attempt is saved, so a Close cannot slip in between the check and the insert.
         var examId = User.GetExamId();
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        // READ COMMITTED, not the default REPEATABLE READ: a second Start that loses the insert race (double click, second
+        // tab) waits on the unique key and must then read the winner's committed attempt. Under REPEATABLE READ its
+        // snapshot, taken at its first read, predates that row and the recovery below could never see it. The locks
+        // (shared exam row, the key) are the same at both levels, so the guard against Close is unchanged.
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken);
         await ExamRowLock.SharedAsync(db, examId, cancellationToken);
         if (!await db.Exams.AnyAsync(e => e.Id == examId && e.Status == ExamStatus.Active, cancellationToken))
         {

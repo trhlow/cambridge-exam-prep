@@ -1,3 +1,4 @@
+using ExamPrep.Api.Common;
 using ExamPrep.Api.Admin;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Content;
@@ -50,7 +51,11 @@ builder.Services.AddScoped<AttemptExpiry>();
 builder.Services.AddHostedService<AttemptExpiryWorker>();
 builder.Services.AddProblemDetails();
 builder.Services.AddScoped<SecurityEventRecorder>();
-builder.Services.AddControllers(options => options.Filters.Add<SebActionFilter>());
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<SebActionFilter>();
+    options.Filters.Add<LockContentionFilter>();
+});
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks().AddDbContextCheck<ExamPrepDbContext>("database");
 
