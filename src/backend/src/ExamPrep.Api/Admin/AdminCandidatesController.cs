@@ -133,12 +133,18 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     [Authorize(Policy = StaffAuthDefaults.CandidatesPolicy)]
     public async Task<ActionResult<CandidateView>> Update(int candidateId, UpdateCandidateRequest request, CancellationToken cancellationToken)
     {
+        // READ COMMITTED so every read below sees what a status change committed while this request waited for the lock.
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken);
         var managed = db.Exams.CandidatesManagedBy(User).Select(e => e.Id);
         var candidate = await db.Candidates.SingleOrDefaultAsync(c => c.Id == candidateId && managed.Contains(c.ExamId), cancellationToken);
         if (candidate is null)
         {
             return NotFound();
         }
+
+        // Going Active takes this lock exclusively, so the frozen-seat check below and the save cannot straddle it: the edit
+        // either lands before the exam opens (and the opening then sees it) or after (and is refused).
+        await ExamRowLock.SharedAsync(db, candidate.ExamId, cancellationToken);
 
         // Special-arrangement extra time is decided before the test, never once the candidate has started: time lost on
         // the day is incident extra time, added by the invigilator (Invigilator Training Test User Guide, p. 15).
@@ -174,6 +180,7 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
         candidate.PlannedExtraPercent = request.PlannedExtraPercent;
         candidate.SeatNo = string.IsNullOrWhiteSpace(request.SeatNo) ? null : request.SeatNo.Trim();
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         logger.LogInformation("Staff {UserId} updated candidate {CandidateId}", User.GetStaffId(), candidateId);
         return CandidateView.From(candidate, hasStarted);
     }
