@@ -23,7 +23,11 @@ ENV Converter__Python=/opt/venv/bin/python \
     Converter__Script=/opt/converter/pdf2package.py
 WORKDIR /app
 COPY --from=build /app .
-# Uploaded pictures/audio and the Data Protection key ring; mounted from the host so they survive a rebuild.
+# Uploaded pictures/audio and the Data Protection key ring; mounted from the host so they survive a rebuild. The API runs
+# as the image's unprivileged "app" user (uid 64198), so the folder is made over to it: a named volume (docker-compose.prod.yml)
+# starts with this owner; a bind mount keeps the host folder's owner (on Linux it must be writable by uid 64198).
+RUN mkdir -p /app/App_Data && chown -R app:app /app/App_Data
 VOLUME /app/App_Data
+USER app
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "ExamPrep.Api.dll"]

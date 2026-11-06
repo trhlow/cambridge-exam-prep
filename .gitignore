@@ -43,3 +43,8 @@ __pycache__/
 
 # Browser-automation screenshots (may show exam content)
 .playwright-mcp/
+
+# TLS certificate and key for the production stack (docker/docker-compose.prod.yml); never commit a private key
+docker/certs/
+*.pem
+*.key
