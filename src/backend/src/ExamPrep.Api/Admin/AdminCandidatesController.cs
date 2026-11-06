@@ -73,17 +73,23 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     [Authorize(Policy = StaffAuthDefaults.CandidatesPolicy)]
     public async Task<ActionResult<IReadOnlyList<CandidateView>>> Add(int examId, AddCandidatesRequest request, CancellationToken cancellationToken)
     {
+        // READ COMMITTED and the exam row lock shared, as Update: going Active takes it exclusively, so the frozen-seat
+        // check and the insert land either before the exam opens (which then seats the new candidates) or after it (A12).
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken);
         if (!await db.Exams.CandidatesManagedBy(User).AnyAsync(e => e.Id == examId, cancellationToken))
         {
             return NotFound();
         }
 
+        await ExamRowLock.SharedAsync(db, examId, cancellationToken);
         var existingNumbers = await db.Candidates.Where(c => c.ExamId == examId).Select(c => c.CandidateNumber).ToListAsync(cancellationToken);
         var errors = Validate(request.Candidates, existingNumbers.ToHashSet(StringComparer.OrdinalIgnoreCase));
+        var frozen = await db.Exams.AnyAsync(e => e.Id == examId && e.Status == ExamStatus.Active, cancellationToken)
+            || await ExamViews.HasStartedAsync(db, examId, cancellationToken);
         errors.AddRange(SeatProblems(
             request.Candidates,
             await db.Candidates.Where(c => c.ExamId == examId && c.SeatNo != null).Select(c => c.SeatNo!).ToListAsync(cancellationToken),
-            await ExamViews.HasStartedAsync(db, examId, cancellationToken)));
+            frozen));
         if (errors.Count > 0)
         {
             return Problems.Invalid("No candidates were added.", errors);
@@ -118,6 +124,7 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
         try
         {
             await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateException)
         {
@@ -290,7 +297,8 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
     /// B16 and A12: a seat already used in the session is refused; once someone has started, a new candidate needs a free
     /// computer number, because a seat without one takes its place in the list and would shift the others.
     /// </summary>
-    private static List<string> SeatProblems(List<NewCandidate> rows, List<string> takenSeats, bool hasStarted)
+    /// <param name="frozen">The exam is open or someone has started: a new candidate needs a free computer number (A12).</param>
+    private static List<string> SeatProblems(List<NewCandidate> rows, List<string> takenSeats, bool frozen)
     {
         var errors = new List<string>();
         var taken = takenSeats.Select(SeatKey).ToHashSet();
@@ -299,17 +307,17 @@ public sealed class AdminCandidatesController(ExamPrepDbContext db, CandidateCre
             var label = $"Row {i + 1}";
             if (Blank(rows[i].SeatNo) is not { } seat)
             {
-                if (hasStarted)
+                if (frozen)
                 {
-                    errors.Add($"{label}: candidates have already started this exam, so enter a free computer number.");
+                    errors.Add($"{label}: the exam is open or has started, so enter a free computer number.");
                 }
 
                 continue;
             }
 
-            if (hasStarted && Domain.Papers.SeatPattern.Parse(seat) is null)
+            if (frozen && Domain.Papers.SeatPattern.Parse(seat) is null)
             {
-                errors.Add($"{label}: candidates have already started this exam, so the seat must be a computer number.");
+                errors.Add($"{label}: the exam is open or has started, so the seat must be a computer number.");
             }
             else if (!taken.Add(SeatKey(seat)))
             {

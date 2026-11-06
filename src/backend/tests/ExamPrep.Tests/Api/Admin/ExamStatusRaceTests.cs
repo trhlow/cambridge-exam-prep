@@ -43,6 +43,11 @@ public sealed class ExamStatusRaceTests(ApiFixture api) : IClassFixture<ApiFixtu
 
         public static RaceHook AttemptAdded() => new(context => context.ChangeTracker.Entries<Attempt>().Any(e => e.State == EntityState.Added));
 
+        public static RaceHook CandidateAdded() => new(context => context.ChangeTracker.Entries<Candidate>().Any(e => e.State == EntityState.Added));
+
+        public static RaceHook RowLengthEdited() => new(context =>
+            context.ChangeTracker.Entries<Exam>().Any(e => e.State == EntityState.Modified && e.Property(x => x.SeatsPerRow).IsModified));
+
         public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
             if (Other is not null && matches(eventData.Context!) && Interlocked.Exchange(ref fired, 1) == 0)
@@ -193,5 +198,64 @@ public sealed class ExamStatusRaceTests(ApiFixture api) : IClassFixture<ApiFixtu
         var seat = (await db.Candidates.AsNoTracking().SingleAsync(c => c.Id == exam.CandidateId, ct)).SeatNo;
         Assert.True(status != ExamStatus.Active || ExamPrep.Domain.Papers.SeatPattern.Parse(seat) is not null,
             $"exam is Active with seat \"{seat}\"; edit {edit.StatusCode}, activate {activate!.StatusCode}");
+    }
+
+    /// <summary>
+    /// Final review A12: a candidate entered without a seat while the exam goes Active. Add takes the exam row lock
+    /// shared, so going Active waits and then gives the new candidate a number too; an open exam never has an unseated
+    /// candidate.
+    /// </summary>
+    [Fact]
+    public async Task AnAddThatMeetsGoingActive_NeverLeavesAnUnseatedCandidateInAnOpenExam()
+    {
+        api.SkipIfUnavailable();
+        var exam = await api.CreateCandidateAsync(Password, ExamStatus.Draft, withSamplePapers: true);
+        var hook = RaceHook.CandidateAdded();
+        var factory = api.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            services.ConfigureDbContext<ExamPrepDbContext>(options => options.AddInterceptors(hook))));
+        using var admin = factory.CreateClient();
+        (await admin.PostAsJsonAsync("/api/staff/auth/login", new { username = ApiFixture.AdminUsername, password = ApiFixture.AdminPassword }, ct)).EnsureSuccessStatusCode();
+        var invigilator = await api.CreateStaffAsync(UserRole.Invigilator, Password);
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}/invigilators", new { userIds = new[] { invigilator.Id } }, ct)).EnsureSuccessStatusCode();
+        (await admin.PostAsJsonAsync($"/api/admin/exams/{exam.ExamId}/status", new { status = "Scheduled" }, ct)).EnsureSuccessStatusCode();
+        HttpResponseMessage? activate = null;
+        hook.Other = async () => activate = await admin.PostAsJsonAsync($"/api/admin/exams/{exam.ExamId}/status", new { status = "Active" }, ct);
+
+        var add = await admin.PostAsJsonAsync($"/api/admin/exams/{exam.ExamId}/candidates", new { candidates = new[] { new { candidateNumber = "7777", firstName = "Race", lastName = "Seat" } } }, ct);
+        await hook.Running!;
+
+        Assert.True(hook.OtherWasHeldUp, "Going Active finished within the window, so the two never overlapped.");
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var status = (await db.Exams.AsNoTracking().SingleAsync(e => e.Id == exam.ExamId, ct)).Status;
+        var seats = await db.Candidates.AsNoTracking().Where(c => c.ExamId == exam.ExamId).Select(c => c.SeatNo).ToListAsync(ct);
+        Assert.True(status != ExamStatus.Active || seats.All(s => ExamPrep.Domain.Papers.SeatPattern.Parse(s) is not null),
+            $"exam is {status} with seats [{string.Join(", ", seats)}]; add {add.StatusCode}, activate {activate!.StatusCode}");
+        Assert.Equal(HttpStatusCode.Created, add.StatusCode);
+    }
+
+    /// <summary>
+    /// Final review A12: a change of computers per row held between its "nobody has started" check and its save while a
+    /// candidate presses Start. The edit takes the exam row lock exclusively, so the Start waits for it and its paper
+    /// follows the new layout; without the lock the row length changed after an attempt existed.
+    /// </summary>
+    [Fact]
+    public async Task ARowLengthEditThatMeetsAStart_HoldsTheStartUntilItIsSaved()
+    {
+        api.SkipIfUnavailable();
+        var (exam, admin, candidate, hook) = await ActiveExamAsync(RaceHook.RowLengthEdited());
+        using var _ = admin;
+        using var __ = candidate;
+        var detail = (await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>($"/api/staff/exams/{exam.ExamId}", ct))!;
+        var papers = detail["sections"]!.AsArray().Select(s => new { sectionTemplateId = (int)s!["sectionTemplateId"]!, testPaperId = (int)s["testPaperId"]! }).ToList();
+        HttpResponseMessage? start = null;
+        hook.Other = async () => start = await candidate.PostAsync($"/api/candidate/sections/{exam.ReadingWritingSectionId}/attempt", null, ct);
+
+        var edit = await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}", new { name = (string)detail["name"]!, examTypeId = 1, scheduledDate = "2026-11-20", papers, seatsPerRow = 6 }, ct);
+        await hook.Running!;
+
+        Assert.True(hook.OtherWasHeldUp, "The Start finished while the edit was between its check and its save.");
+        Assert.Equal(HttpStatusCode.OK, edit.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, start!.StatusCode);
     }
 }
