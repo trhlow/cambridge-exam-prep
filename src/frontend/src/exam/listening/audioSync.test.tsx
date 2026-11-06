@@ -1,5 +1,5 @@
-import { renderHook } from '@testing-library/react'
-import { realignTarget, useResumeAfterPause } from './audioSync'
+import { act, renderHook } from '@testing-library/react'
+import { realignTarget, useFollowServerPosition, useResumeAfterPause } from './audioSync'
 import type { PlayerState } from './useRecordingPlayer'
 
 describe('realignTarget', () => {
@@ -22,7 +22,7 @@ describe('realignTarget', () => {
 
 describe('useResumeAfterPause (A9)', () => {
   const setup = (initial: { status: string; state: PlayerState }) => {
-    const start = vi.fn().mockResolvedValue(undefined)
+    const start = vi.fn().mockResolvedValue(true)
     const hook = renderHook((props) => useResumeAfterPause(props.status, props.state, () => 42_000, start), { initialProps: initial })
     return { start, ...hook }
   }
@@ -55,5 +55,83 @@ describe('useResumeAfterPause (A9)', () => {
 
     await Promise.resolve()
     expect(start).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('useFollowServerPosition', () => {
+  interface Props {
+    status: string
+    syncedAt: number | null
+    state: PlayerState
+    server: number | null
+    local: number | null
+  }
+
+  const setup = (initial: Props, start = vi.fn().mockResolvedValue(true)) => {
+    const onRewound = vi.fn()
+    const hook = renderHook(
+      (p: Props) =>
+        useFollowServerPosition({
+          status: p.status,
+          syncedAt: p.syncedAt,
+          playerState: p.state,
+          serverPosition: () => p.server,
+          localPosition: () => p.local,
+          start,
+          onRewound,
+        }),
+      { initialProps: initial },
+    )
+    return { start, onRewound, ...hook }
+  }
+
+  const flush = () => act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+
+  it('says the recording moved back only when it really played again after a rewind (A10)', async () => {
+    const { start, onRewound } = setup({ status: 'InProgress', syncedAt: 1, state: 'finished', server: 300_000, local: null })
+    await flush()
+
+    expect(start).toHaveBeenCalledExactlyOnceWith(300_000)
+    expect(onRewound).toHaveBeenCalledTimes(1)
+  })
+
+  it('stays quiet on every heartbeat once the recording finished and the server is past its end', async () => {
+    const start = vi.fn().mockResolvedValue(false)
+    const { onRewound, rerender } = setup({ status: 'InProgress', syncedAt: 1, state: 'finished', server: 2_000_000, local: null }, start)
+    await flush()
+    rerender({ status: 'InProgress', syncedAt: 2, state: 'finished', server: 2_005_000, local: null })
+    await flush()
+
+    expect(onRewound).not.toHaveBeenCalled()
+  })
+
+  it('never restarts the recording while the candidate is paused, even when a rewind arrives with the pause', async () => {
+    const { start } = setup({ status: 'Paused', syncedAt: 1, state: 'finished', server: 300_000, local: null })
+    await flush()
+
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  it('does not start the same restart again on each heartbeat while the track is still loading', async () => {
+    let finish: (played: boolean) => void = () => undefined
+    const start = vi.fn(() => new Promise<boolean>((resolve) => (finish = resolve)))
+    const { rerender, onRewound } = setup({ status: 'InProgress', syncedAt: 1, state: 'finished', server: 300_000, local: null }, start)
+    rerender({ status: 'InProgress', syncedAt: 2, state: 'finished', server: 305_000, local: null })
+    rerender({ status: 'InProgress', syncedAt: 3, state: 'finished', server: 310_000, local: null })
+    expect(start).toHaveBeenCalledTimes(1)
+
+    await act(async () => finish(true))
+    expect(onRewound).toHaveBeenCalledTimes(1)
+  })
+
+  it('follows a playing recording that drifted without calling it a rewind when it only caught up', async () => {
+    const { start, onRewound } = setup({ status: 'InProgress', syncedAt: 1, state: 'playing', server: 70_000, local: 60_000 })
+    await flush()
+
+    expect(start).toHaveBeenCalledExactlyOnceWith(70_000)
+    expect(onRewound).not.toHaveBeenCalled()
   })
 })
