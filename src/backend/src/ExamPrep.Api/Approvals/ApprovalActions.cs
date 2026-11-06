@@ -169,7 +169,7 @@ public static class ApprovalActions
             }
 
             case ApprovalKind.ChangeStaffAccount:
-                return await ChangeAccountAsync(db, id, JsonSerializer.Deserialize<StaffAccountChange>(request.PayloadJson!, Json)!, cancellationToken);
+                return await ChangeAccountAsync(db, request, id, JsonSerializer.Deserialize<StaffAccountChange>(request.PayloadJson!, Json)!, cancellationToken);
 
             case ApprovalKind.CreateAdmin:
             {
@@ -196,7 +196,7 @@ public static class ApprovalActions
         }
     }
 
-    private static async Task<string?> ChangeAccountAsync(ExamPrepDbContext db, int userId, StaffAccountChange change, CancellationToken cancellationToken)
+    private static async Task<string?> ChangeAccountAsync(ExamPrepDbContext db, ApprovalRequest request, int userId, StaffAccountChange change, CancellationToken cancellationToken)
     {
         var user = await db.Users.Include(u => u.Areas).SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (user is null)
@@ -229,6 +229,41 @@ public static class ApprovalActions
             foreach (var area in change.Areas.Select(Enum.Parse<ManagerArea>))
             {
                 user.Areas.Add(new UserArea { Area = area });
+            }
+        }
+
+        // What the account was assigned to as something it no longer is goes with the old role: a session opens for an
+        // invigilator, an examiner or a manager of candidates only. Scripts already dealt stay as they are; the
+        // allocator deals the unfinished ones again and a Final script stays with its examiner.
+        if (role != UserRole.Invigilator)
+        {
+            db.ExamInvigilators.RemoveRange(await db.ExamInvigilators.Where(x => x.UserId == userId).ToListAsync(cancellationToken));
+        }
+
+        if (role != UserRole.Examiner)
+        {
+            db.ExamExaminers.RemoveRange(await db.ExamExaminers.Where(x => x.UserId == userId).ToListAsync(cancellationToken));
+        }
+
+        if (role != UserRole.Manager || user.Areas.All(a => a.Area != ManagerArea.Candidates))
+        {
+            db.ExamCandidateManagers.RemoveRange(await db.ExamCandidateManagers.Where(x => x.UserId == userId).ToListAsync(cancellationToken));
+        }
+
+        // An administrator who leaves (switched off or no longer one) takes their waiting requests with them: nobody
+        // else should be able to carry out what a person without that power asked for.
+        if (losesAdmin)
+        {
+            var waiting = await db.ApprovalRequests
+                .Where(r => r.RequestedByUserId == userId && r.Status == ApprovalStatus.Pending && r.Id != request.Id)
+                .ToListAsync(cancellationToken);
+            foreach (var other in waiting)
+            {
+                other.Status = ApprovalStatus.Cancelled;
+                other.DecidedByUserId = request.DecidedByUserId;
+                other.DecidedAt = request.DecidedAt;
+                other.Outcome = "Cancelled: the administrator who asked is no longer an active administrator.";
+                ForgetPassword(other);
             }
         }
 

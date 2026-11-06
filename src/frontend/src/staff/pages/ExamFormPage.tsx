@@ -36,6 +36,7 @@ export function ExamFormPage({ examId }: { examId?: number }) {
     isNew ? { name: '', examTypeId: 0, scheduledDate: today(), room: '', papers: {}, sessionPin: '', invigilatorPassword: '', sebConfigKey: '', seatsPerRow: '' } : null,
   )
   const [hasStarted, setHasStarted] = useState(false)
+  const [mayOrganise, setMayOrganise] = useState(true)
   const [error, setError] = useState<unknown>(null)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -45,6 +46,7 @@ export function ExamFormPage({ examId }: { examId?: number }) {
     }
 
     staffApi.exam(examId).then((exam) => {
+      setMayOrganise(exam.canOrganise !== false)
       setHasStarted(exam.hasStarted)
       setForm({
         name: exam.name,
@@ -59,6 +61,15 @@ export function ExamFormPage({ examId }: { examId?: number }) {
       })
     }, setError)
   }, [examId, isNew])
+
+  // A manager of exams edits only the sessions they created; the session page already hides the button from others.
+  if (!mayOrganise) {
+    return (
+      <p className="st-empty">
+        This page does not exist or is not part of your role. <Link to="/staff">Back to the start</Link>
+      </p>
+    )
+  }
 
   if (!form || !types || !papers || !mixes) {
     return error ? <ErrorBox error={error} /> : <p className="st-empty">Loading…</p>

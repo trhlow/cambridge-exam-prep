@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Exams;
 using ExamPrep.Domain.Enums;
@@ -22,6 +23,15 @@ public sealed class StaffRoomHub(ExamPrepDbContext db) : Hub
     public async Task<bool> WatchSection(int examId, int sectionId)
     {
         var user = Context.User!;
+        // The connection was authenticated when it opened and can be hours old: the account is checked in the
+        // database now, as every HTTP request does (active, same security stamp), before its claims decide anything.
+        var userId = user.GetStaffId();
+        var stamp = Guid.TryParse(user.FindFirstValue(StaffAuthDefaults.SecurityStampClaim), out var claimed) ? claimed : Guid.Empty;
+        if (!await db.Users.AnyAsync(u => u.Id == userId && u.IsActive && u.SecurityStamp == stamp))
+        {
+            return false;
+        }
+
         var allowed = await db.Exams.MonitorableBy(user).AnyAsync(e => e.Id == examId)
             && await db.ExamSections.AnyAsync(s => s.Id == sectionId && s.ExamId == examId);
         if (allowed)

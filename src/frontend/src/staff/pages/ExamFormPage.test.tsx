@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { adminApi, type ExamDetail, type ExamMixChoice, type ExamPaperChoice } from '../api'
+import { adminApi, staffApi, type ExamDetail, type ExamMixChoice, type ExamPaperChoice } from '../api'
 import { ExamFormPage } from './ExamFormPage'
 
 const paper = (id: number, sectionTemplateId: number, title: string, extra: Partial<ExamPaperChoice> = {}): ExamPaperChoice => ({
@@ -44,5 +44,20 @@ describe('ExamFormPage with mixed papers (VE-67)', () => {
       ],
       seatsPerRow: 4,
     })
+  })
+})
+
+describe('ExamFormPage for a session the person does not organise (review 2/11)', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('says it is not part of their role instead of showing the form', async () => {
+    vi.spyOn(adminApi, 'examTypes').mockResolvedValue([])
+    vi.spyOn(adminApi, 'examPapers').mockResolvedValue([])
+    vi.spyOn(adminApi, 'examPaperMixes').mockResolvedValue([])
+    vi.spyOn(staffApi, 'exam').mockResolvedValue({ id: 5, name: 'Someone else', examTypeId: 1, scheduledDate: '2026-12-01', sections: [], hasStarted: false, canOrganise: false } as unknown as ExamDetail)
+    render(<ExamFormPage examId={5} />)
+
+    expect(await screen.findByText(/not part of your role/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
   })
 })
