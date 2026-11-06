@@ -134,32 +134,47 @@ API tự cập nhật cấu trúc CSDL (migration) khi khởi động; dữ li�
 
 ## 8. Sao lưu và khôi phục
 
-Dữ liệu nằm ở hai nơi: **CSDL MySQL** (volume Docker `<dự án>_mysql-data`) và thư mục **`App_Data`** của API (hình, audio của đề; khoá mã hoá cookie và mật khẩu thí sinh). Phải sao lưu cả hai. Bản demo để `App_Data` ở `src/backend/src/ExamPrep.Api/App_Data`; bản thi thật để trong volume `<dự án>_api-data` và lấy ra bằng `docker cp`. Tên container là `<dự án>-mysql-1` và `<dự án>-api-1`: `examprep-…` ở bản demo, `examprep-prod-…` ở bản thi thật (dưới đây viết `examprep-mysql-1`).
+Dữ liệu nằm ở hai nơi: **CSDL MySQL** (volume Docker `<dự án>_mysql-data`) và thư mục **`App_Data`** của API (hình, audio của đề; khoá mã hoá cookie và mật khẩu thí sinh). Phải sao lưu cả hai. Bản demo để `App_Data` ở `src/backend/src/ExamPrep.Api/App_Data`; bản thi thật để trong volume `<dự án>_api-data` và lấy ra bằng `docker cp`. Tên container là `<dự án>-mysql-1` và `<dự án>-api-1`: `examprep-…` ở bản demo, `examprep-prod-…` ở bản thi thật (các lệnh dưới đặt tên container MySQL vào biến `$m`).
 
 Các lệnh dưới chạy mysqldump/mysql **bên trong container** và chép tệp bằng `docker cp`, không dùng ống dẫn (`|`, `>`) của PowerShell, vì PowerShell 5 ghi lại chuỗi theo bảng mã của nó và có thể làm hỏng tiếng Việt trong tệp `.sql`. Đã thử: sao lưu rồi khôi phục vào một CSDL mới giữ nguyên tên "Hoàng Long".
 
-**Sao lưu** (PowerShell, tại thư mục dự án):
+**Sao lưu** (PowerShell, tại thư mục dự án). Dòng đầu chọn container MySQL của bản đang dùng:
 
 ```powershell
+$m = "examprep-mysql-1"            # bản demo; bản thi thật: $m = "examprep-prod-mysql-1"
 $d = Get-Date -Format yyyyMMdd-HHmm
-docker exec examprep-mysql-1 sh -c 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --default-character-set=utf8mb4 --single-transaction --routines examprep > /tmp/backup.sql'
-docker cp examprep-mysql-1:/tmp/backup.sql "backup-$d.sql"
+docker exec $m sh -c 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --default-character-set=utf8mb4 --single-transaction --routines examprep > /tmp/backup.sql'
+docker cp "${m}:/tmp/backup.sql" "backup-$d.sql"
 # App_Data: bản demo là thư mục trên ổ đĩa, bản thi thật nằm trong container
 Compress-Archive src\backend\src\ExamPrep.Api\App_Data "backup-appdata-$d.zip"            # bản demo
 docker cp examprep-prod-api-1:/app/App_Data "backup-appdata-$d"                                 # bản thi thật
 ```
 
-**Khôi phục** (ghi đè dữ liệu hiện tại; làm khi hệ thống không có người thi):
+**Khôi phục** (ghi đè dữ liệu hiện tại; làm khi hệ thống không có người thi), cũng đặt `$m` như trên:
 
 ```powershell
-docker cp backup-<ngày>.sql examprep-mysql-1:/tmp/restore.sql
-docker exec examprep-mysql-1 sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --default-character-set=utf8mb4 examprep < /tmp/restore.sql'
-Expand-Archive backup-appdata-<ngày>.zip -DestinationPath src\backend\src\ExamPrep.Api -Force   # bản demo
-docker cp "backup-appdata-<ngày>/." examprep-prod-api-1:/app/App_Data                            # bản thi thật
+docker cp backup-<ngày>.sql "${m}:/tmp/restore.sql"
+docker exec $m sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --default-character-set=utf8mb4 examprep < /tmp/restore.sql'
+```
+
+Bản demo, sau đó:
+
+```powershell
+Expand-Archive backup-appdata-<ngày>.zip -DestinationPath src\backend\src\ExamPrep.Api -Force
 docker compose -f docker/docker-compose.yml --env-file docker/.env restart api
 ```
 
-Tệp `/tmp/backup.sql` và `/tmp/restore.sql` nằm trong container MySQL, mất khi container được tạo lại; có thể xoá bằng `docker exec examprep-mysql-1 rm /tmp/backup.sql /tmp/restore.sql`. Giữ bản sao lưu ở ổ khác hoặc ổ USB. Nên sao lưu ngay sau mỗi buổi thi.
+Bản thi thật, sau đó (`docker cp` chép tệp với chủ sở hữu root, còn API chạy bằng người dùng `app`, nên phải trả quyền lại, nếu không API không ghi được hình mới và khoá cookie):
+
+```powershell
+docker cp "backup-appdata-<ngày>/." examprep-prod-api-1:/app/App_Data
+docker exec -u 0 examprep-prod-api-1 chown -R app:app /app/App_Data
+docker compose -p examprep-prod -f docker/docker-compose.yml -f docker/docker-compose.prod.yml --env-file docker/.env restart api
+```
+
+Các lệnh trên viết cho PowerShell. Trong Git Bash, đặt `m=examprep-mysql-1`, viết `"$m:/tmp/…"` thay cho `"${m}:/tmp/…"`, và thêm `MSYS_NO_PATHCONV=1` trước mỗi lệnh `docker cp` / `docker exec` để Git Bash không đổi các đường dẫn `/tmp/…`, `/app/…` thành đường dẫn Windows. Mật khẩu MySQL chỉ nên dùng chữ và số, vì PowerShell 5 bỏ dấu ngoặc kép bên trong `sh -c '…'`.
+
+Tệp `/tmp/backup.sql` và `/tmp/restore.sql` nằm trong container MySQL, mất khi container được tạo lại; có thể xoá bằng `docker exec $m rm /tmp/backup.sql /tmp/restore.sql`. Giữ bản sao lưu ở ổ khác hoặc ổ USB. Nên sao lưu ngay sau mỗi buổi thi.
 
 ## 9. Xử lý sự cố
 
