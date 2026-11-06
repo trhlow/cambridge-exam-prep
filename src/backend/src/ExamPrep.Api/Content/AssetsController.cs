@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ExamPrep.Api.Auth;
 using ExamPrep.Infrastructure.Content;
 using ExamPrep.Infrastructure.Persistence;
@@ -51,15 +52,25 @@ public sealed class AssetsController(ExamPrepDbContext db, IAssetStorage storage
 
     /// <summary>
     /// Administrators may read any file; other staff the files of the papers they made (VE-72) or of the sessions they
-    /// mark; a candidate only the files of the paper of a section they are sitting, and only after the PIN.
+    /// mark; a candidate only the files of the paper of a section they are sitting, and only after the PIN. A browser
+    /// can hold both cookies (a staff member who also sits a test): each identity is judged on its own, by its own
+    /// claims, and either one may open the file.
     /// </summary>
     private async Task<bool> MayReadAsync(int assetId, CancellationToken cancellationToken)
     {
-        if (User.Identities.Any(i => i.IsAuthenticated && i.AuthenticationType == StaffAuthDefaults.Scheme))
+        var staff = User.Identities.FirstOrDefault(i => i.IsAuthenticated && i.AuthenticationType == StaffAuthDefaults.Scheme);
+        if (staff is not null && await examAssets.StaffMayReadAsync(new ClaimsPrincipal(staff), assetId, cancellationToken))
         {
-            return await examAssets.StaffMayReadAsync(User, assetId, cancellationToken);
+            return true;
         }
 
-        return User.IsPinVerified() && await examAssets.CandidateMayReadAsync(User.GetCandidateId(), assetId, cancellationToken);
+        var candidate = User.Identities.FirstOrDefault(i => i.IsAuthenticated && i.AuthenticationType == CandidateAuthDefaults.Scheme);
+        if (candidate is null)
+        {
+            return false;
+        }
+
+        var principal = new ClaimsPrincipal(candidate);
+        return principal.IsPinVerified() && await examAssets.CandidateMayReadAsync(principal.GetCandidateId(), assetId, cancellationToken);
     }
 }

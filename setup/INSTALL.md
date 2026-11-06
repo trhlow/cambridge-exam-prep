@@ -126,7 +126,7 @@ Giữ bản sao lưu ở ổ khác hoặc ổ USB. Nên sao lưu ngay sau mỗi 
 | `port is already allocated` (8080 hoặc 3306) | Cổng đang bị chương trình khác dùng: đổi `WEB_PORT` / `MYSQL_PORT` trong `docker/.env` |
 | `/health` báo `Unhealthy` | MySQL chưa sẵn sàng hoặc sai mật khẩu: xem `logs mysql` và `logs api`; mật khẩu trong `.env` phải giống lúc tạo volume lần đầu |
 | Không đăng nhập được admin đầu tiên | `BOOTSTRAP_ADMIN_*` chỉ có tác dụng khi CSDL chưa có admin; dùng admin hiện có, hoặc admin còn lại đặt lại mật khẩu (cần duyệt) |
-| Tài khoản bị khoá 5 phút | Nhập sai mật khẩu (hoặc mã PIN) 10 lần liên tiếp; đợi 5 phút |
+| Tài khoản bị khoá 5 phút | Nhập sai mật khẩu (hoặc mã PIN) 10 lần liên tiếp; không có nút mở khoá, kể cả với quản trị viên: đợi 5 phút rồi đăng nhập lại |
 | Máy thí sinh không mở được trang | Kiểm tra cùng mạng, đúng IP, đã mở tường lửa cổng 8080 (mục 5) |
 | Thí sinh "Offline" trên trang giám thị | Máy mất mạng hoặc đóng trình duyệt; đồng hồ vẫn chạy trên server, giám thị cộng giờ bù khi thí sinh vào lại |
 | Sau khi đổi máy chủ, thí sinh phải in lại mật khẩu | Thư mục `App_Data/keys` không được chép theo: khôi phục `App_Data` từ bản sao lưu |
