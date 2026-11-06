@@ -3,6 +3,10 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using ExamPrep.Domain.Enums;
+using ExamPrep.Infrastructure.Content;
+using ExamPrep.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ExamPrep.Tests.Infrastructure.Content;
 
 namespace ExamPrep.Tests.Api.Content;
@@ -333,6 +337,42 @@ public sealed class PaperEditorTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Contains(url, await copied.Content.ReadAsStringAsync(ct));
         Assert.NotEqual(url, theirUrl);
         Assert.Equal(HttpStatusCode.OK, theirUse.StatusCode);
+    }
+
+    [Fact]
+    public async Task APictureLinkWithAnImpossiblyLongNumber_IsRefusedNotAServerError()
+    {
+        api.SkipIfUnavailable();
+        var author = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        using var mine = await api.StaffClientAsync(author.Username, Password);
+        var myPaper = await BlankAsync(mine, 1, "C1 long");
+        var link = new { stimulusHtml = "<p><img src=\"/api/assets/99999999999999999999999\"></p>", answers = new[] { "A" }, points = 1 };
+
+        var response = await mine.PutAsJsonAsync($"/api/admin/papers/{myPaper}/questions/1", link, ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task TwoPeopleImportingTheSameSample_EachGetTheirOwnAssetRows_OverOneStoredFile()
+    {
+        api.SkipIfUnavailable();
+        var first = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        var second = await api.CreateManagerAsync(Password, ManagerArea.Papers);
+        using var scope = api.Factory.Services.CreateScope();
+        var importer = scope.ServiceProvider.GetRequiredService<PaperPackageImporter>();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var zip = SamplePackages.Zip(SamplePackages.ReadingWriting);
+
+        await importer.ImportAsync(new MemoryStream(zip), first.Id, default);
+        await importer.ImportAsync(new MemoryStream(zip), second.Id, default);
+
+        var mine = await db.Assets.AsNoTracking().Where(a => a.UploadedByUserId == first.Id).ToListAsync(ct);
+        var theirs = await db.Assets.AsNoTracking().Where(a => a.UploadedByUserId == second.Id).ToListAsync(ct);
+        Assert.NotEmpty(mine);
+        Assert.Empty(mine.Select(a => a.Id).Intersect(theirs.Select(a => a.Id)));
+        Assert.Equal(mine.Select(a => a.Sha256).Order(), theirs.Select(a => a.Sha256).Order());
+        Assert.Equal(mine.Select(a => a.StoredPath).Order(), theirs.Select(a => a.StoredPath).Order());
     }
 
     [Fact]

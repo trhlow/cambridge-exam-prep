@@ -37,7 +37,8 @@ export function PaperPage({ paperId, isAdmin = false }: { paperId: number; isAdm
 
   const questionCount = paper.parts.reduce((sum, part) => sum + part.groups.reduce((n, group) => n + group.questions.length, 0), 0)
   const onEdit = paper.status === 'Draft' ? setEdit : null
-  const onCorrect = isAdmin && paper.status === 'Published' ? (group: PaperGroupDetail, question: PaperQuestionDetail) => setCorrecting({ group, question }) : null
+  const mixVersion = Boolean(paper.mixVersion)
+  const onCorrect = isAdmin && paper.status === 'Published' && !mixVersion ? (group: PaperGroupDetail, question: PaperQuestionDetail) => setCorrecting({ group, question }) : null
   const replaceAudio = async (part: PaperPartDetail, file: File) => {
     setActionError(null)
     try {
@@ -78,6 +79,9 @@ export function PaperPage({ paperId, isAdmin = false }: { paperId: number; isAdm
         <p className="st-note">
           Version {paper.mixVersion} of the mix “{paper.mixTitle}”: {[...paper.mixPattern].map((source, i) => `Part ${i + 1} from ${source}`).join(', ')}. A mixed paper is a copy of the source parts and cannot be edited; it is given to candidates by seat.
         </p>
+      )}
+      {isAdmin && paper.status === 'Published' && mixVersion && (
+        <p className="st-note">This paper is a mixed version; correct the answer on its source paper (the letters above say which source each part came from). The correction there also reaches the versions that took the question from it.</p>
       )}
       {onCorrect && <p className="st-note">This paper is published. An administrator can still correct a wrong answer with “Correct answer”; the attempts already marked are marked again.</p>}
       {corrected && (

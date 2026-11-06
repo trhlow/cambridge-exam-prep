@@ -125,7 +125,7 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
             var sha = Convert.ToHexStringLower(SHA256.HashData(content));
             if (!bySha.TryGetValue(sha, out var asset))
             {
-                asset = await db.Assets.FirstOrDefaultAsync(a => a.Sha256 == sha, cancellationToken)
+                asset = await db.Assets.FirstOrDefaultAsync(a => a.Sha256 == sha && a.UploadedByUserId == userId, cancellationToken)
                     ?? await CreateAssetAsync(path, kind, content, sha, userId, cancellationToken);
                 bySha[sha] = asset;
             }

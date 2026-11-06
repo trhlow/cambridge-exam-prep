@@ -102,11 +102,18 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
     /// <summary>
     /// Invigilator, examiner and candidates-manager accounts, for the assignment panels of a session: the active ones,
     /// plus an account switched off since it was assigned (to the session in <paramref name="examId"/>, or to any session
-    /// when none is named), so the panel can still show and remove it.
+    /// when none is named), so the panel can still show and remove it. A session is answered (404 otherwise) only to
+    /// whoever organises it.
     /// </summary>
     [HttpGet("assignable-staff")]
-    public async Task<IReadOnlyList<AssignableStaffView>> AssignableStaff([FromQuery] int? examId, CancellationToken cancellationToken) =>
-        await db.Users.AsNoTracking()
+    public async Task<ActionResult<IReadOnlyList<AssignableStaffView>>> AssignableStaff([FromQuery] int? examId, CancellationToken cancellationToken)
+    {
+        if (examId is { } id && !await db.Exams.OrganisedBy(User).AnyAsync(e => e.Id == id, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        return await db.Users.AsNoTracking()
             .Where(u => u.Role == UserRole.Invigilator || u.Role == UserRole.Examiner
                 || (u.Role == UserRole.Manager && db.UserAreas.Any(a => a.UserId == u.Id && a.Area == ManagerArea.Candidates)))
             .Where(u => u.IsActive
@@ -116,6 +123,7 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             .OrderBy(u => u.FullName)
             .Select(u => new AssignableStaffView(u.Id, u.Username, u.FullName, u.Role.ToString(), u.IsActive))
             .ToListAsync(cancellationToken);
+    }
 
     [HttpPost("exams")]
     public async Task<ActionResult<ExamDetail>> Create(SaveExamRequest request, CancellationToken cancellationToken)

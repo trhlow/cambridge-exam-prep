@@ -45,6 +45,7 @@ public sealed class ExamChoicesTests(ApiFixture api) : IClassFixture<ApiFixture>
         var retiredButAssigned = await api.CreateStaffAsync(UserRole.Examiner, Password, isActive: false);
         await api.AssignExaminerAsync(candidate.ExamId, retiredButAssigned.Id);
         var manager = await api.CreateManagerAsync(Password, ManagerArea.Exams);
+        await api.SetExamCreatorAsync(candidate.ExamId, manager.Id);
         using var client = await api.StaffClientAsync(manager.Username, Password);
 
         var staff = (await client.GetFromJsonAsync<JsonArray>("/api/admin/assignable-staff", ct))!;
@@ -56,5 +57,27 @@ public sealed class ExamChoicesTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Contains(retiredButAssigned.Id, ids);
         Assert.Contains(retiredButAssigned.Id, forExam.Select(u => (int)u!["id"]!));
         Assert.DoesNotContain(retired.Id, forExam.Select(u => (int)u!["id"]!));
+    }
+
+    [Fact]
+    public async Task AssignableStaffOfAnExam_AreShownOnlyToWhoOrganisesIt()
+    {
+        api.SkipIfUnavailable();
+        var candidate = await api.CreateCandidateAsync(Password);
+        var retired = await api.CreateStaffAsync(UserRole.Examiner, Password, isActive: false);
+        await api.AssignExaminerAsync(candidate.ExamId, retired.Id);
+        var stranger = await api.CreateManagerAsync(Password, ManagerArea.Exams);
+        using var other = await api.StaffClientAsync(stranger.Username, Password);
+        using var admin = await api.AdminClientAsync();
+
+        var refused = await other.GetAsync($"/api/admin/assignable-staff?examId={candidate.ExamId}", ct);
+        var missing = await other.GetAsync("/api/admin/assignable-staff?examId=99999999", ct);
+        var anyExam = await other.GetAsync("/api/admin/assignable-staff", ct);
+        var allowed = await admin.GetAsync($"/api/admin/assignable-staff?examId={candidate.ExamId}", ct);
+
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, refused.StatusCode);
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, missing.StatusCode);
+        Assert.Equal(System.Net.HttpStatusCode.OK, anyExam.StatusCode);
+        Assert.Equal(System.Net.HttpStatusCode.OK, allowed.StatusCode);
     }
 }
