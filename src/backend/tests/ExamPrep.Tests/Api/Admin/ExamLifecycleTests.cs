@@ -210,6 +210,42 @@ public sealed class ExamLifecycleTests(ApiFixture api) : IClassFixture<ApiFixtur
     }
 
     [Fact]
+    public async Task GoingActive_GivesUnseatedCandidatesTheLowestFreeNumbers_NeverASeatSomeoneTyped()
+    {
+        api.SkipIfUnavailable();
+        var (exam, admin) = await ReadyExamAsync();
+        using var _ = admin;
+        var others = new List<int>();
+        for (var i = 0; i < 3; i++)
+        {
+            others.Add((await api.AddCandidateAsync(exam.ExamId, Password)).CandidateId);
+        }
+
+        // Typed seats 1 and 3, on whoever comes second and fourth in the list; the other two are unseated.
+        var inList = await ListOrderAsync(exam.ExamId);
+        await api.SetSeatAsync(inList[1], "1");
+        await api.SetSeatAsync(inList[3], "3");
+
+        (await SetStatusAsync(admin, exam.ExamId, "Active")).EnsureSuccessStatusCode();
+
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var seats = await db.Candidates.Where(c => c.ExamId == exam.ExamId).ToDictionaryAsync(c => c.Id, c => c.SeatNo, ct);
+        Assert.Equal("2", seats[inList[0]]);
+        Assert.Equal("4", seats[inList[2]]);
+        Assert.Equal(4, seats.Values.Distinct().Count());
+    }
+
+    /// <summary>The candidate list's order (candidate number, then id), as the seats follow it.</summary>
+    private async Task<List<int>> ListOrderAsync(int examId)
+    {
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var candidates = await db.Candidates.AsNoTracking().Where(c => c.ExamId == examId).ToListAsync(ct);
+        return candidates.OrderBy(c => c.CandidateNumber, StringComparer.OrdinalIgnoreCase).ThenBy(c => c.Id).Select(c => c.Id).ToList();
+    }
+
+    [Fact]
     public async Task OnceAnAttemptExists_SeatsPerRowIsFrozen_AndANewCandidateNeedsAFreeNumericSeat()
     {
         api.SkipIfUnavailable();
@@ -236,6 +272,28 @@ public sealed class ExamLifecycleTests(ApiFixture api) : IClassFixture<ApiFixtur
         Assert.Equal(HttpStatusCode.BadRequest, noSeat.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, taken.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, label.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, free.StatusCode);
+    }
+
+    [Fact]
+    public async Task OnceTheExamIsActive_BeforeAnyoneStarts_ANewCandidateNeedsAFreeNumericSeat()
+    {
+        api.SkipIfUnavailable();
+        var (exam, admin) = await ReadyExamAsync();
+        using var _ = admin;
+        await api.SetSeatAsync(exam.CandidateId, "1");
+        (await SetStatusAsync(admin, exam.ExamId, "Active")).EnsureSuccessStatusCode();
+
+        object Candidates(string? seat) => new { candidates = new[] { new NewCandidate(Random.Shared.Next(100000, 999999).ToString(), "An", "Le", SeatNo: seat) } };
+        var noSeat = await admin.PostAsJsonAsync($"/api/admin/exams/{exam.ExamId}/candidates", Candidates(null), ct);
+        var label = await admin.PostAsJsonAsync($"/api/admin/exams/{exam.ExamId}/candidates", Candidates("A3"), ct);
+        var taken = await admin.PostAsJsonAsync($"/api/admin/exams/{exam.ExamId}/candidates", Candidates("1"), ct);
+        var free = await admin.PostAsJsonAsync($"/api/admin/exams/{exam.ExamId}/candidates", Candidates("2"), ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, noSeat.StatusCode);
+        Assert.Contains("computer number", await noSeat.Content.ReadAsStringAsync(ct));
+        Assert.Equal(HttpStatusCode.BadRequest, label.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, taken.StatusCode);
         Assert.Equal(HttpStatusCode.Created, free.StatusCode);
     }
 

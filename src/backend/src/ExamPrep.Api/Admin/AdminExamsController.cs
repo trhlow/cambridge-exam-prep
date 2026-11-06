@@ -159,6 +159,11 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
     [HttpPut("exams/{examId:int}")]
     public async Task<ActionResult<ExamDetail>> Update(int examId, SaveExamRequest request, CancellationToken cancellationToken)
     {
+        // Locked first, exclusively, as a status change: a candidate's Start (shared lock) waits until the papers and the
+        // row length are saved, so neither can change after the first attempt exists (A12). READ COMMITTED so the
+        // "has anyone started" check reads what a Start committed while this request waited.
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken);
+        await ExamRowLock.ExclusiveAsync(db, examId, cancellationToken);
         var exam = await db.Exams.OrganisedBy(User).Include(e => e.Sections).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         if (exam is null)
         {
@@ -203,7 +208,6 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
             exam.SeatsPerRow = seatsPerRow > 0 ? seatsPerRow : null;
         }
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         if (papersChanged)
         {
             // Removed first, in its own save: (exam_id, order_no) is unique.
@@ -232,7 +236,9 @@ public sealed class AdminExamsController(ExamPrepDbContext db, Microsoft.Extensi
         }
 
         // Locked first: a second status change or a candidate's Start waits here and then reads what this one decided.
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        // READ COMMITTED, as every other transaction that takes this lock: the first plain read comes after the lock, so
+        // it sees what the request it waited for committed.
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken);
         await ExamRowLock.ExclusiveAsync(db, examId, cancellationToken);
         var exam = await db.Exams.OrganisedBy(User).Include(e => e.Candidates).SingleOrDefaultAsync(e => e.Id == examId, cancellationToken);
         if (exam is null)

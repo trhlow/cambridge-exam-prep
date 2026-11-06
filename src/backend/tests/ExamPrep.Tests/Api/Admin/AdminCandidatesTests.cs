@@ -21,7 +21,7 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
 
     private sealed record LoginRequest(string Username, string Password);
 
-    /// <summary>An empty, open A2 session created through the admin API.</summary>
+    /// <summary>An empty, open A2 session created through the admin API (an open exam takes new candidates only with a computer number).</summary>
     private async Task<int> CreateOpenExamAsync(HttpClient admin)
     {
         var papers = await api.CreatePublishedPapersAsync();
@@ -51,7 +51,7 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
         var examId = await CreateOpenExamAsync(admin);
         var number = Number();
 
-        var add = await admin.PostAsJsonAsync($"/api/admin/exams/{examId}/candidates", new { candidates = new[] { new NewCandidate(number, "An", "Nguyễn", PlannedExtraPercent: 25), new NewCandidate(Number(), "Thị Hoa", "Lê") } }, ct);
+        var add = await admin.PostAsJsonAsync($"/api/admin/exams/{examId}/candidates", new { candidates = new[] { new NewCandidate(number, "An", "Nguyễn", PlannedExtraPercent: 25, SeatNo: "1"), new NewCandidate(Number(), "Thị Hoa", "Lê", SeatNo: "2") } }, ct);
         var slips = await admin.GetFromJsonAsync<List<LoginSlip>>($"/api/staff/exams/{examId}/login-slips", ct);
 
         Assert.Equal(HttpStatusCode.Created, add.StatusCode);
@@ -93,8 +93,8 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
         var second = await CreateOpenExamAsync(admin);
         var number = Number();
 
-        var a = await admin.PostAsJsonAsync($"/api/admin/exams/{first}/candidates", new { candidates = new[] { new NewCandidate(number, "An", "Hoang") } }, ct);
-        var b = await admin.PostAsJsonAsync($"/api/admin/exams/{second}/candidates", new { candidates = new[] { new NewCandidate(number, "Anh", "Hoang") } }, ct);
+        var a = await admin.PostAsJsonAsync($"/api/admin/exams/{first}/candidates", new { candidates = new[] { new NewCandidate(number, "An", "Hoang", SeatNo: "1") } }, ct);
+        var b = await admin.PostAsJsonAsync($"/api/admin/exams/{second}/candidates", new { candidates = new[] { new NewCandidate(number, "Anh", "Hoang", SeatNo: "1") } }, ct);
 
         var usernameA = (await a.Content.ReadFromJsonAsync<List<CandidateView>>(ct))![0].Username;
         var usernameB = (await b.Content.ReadFromJsonAsync<List<CandidateView>>(ct))![0].Username;
@@ -125,7 +125,7 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
         using var admin = await api.AdminClientAsync();
         var seeded = await api.CreateCandidateAsync("x-pass-1234");
         var examId = await CreateOpenExamAsync(admin);
-        var added = await admin.PostAsJsonAsync($"/api/admin/exams/{examId}/candidates", new { candidates = new[] { new NewCandidate(Number(), "Cuong", "Do") } }, ct);
+        var added = await admin.PostAsJsonAsync($"/api/admin/exams/{examId}/candidates", new { candidates = new[] { new NewCandidate(Number(), "Cuong", "Do", SeatNo: "1") } }, ct);
         var fresh = (await added.Content.ReadFromJsonAsync<List<CandidateView>>(ct))![0];
         await api.StartAttemptAsync(seeded.CandidateId, seeded.ReadingWritingSectionId);
 
@@ -169,7 +169,7 @@ public sealed class AdminCandidatesTests(ApiFixture api) : IClassFixture<ApiFixt
         api.SkipIfUnavailable();
         using var admin = await api.AdminClientAsync();
         var examId = await CreateOpenExamAsync(admin);
-        var added = await admin.PostAsJsonAsync($"/api/admin/exams/{examId}/candidates", new { candidates = new[] { new NewCandidate(Number(), "Giang", "Vu") } }, ct);
+        var added = await admin.PostAsJsonAsync($"/api/admin/exams/{examId}/candidates", new { candidates = new[] { new NewCandidate(Number(), "Giang", "Vu", SeatNo: "1") } }, ct);
         var candidate = (await added.Content.ReadFromJsonAsync<List<CandidateView>>(ct))![0];
         var before = (await admin.GetFromJsonAsync<List<LoginSlip>>($"/api/staff/exams/{examId}/login-slips", ct))!.Single(s => s.CandidateId == candidate.Id);
         using var oldSession = api.CreateClient();
