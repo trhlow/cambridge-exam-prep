@@ -43,6 +43,7 @@ public sealed record SelectionRequest([Range(1, 1000)] int QuestionNumber, [Requ
 [Authorize(Policy = CandidateAuthDefaults.ExamPolicy)]
 public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateSectionQuery sectionQuery, PaperAssignment papers, TimeProvider clock, RoomNotifier notifier, SecurityEventRecorder events) : ControllerBase
 {
+    public const string TestEndedTitle = "The invigilator has ended your test.";
     public const string NotOpenTitle = "This test is not open. Ask your invigilator.";
 
     /// <summary>The browser's clock in Unix milliseconds, sent with every heartbeat (VE-29).</summary>
@@ -85,7 +86,15 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
 
         var (section, candidate) = await LoadSectionAndCandidateAsync(sectionId, cancellationToken);
         var now = Now();
-        var attempt = await FindAttemptAsync(sectionId, cancellationToken) ?? await TryCreateAttemptAsync(section, candidate, now, cancellationToken);
+        var attempt = await FindAttemptAsync(sectionId, cancellationToken);
+        if (attempt is null && candidate.ParentEndOverrideAt is { } endedAt && endedAt <= now)
+        {
+            // End all ended the whole test: a section not started yet must not start already over (it would be submitted
+            // on the spot with no answers, and "Use test end time" could not bring it back).
+            return Problem(title: TestEndedTitle, statusCode: StatusCodes.Status409Conflict);
+        }
+
+        attempt ??= await TryCreateAttemptAsync(section, candidate, now, cancellationToken);
         if (attempt is null)
         {
             // Another request (double click, second tab) created it a moment ago: carry on with that one.

@@ -72,7 +72,7 @@ export function ResultsPage({ examId }: { examId: number }) {
                   {candidate.examiner && (
                     <div className="st-faint">
                       {candidate.examiner}
-                      {candidate.examinerUnavailable && ' (can no longer mark)'}
+                      {candidate.examinerUnavailable && candidate.sections.some((s) => s.gradingStatus === 'NeedsManualMarking') && ' (can no longer mark)'}
                     </div>
                   )}
                 </td>
