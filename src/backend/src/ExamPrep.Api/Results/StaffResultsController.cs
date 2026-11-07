@@ -251,13 +251,13 @@ public static class WritingMarks
     /// score, in one transaction. Returns the status code, with a sentence for the teacher when the mark is refused.
     /// A concurrent change of the attempt is reloaded and retried once.
     /// </summary>
-    public static async Task<(int Status, string? Error)> SaveAsync(ExamPrepDbContext db, int attemptId, WritingMarkRequest request, int markerId, DateTime now, CancellationToken cancellationToken)
+    public static async Task<(int Status, string? Error)> SaveAsync(ExamPrepDbContext db, int attemptId, WritingMarkRequest request, int markerId, TimeProvider clock, CancellationToken cancellationToken)
     {
         for (var attemptNo = 1; ; attemptNo++)
         {
             try
             {
-                return await SaveOnceAsync(db, attemptId, request, markerId, now, cancellationToken);
+                return await SaveOnceAsync(db, attemptId, request, markerId, clock, cancellationToken);
             }
             catch (DbUpdateConcurrencyException) when (attemptNo == 1)
             {
@@ -271,15 +271,29 @@ public static class WritingMarks
         }
     }
 
-    private static async Task<(int Status, string? Error)> SaveOnceAsync(ExamPrepDbContext db, int attemptId, WritingMarkRequest request, int markerId, DateTime now, CancellationToken cancellationToken)
+    private static async Task<(int Status, string? Error)> SaveOnceAsync(ExamPrepDbContext db, int attemptId, WritingMarkRequest request, int markerId, TimeProvider clock, CancellationToken cancellationToken)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        // Locking the attempt first makes two marks of one script wait for each other instead of deadlocking.
-        var attempt = await db.Attempts.FromSql($"SELECT * FROM attempts WHERE id = {attemptId} FOR UPDATE").SingleOrDefaultAsync(cancellationToken);
-        if (attempt is null)
+        // READ COMMITTED: the reads after the locks see what the request it waited for committed (another mark, a new deal).
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken);
+        var candidateId = await db.Attempts.Where(a => a.Id == attemptId).Select(a => (int?)a.CandidateId).SingleOrDefaultAsync(cancellationToken);
+        if (candidateId is null)
         {
             return (StatusCodes.Status404NotFound, null);
         }
+
+        // The candidate row first (shared), then the attempt (exclusive), in the order every other lock holder takes them.
+        // The deal cannot move the script while the mark is saved, and the check before this one may be stale: a new
+        // deal can have given the script to someone else meanwhile (final review 11).
+        var dealtTo = await db.Database.SqlQuery<int?>($"SELECT examiner_user_id AS Value FROM candidates WHERE id = {candidateId} FOR SHARE").SingleAsync(cancellationToken);
+        // Locking the attempt makes two marks of one script wait for each other instead of deadlocking.
+        var attempt = await db.Attempts.FromSql($"SELECT * FROM attempts WHERE id = {attemptId} FOR UPDATE").SingleAsync(cancellationToken);
+        if (dealtTo != markerId)
+        {
+            return (StatusCodes.Status409Conflict, "This script has just been dealt to another examiner. Reload your list of scripts.");
+        }
+
+        // After the locks: a mark saved while this one waited is older, so this one is the latest (marked_at, then id).
+        var now = clock.GetUtcNow().UtcDateTime;
 
         if (attempt.Status != AttemptStatus.Submitted || attempt.GradingStatus == GradingStatus.NotGraded)
         {
@@ -361,7 +375,7 @@ public sealed class WritingMarksController(ExamPrepDbContext db, TimeProvider cl
             return NotFound();
         }
 
-        var (status, error) = await WritingMarks.SaveAsync(db, attemptId, request, User.GetStaffId(), clock.GetUtcNow().UtcDateTime, cancellationToken);
+        var (status, error) = await WritingMarks.SaveAsync(db, attemptId, request, User.GetStaffId(), clock, cancellationToken);
         if (status != StatusCodes.Status200OK)
         {
             return error is null ? StatusCode(status) : Problem(title: error, statusCode: status);
