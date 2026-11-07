@@ -1,0 +1,252 @@
+{
+  "startedAt": "2026-11-07T02:29:29.344Z",
+  "savedAt": "2026-11-07T03:12:19.885Z",
+  "situations": [
+    {
+      "no": 1,
+      "title": "Thí sinh đăng nhập bằng phiếu và mã PIN",
+      "passed": true,
+      "notes": [
+        "6 thí sinh đăng nhập bằng tên và mật khẩu in trên phiếu; sau PIN vào màn hình chọn phần thi, Listening bị khoá (thí sinh 0101 nhập PIN ở tình huống 2)"
+      ],
+      "screenshots": [
+        "01-chon-phan-thi.png"
+      ]
+    },
+    {
+      "no": 2,
+      "title": "Nhập sai mã PIN",
+      "passed": true,
+      "notes": [
+        "Sai PIN: \"Incorrect PIN.\"",
+        "3 lần sai đều bị từ chối, lần đúng vào được"
+      ],
+      "screenshots": [
+        "02-sai-pin.png"
+      ]
+    },
+    {
+      "no": 3,
+      "title": "Bắt đầu trước khi giám thị Announce start (cảnh báo StartedEarly)",
+      "passed": true,
+      "notes": [
+        "Chỉ Bình Trần (bắt đầu trước) có cảnh báo; 5 thí sinh bắt đầu sau không có"
+      ],
+      "screenshots": [
+        "03-canh-bao-started-early.png"
+      ]
+    },
+    {
+      "no": 4,
+      "title": "Làm bài, ghi chú/highlight, đổi cỡ chữ và độ tương phản",
+      "passed": true,
+      "notes": [
+        "Câu 1 lưu ngay (PUT 204), biểu tượng kết nối \"Connected\"",
+        "Highlight một đoạn ở Part 3 (1 vùng tô)",
+        "Đổi độ tương phản \"White on black\" và cỡ chữ \"Large\" có hiệu lực ngay, được lưu lên máy chủ"
+      ],
+      "screenshots": [
+        "04-trang-tren-den-chu-lon.png"
+      ]
+    },
+    {
+      "no": 5,
+      "title": "Tải lại trang giữa giờ",
+      "passed": true,
+      "notes": [
+        "Sau F5 vẫn ở Part 3 của Reading & Writing",
+        "Còn đáp án câu 1 và highlight; đồng hồ lệch 0 s so với thời gian đã trôi"
+      ],
+      "screenshots": [
+        "05-sau-khi-tai-lai.png"
+      ]
+    },
+    {
+      "no": 6,
+      "title": "Tạm dừng một thí sinh, cả phòng; cho làm tiếp",
+      "passed": true,
+      "notes": [
+        "Dừng 1 thí sinh: màn hình dừng sau 146 ms",
+        "Trong 10 s dừng đồng hồ đứng yên (3590 s), sau khi cho làm tiếp còn 3590 s",
+        "Dừng cả phòng: 6/6 màn hình dừng sau tối đa 166 ms; Khoa Hồ (chưa vào thi) được báo bỏ qua"
+      ],
+      "screenshots": [
+        "06-thi-sinh-bi-dung.png",
+        "06-ca-phong-tam-dung.png"
+      ]
+    },
+    {
+      "no": 7,
+      "title": "Thông báo cho cả phòng và cho một thí sinh",
+      "passed": true,
+      "notes": [
+        "Thông báo cả phòng đến 6/6 màn hình sau tối đa 163 ms",
+        "Thông báo riêng chỉ đến Thị Hoa Lê; thí sinh khác chỉ thấy thông báo chung trong chuông"
+      ],
+      "screenshots": [
+        "07-thong-bao-ca-phong.png"
+      ]
+    },
+    {
+      "no": 8,
+      "title": "Mất mạng 1 phút rồi vào lại; cộng giờ bù",
+      "passed": true,
+      "notes": [
+        "Trang giám thị báo Offline sau 10 s, có cảnh báo ConnectionLost",
+        "Mất mạng 62 s: đồng hồ vẫn chạy (62 s), đáp án chọn lúc mất mạng được lưu khi có mạng lại",
+        "Giám thị cộng 1 phút giờ bù"
+      ],
+      "screenshots": [
+        "08-offline.png",
+        "08-thi-sinh-mat-mang.png"
+      ]
+    },
+    {
+      "no": 9,
+      "title": "Chuyển sang máy khác",
+      "passed": true,
+      "notes": [
+        "Máy cũ tự về màn hình đăng nhập",
+        "Máy mới tiếp tục cùng lượt làm bài, còn đáp án câu 1",
+        "Máy mới hiện lại thông báo chung đã đọc ở máy cũ một lần (ghi nhận, không phải lỗi)"
+      ],
+      "screenshots": [
+        "09-may-moi.png"
+      ]
+    },
+    {
+      "no": 10,
+      "title": "Cộng giờ bù sự cố; Edit end time (End in)",
+      "passed": true,
+      "notes": [
+        "An Nguyễn +5 phút: thời gian còn lại tăng 299 s, màn hình thí sinh cập nhật",
+        "Dung Võ End in 2 phút: còn 120 s, màn hình thí sinh đếm phút và giây (dưới 5 phút)",
+        "Hết 2 phút Dung Võ tự nộp (TimeExpired), màn hình báo kết thúc"
+      ],
+      "screenshots": [
+        "10-gio-bu-va-end-in.png"
+      ]
+    },
+    {
+      "no": 11,
+      "title": "Listening: tua lại 1 phút và cộng 1 phút",
+      "passed": true,
+      "notes": [
+        "Sang Listening, thông báo đã đọc ở Reading & Writing không bật lại",
+        "Màn hình thí sinh báo \"The invigilator has moved the recording back.\" và phát lại từ chỗ mới",
+        "Vị trí audio 75 s → 16 s (lùi 59 s); hộp cộng giờ mở sẵn 1 phút, cộng xong 60 s"
+      ],
+      "screenshots": [
+        "11-tua-xong-mo-cong-gio.png",
+        "11-thi-sinh-nghe-lai.png"
+      ]
+    },
+    {
+      "no": 12,
+      "title": "B1 Writing Part 2: chọn một trong hai câu",
+      "passed": true,
+      "notes": [
+        "Chọn Yes câu 2: \"1 of 1 question selected\"; câu 3 không còn chọn Yes được; gọi thẳng API chọn thêm câu 3 bị từ chối 409"
+      ],
+      "screenshots": [
+        "12-b1-chon-cau.png"
+      ]
+    },
+    {
+      "no": 13,
+      "title": "End now cho một thí sinh",
+      "passed": true,
+      "notes": [
+        "Hai lần bấm; màn hình thí sinh kết thúc sau 152 ms",
+        "Trạng thái Submitted, \"Ended by invigilator\"; mọi thao tác đổi giờ bị khoá nên không hoàn tác được"
+      ],
+      "screenshots": [
+        "13-end-now.png"
+      ]
+    },
+    {
+      "no": 14,
+      "title": "Hết giờ tự nộp (cả thí sinh thêm 25 % giờ, máy offline)",
+      "passed": true,
+      "notes": [
+        "Cả 6 tự nộp (TimeExpired) trong vòng 15 s sau giờ kết thúc; thường 30.0 phút, An Nguyễn (+1 phút bù) 31.0 phút, Thị Hoa Lê (25 %) 37.5 phút, Chi Phạm (máy tắt) 30.0 phút"
+      ],
+      "screenshots": [
+        "14-het-gio.png"
+      ]
+    },
+    {
+      "no": 15,
+      "title": "Giám khảo chấm Writing ẩn danh, admin xem kết quả, xuất CSV",
+      "passed": true,
+      "notes": [
+        "An Nguyễn (bài mã CQPUAX, giám khảo không thấy tên): chấm tự động 6 (đúng 6 câu Part 1 đã trả lời theo đáp án) + Writing 7 = 13/60, trạng thái Final",
+        "CSV có BOM UTF-8 (Excel đọc đúng tiếng Việt), đủ 6 thí sinh, điểm Reading & Writing và Listening"
+      ],
+      "screenshots": [
+        "15-cham-writing.png",
+        "15-bang-ket-qua.png"
+      ]
+    },
+    {
+      "no": 16,
+      "title": "Yêu cầu xoá thí sinh và admin khác duyệt",
+      "passed": true,
+      "notes": [
+        "Admin 1 yêu cầu xoá Khoa Hồ: thí sinh chưa bị xoá, yêu cầu chờ duyệt",
+        "Người yêu cầu không có nút Approve cho yêu cầu của mình",
+        "admin2 duyệt: thí sinh bị xoá, nhật ký ghi Approved và người duyệt"
+      ],
+      "screenshots": [
+        "16-nhat-ky-duyet.png"
+      ]
+    }
+  ],
+  "log": [
+    "09:29:29 Kết quả ghi vào D:\\TranHoangLong-DA23TTA-DoAnChuyenNganh\\setup\\mock-exam\\results\\2026-11-07",
+    "09:29:34 Kỳ thi A2 #3, phần thi {\"Reading & Writing\":6,\"Listening\":7}",
+    "09:29:37 Kỳ thi B1 #4, phần thi {\"Reading\":8,\"Writing\":9,\"Listening\":10}",
+    "09:29:38 #1 Thí sinh đăng nhập bằng phiếu và mã PIN",
+    "09:29:41 #1 Đạt — 6 thí sinh đăng nhập bằng tên và mật khẩu in trên phiếu; sau PIN vào màn hình chọn phần thi, Listening bị khoá (thí sinh 0101 nhập PIN ở tình huống 2)",
+    "09:29:41 #2 Nhập sai mã PIN",
+    "09:29:42 #2 Đạt — Sai PIN: \"Incorrect PIN.\"; 3 lần sai đều bị từ chối, lần đúng vào được",
+    "09:29:42 #3 Bắt đầu trước khi giám thị Announce start (cảnh báo StartedEarly)",
+    "09:29:44 #3 Đạt — Chỉ Bình Trần (bắt đầu trước) có cảnh báo; 5 thí sinh bắt đầu sau không có",
+    "09:29:44 #4 Làm bài, ghi chú/highlight, đổi cỡ chữ và độ tương phản",
+    "09:29:45 #4 Đạt — Câu 1 lưu ngay (PUT 204), biểu tượng kết nối \"Connected\"; Highlight một đoạn ở Part 3 (1 vùng tô); Đổi độ tương phản \"White on black\" và cỡ chữ \"Large\" có hiệu lực ngay, được lưu lên máy chủ",
+    "09:29:45 #5 Tải lại trang giữa giờ",
+    "09:29:46 #5 Đạt — Sau F5 vẫn ở Part 3 của Reading & Writing; Còn đáp án câu 1 và highlight; đồng hồ lệch 0 s so với thời gian đã trôi",
+    "09:29:53 0101 và 0102 đã viết câu 31, 32; 0101 trả lời đúng Part 1 (câu 1–6)",
+    "09:29:53 #6 Tạm dừng một thí sinh, cả phòng; cho làm tiếp",
+    "09:30:05 #6 Đạt — Dừng 1 thí sinh: màn hình dừng sau 146 ms; Trong 10 s dừng đồng hồ đứng yên (3590 s), sau khi cho làm tiếp còn 3590 s; Dừng cả phòng: 6/6 màn hình dừng sau tối đa 166 ms; Khoa Hồ (chưa vào thi) được báo bỏ qua",
+    "09:30:05 #7 Thông báo cho cả phòng và cho một thí sinh",
+    "09:30:12 #7 Đạt — Thông báo cả phòng đến 6/6 màn hình sau tối đa 163 ms; Thông báo riêng chỉ đến Thị Hoa Lê; thí sinh khác chỉ thấy thông báo chung trong chuông",
+    "09:30:12 #8 Mất mạng 1 phút rồi vào lại; cộng giờ bù",
+    "09:31:14 #8 Đạt — Trang giám thị báo Offline sau 10 s, có cảnh báo ConnectionLost; Mất mạng 62 s: đồng hồ vẫn chạy (62 s), đáp án chọn lúc mất mạng được lưu khi có mạng lại; Giám thị cộng 1 phút giờ bù",
+    "09:31:14 #9 Chuyển sang máy khác",
+    "09:31:19 #9 Đạt — Máy cũ tự về màn hình đăng nhập; Máy mới tiếp tục cùng lượt làm bài, còn đáp án câu 1; Máy mới hiện lại thông báo chung đã đọc ở máy cũ một lần (ghi nhận, không phải lỗi)",
+    "09:31:19 #10 Cộng giờ bù sự cố; Edit end time (End in)",
+    "09:33:25 #10 Đạt — An Nguyễn +5 phút: thời gian còn lại tăng 299 s, màn hình thí sinh cập nhật; Dung Võ End in 2 phút: còn 120 s, màn hình thí sinh đếm phút và giây (dưới 5 phút); Hết 2 phút Dung Võ tự nộp (TimeExpired), màn hình báo kết thúc",
+    "09:33:25 #13 End now cho một thí sinh",
+    "09:33:26 #13 Đạt — Hai lần bấm; màn hình thí sinh kết thúc sau 152 ms; Trạng thái Submitted, \"Ended by invigilator\"; mọi thao tác đổi giờ bị khoá nên không hoàn tác được",
+    "09:34:35 Reading & Writing kết thúc cho cả phòng",
+    "09:34:36 Cả phòng bắt đầu Listening",
+    "09:34:37 #11 Listening: tua lại 1 phút và cộng 1 phút",
+    "09:35:52 #11 Đạt — Sang Listening, thông báo đã đọc ở Reading & Writing không bật lại; Màn hình thí sinh báo \"The invigilator has moved the recording back.\" và phát lại từ chỗ mới; Vị trí audio 75 s → 16 s (lùi 59 s); hộp cộng giờ mở sẵn 1 phút, cộng xong 60 s",
+    "09:35:52 Chi Phạm: máy tắt hẳn giữa Listening",
+    "09:35:52 #12 B1 Writing Part 2: chọn một trong hai câu",
+    "09:35:59 #12 Đạt — Chọn Yes câu 2: \"1 of 1 question selected\"; câu 3 không còn chọn Yes được; gọi thẳng API chọn thêm câu 3 bị từ chối 409",
+    "09:35:59 #16 Yêu cầu xoá thí sinh và admin khác duyệt",
+    "09:36:02 #16 Đạt — Admin 1 yêu cầu xoá Khoa Hồ: thí sinh chưa bị xoá, yêu cầu chờ duyệt; Người yêu cầu không có nút Approve cho yêu cầu của mình; admin2 duyệt: thí sinh bị xoá, nhật ký ghi Approved và người duyệt",
+    "09:36:02 #14 Hết giờ tự nộp (cả thí sinh thêm 25 % giờ, máy offline)",
+    "10:04:45 Bình Trần nộp bài (TimeExpired)",
+    "10:04:45 Dung Võ nộp bài (TimeExpired)",
+    "10:04:45 Giang Đỗ nộp bài (TimeExpired)",
+    "10:04:50 Chi Phạm nộp bài (TimeExpired)",
+    "10:05:45 An Nguyễn nộp bài (TimeExpired)",
+    "10:12:12 Thị Hoa Lê nộp bài (TimeExpired)",
+    "10:12:17 #14 Đạt — Cả 6 tự nộp (TimeExpired) trong vòng 15 s sau giờ kết thúc; thường 30.0 phút, An Nguyễn (+1 phút bù) 31.0 phút, Thị Hoa Lê (25 %) 37.5 phút, Chi Phạm (máy tắt) 30.0 phút",
+    "10:12:17 #15 Giám khảo chấm Writing ẩn danh, admin xem kết quả, xuất CSV",
+    "10:12:19 #15 Đạt — An Nguyễn (bài mã CQPUAX, giám khảo không thấy tên): chấm tự động 6 (đúng 6 câu Part 1 đã trả lời theo đáp án) + Writing 7 = 13/60, trạng thái Final; CSV có BOM UTF-8 (Excel đọc đúng tiếng Việt), đủ 6 thí sinh, điểm Reading & Writing và Listening"
+  ]
+}
