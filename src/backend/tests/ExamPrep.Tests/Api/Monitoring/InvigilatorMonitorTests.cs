@@ -305,6 +305,26 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
     }
 
     [Fact]
+    public async Task ASectionAction_ThatKeepsLosingTheRaceAnswers409WithASentenceNotA500()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var sectionId = room.First.ReadingWritingSectionId;
+        await api.StartAttemptAsync(room.First.CandidateId, sectionId);
+        var conflicts = new ConflictMaker { Remaining = 10 };
+        var factory = api.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            services.ConfigureDbContext<ExamPrepDbContext>(options => options.AddInterceptors(conflicts))));
+        using var client = factory.CreateClient();
+        (await client.PostAsJsonAsync("/api/staff/auth/login", new { username = room.InvigilatorUsername, password = Password }, ct)).EnsureSuccessStatusCode();
+
+        var response = await client.PostAsJsonAsync($"/api/staff/exams/{room.First.ExamId}/sections/{sectionId}/actions", new { action = "AddIncidentTime", minutes = 5, candidateIds = new[] { room.First.CandidateId } }, ct);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("same moment", await response.Content.ReadAsStringAsync(ct));
+        Assert.Equal(0, (await api.GetAttemptAsync(room.First.CandidateId, sectionId)).IncidentExtraSeconds);
+    }
+
+    [Fact]
     public async Task EndAll_IsRefusedForOutsidersAndForCandidatesOfAnotherSession()
     {
         api.SkipIfUnavailable();
