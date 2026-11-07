@@ -49,6 +49,11 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
         (await client.PostAsync($"/api/candidate/sections/{sections[0].Id}/attempt", null, ct)).EnsureSuccessStatusCode();
         var paper = await client.GetFromJsonAsync<JsonObject>($"/api/candidate/sections/{sections[0].Id}/paper", ct);
         Assert.Equal(7, paper!["parts"]!.AsArray().Count);
+
+        // Final review 10: the exam opens Active, so its candidates have computer numbers (1…N in list order).
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        Assert.Equal("1", await db.Candidates.Where(c => c.Username == options.CandidateUsername).Select(c => c.SeatNo).SingleAsync(ct));
     }
 
     [Fact]
@@ -235,6 +240,7 @@ public sealed class DemoSeederTests(ApiFixture api) : IClassFixture<ApiFixture>
             var exam = await db.Exams.Include(e => e.Sections).SingleAsync(e => e.Name == options.B1.ExamName, ct);
             Assert.Equal(3, exam.Sections.Count);
             Assert.All(exam.Sections, s => Assert.NotNull(s.PaperMixId));
+            Assert.Equal(["1"], await db.Candidates.Where(c => c.ExamId == exam.Id).Select(c => c.SeatNo).ToListAsync(ct));
         }
 
         using var client = api.CreateClient();
