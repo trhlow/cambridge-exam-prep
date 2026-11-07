@@ -153,10 +153,15 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
             {
                 return await ApplyAsync(section, ids, command, request.Reason, cancellationToken);
             }
-            catch (DbUpdateConcurrencyException) when (round < MaxSaveAttempts)
+            catch (DbUpdateConcurrencyException)
             {
-                // The candidate's browser or the time-up sweep changed an attempt meanwhile: start again from fresh data.
+                // The candidate's browser or the time-up sweep changed an attempt meanwhile: start again from fresh data,
+                // and after the last try say so, as End all does, rather than fail with a 500 (final review 7).
                 db.ChangeTracker.Clear();
+                if (round >= MaxSaveAttempts)
+                {
+                    return Problems.Conflict("Candidates' tests were updated at the same moment. Press the button again.");
+                }
             }
         }
     }
