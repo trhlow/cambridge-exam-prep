@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, candidateApi } from '../api/client'
 import { useLive } from '../api/live'
 import type { Answers, AttemptState, CandidateMessage, Selection, Selections } from '../api/types'
-import { AutosaveQueue, clearStoredAnswers, loadStoredAnswers, type SaveStatus } from './autosave'
+import { AutosaveQueue, clearStoredAnswers, loadStoredAnswers, pendingAnswersKey, type SaveStatus } from './autosave'
 import { remainingSecondsNow } from './timing'
 
 /**
@@ -55,7 +55,7 @@ export function useAttempt(sectionId: number, owner?: string): AttemptView {
   const [isSignedOut, setIsSignedOut] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const queueRef = useRef<AutosaveQueue | null>(null)
-  const storageKey = owner ? `exam-pending:${owner}/${sectionId}` : undefined
+  const storageKey = owner ? pendingAnswersKey(owner, sectionId) : undefined
 
   const apply = useCallback((state: AttemptState) => {
     setClock({ status: state.status, remaining: state.remainingSeconds, audioPositionMs: state.audioPositionMs, receivedAt: Date.now() })
@@ -110,10 +110,12 @@ export function useAttempt(sectionId: number, owner?: string): AttemptView {
     }
   }, [sectionId, storageKey, apply, sync])
 
-  // The section ended: send once more what is still pending (the grace may have covered it) before the queue stops.
+  // The section ended: send once more what is still pending (the grace may have covered it) before the queue stops,
+  // and remove the browser copy, which could never be replayed into a finished section (final review 6).
   useEffect(() => {
     if (clock?.status === 'Submitted') {
       queueRef.current?.flushAndDispose()
+      queueRef.current?.forgetMirror()
     }
   }, [clock?.status])
 
