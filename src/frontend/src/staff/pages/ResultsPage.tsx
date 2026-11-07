@@ -12,8 +12,11 @@ export function ResultsPage({ examId }: { examId: number }) {
   const { data: exam } = useLoad(() => staffApi.exam(examId), `exam-${examId}`)
   const { data: results, error } = useLoad(() => staffApi.results(examId), examId)
   const sections = results?.[0]?.sections ?? []
-  // B11: Writing finished but held by nobody (no examiner on the session, or the one it had was switched off).
-  const undealt = (results ?? []).filter((c) => !c.examiner && c.sections.some((s) => s.status === 'Submitted' && s.gradingStatus === 'NeedsManualMarking')).length
+  // B11: Writing finished but held by nobody who can mark it: never dealt (no examiner on the session), or dealt to one
+  // since switched off, no longer an examiner or off the session (the server flags those; the deal waits for an eligible one).
+  const undealt = (results ?? []).filter(
+    (c) => (!c.examiner || c.examinerUnavailable) && c.sections.some((s) => s.status === 'Submitted' && s.gradingStatus === 'NeedsManualMarking'),
+  ).length
   const download = () => {
     if (!results) {
       return
@@ -42,7 +45,7 @@ export function ResultsPage({ examId }: { examId: number }) {
       <ErrorBox error={error} />
       {undealt > 0 && (
         <p className="st-error" role="alert">
-          {undealt} Writing script{undealt === 1 ? ' has' : 's have'} no examiner. Assign an active examiner to the session and they will be dealt.
+          {undealt} Writing script{undealt === 1 ? ' has' : 's have'} no examiner who can mark them. Assign an active examiner to the session and they will be dealt.
         </p>
       )}
       {results && results.length === 0 && <p className="st-empty">No candidates.</p>}
@@ -66,7 +69,12 @@ export function ResultsPage({ examId }: { examId: number }) {
                 </td>
                 <td>
                   {candidate.markingCode ? <span className="st-mono">{candidate.markingCode}</span> : <span className="st-faint">not dealt yet</span>}
-                  {candidate.examiner && <div className="st-faint">{candidate.examiner}</div>}
+                  {candidate.examiner && (
+                    <div className="st-faint">
+                      {candidate.examiner}
+                      {candidate.examinerUnavailable && ' (can no longer mark)'}
+                    </div>
+                  )}
                 </td>
                 {candidate.sections.map((s) => (
                   <td key={s.sectionId}>

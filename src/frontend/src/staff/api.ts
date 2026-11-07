@@ -540,6 +540,8 @@ export interface CandidateResult {
   /** VE-73: the code the examiner sees, and who marks the Writing. */
   markingCode?: string | null
   examiner?: string | null
+  /** That examiner is switched off, no longer an examiner or off the session: nobody can mark the script until one is assigned. */
+  examinerUnavailable?: boolean
 }
 
 export type ApprovalKind = 'DeletePaper' | 'DeleteExam' | 'DeleteCandidate' | 'DeleteMix' | 'ChangeStaffAccount' | 'CreateAdmin'
