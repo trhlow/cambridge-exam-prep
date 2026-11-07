@@ -244,6 +244,14 @@ public static class DemoSeeder
         }
 
         var candidate = CreateCandidate(provider, options, candidateUsername);
+        // The exam opens Active, and an open exam seats every candidate at a computer number: 1…N in list order (final review 10).
+        List<Candidate> candidates = [candidate];
+        var seat = 0;
+        foreach (var entered in candidates.OrderBy(c => c.CandidateNumber, StringComparer.OrdinalIgnoreCase))
+        {
+            entered.SeatNo = (++seat).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         var invigilatorId = await EnsureStaffAsync(provider, db, options.InvigilatorUsername, options.InvigilatorPassword, "Demo Invigilator", UserRole.Invigilator, cancellationToken);
         var examinerId = await EnsureStaffAsync(provider, db, options.ExaminerUsername, options.ExaminerPassword, "Demo Examiner", UserRole.Examiner, cancellationToken);
         var exam = new Exam
@@ -260,7 +268,7 @@ public static class DemoSeeder
             CreatedByUserId = authorId,
             CreatedAt = DateTime.UtcNow,
             Sections = sections,
-            Candidates = [candidate],
+            Candidates = candidates,
             Invigilators = invigilatorId is { } id ? [new ExamInvigilator { UserId = id, AssignedAt = DateTime.UtcNow }] : [],
             Examiners = examinerId is { } examiner ? [new ExamExaminer { UserId = examiner, AssignedAt = DateTime.UtcNow }] : [],
         };
