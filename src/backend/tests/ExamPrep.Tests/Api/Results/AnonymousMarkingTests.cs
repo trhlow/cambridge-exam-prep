@@ -4,7 +4,9 @@ using System.Text.Json.Nodes;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Marking;
 using ExamPrep.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamPrep.Tests.Api.Results;
@@ -476,5 +478,69 @@ public sealed class AnonymousMarkingTests(ApiFixture api) : IClassFixture<ApiFix
         Assert.Equal(HttpStatusCode.OK, writingFile.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, readingFile.StatusCode);
         examiners.ForEach(e => e.Dispose());
+    }
+
+    /// <summary>Runs <see cref="Before"/> once, just before the request's first locking read (FOR UPDATE / FOR SHARE), while it holds no lock yet.</summary>
+    private sealed class FirstLockHook : DbCommandInterceptor
+    {
+        private int fired;
+
+        public Func<Task>? Before;
+
+        public override async ValueTask<InterceptionResult<System.Data.Common.DbDataReader>> ReaderExecutingAsync(
+            System.Data.Common.DbCommand command, CommandEventData eventData, InterceptionResult<System.Data.Common.DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            if (Before is not null && (command.CommandText.Contains("FOR UPDATE") || command.CommandText.Contains("FOR SHARE")) && Interlocked.Exchange(ref fired, 1) == 0)
+            {
+                await Before();
+            }
+
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Final review 11: the script is dealt to another examiner (the examiners changed) after the request checked it was
+    /// this examiner's but before the mark is saved. The save checks again under its lock and refuses.
+    /// </summary>
+    [Fact]
+    public async Task AMark_IsRefused_WhenTheScriptWasDealtToSomeoneElseWhileItWasBeingSaved()
+    {
+        api.SkipIfUnavailable();
+        var (exam, candidates) = await FinishedSessionAsync(1);
+        var first = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        var second = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        using (var admin = await api.AdminClientAsync())
+        {
+            (await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}/examiners", new { userIds = new[] { first.Id } }, ct)).EnsureSuccessStatusCode();
+        }
+
+        var attemptId = await AttemptIdAsync(candidates[0].Id, exam.ReadingWritingSectionId);
+        Assert.Equal(first.Id, await ExaminerOfAsync(candidates[0].Id));
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            db.ExamExaminers.Add(new ExamPrep.Domain.Entities.ExamExaminer { ExamId = exam.ExamId, UserId = second.Id, AssignedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync(ct);
+        }
+
+        var hook = new FirstLockHook();
+        hook.Before = async () =>
+        {
+            using var scope = api.Factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            await db.Candidates.Where(c => c.Id == candidates[0].Id).ExecuteUpdateAsync(set => set.SetProperty(c => c.ExaminerUserId, second.Id), CancellationToken.None);
+        };
+        var factory = api.Factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            services.ConfigureDbContext<ExamPrepDbContext>(options => options.AddInterceptors(hook))));
+        using var examiner = factory.CreateClient();
+        (await examiner.PostAsJsonAsync("/api/staff/auth/login", new { username = first.Username, password = Password }, ct)).EnsureSuccessStatusCode();
+
+        var mark = await MarkAsync(examiner, attemptId, 31, 3);
+
+        Assert.Equal(HttpStatusCode.Conflict, mark.StatusCode);
+        Assert.Contains("another examiner", await mark.Content.ReadAsStringAsync(ct));
+        using var check = api.Factory.Services.CreateScope();
+        Assert.False(await check.ServiceProvider.GetRequiredService<ExamPrepDbContext>().ManualMarks.AnyAsync(m => m.Response!.AttemptId == attemptId, ct));
     }
 }
