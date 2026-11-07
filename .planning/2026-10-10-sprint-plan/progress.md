@@ -273,3 +273,13 @@
 - Lần chạy cuối 16/16 đạt: biên bản `setup/mock-exam/results/2026-10-26/BienBan_ThiThu_2026-10-26.docx`, `ket-qua.json`, ảnh, CSV; `make_minutes.py --results` điền biên bản từ kết quả
 - VE-44: `progress-report/BaoCaoTienDo_Tuan07_TranHoangLong.docx` (23–29/11, ký 29/11); Google Sheet chưa điền. Sprint 7 xong
 - Tiếp theo Sprint 8 (30/11–06/12): VE-47 viết quyển báo cáo Mở đầu, Chương 1–3
+
+## Session: 2026-11-02 → 2026-11-07
+
+### Rà soát toàn hệ thống và sửa 42 mục
+- 02/11: rà soát từ đầu đến cuối (thí sinh, phòng thi, phân quyền, đề và chấm, triển khai, tài liệu): 42 mục trong `.planning/2026-11-02-review/findings.md`; kế hoạch sửa 8 nhóm `fix-plan.md`
+- 02–07/11: sửa theo từng nhóm, mỗi nhóm có review riêng và sửa lại theo review; review toàn nhánh (11e2e24..7f6e1dc) rồi hai lượt sửa thêm (đến `708f213`). Quyết định và giới hạn còn lại ghi cuối findings.md
+- Kiểm tra trên mã cuối (07/11): backend 1464/1464, frontend 201/201, bộ chuyển đề 69/69, e2e 6/6, buổi thi thử 16/16 (`setup/mock-exam/results/2026-11-07/`, biên bản Word), tải 200 thí sinh 0 lỗi máy chủ (`setup/loadtest/results/2026-11-07-03-28-200.md`); Docker demo dựng lại, MySQL chỉ nghe 127.0.0.1; ERD vẽ lại (28 bảng)
+- Báo cáo tuần 4 bổ sung đợt rà soát và sửa lỗi; dòng tuần 4 trên Google Sheet điền ngày 07/11 (người dùng yêu cầu)
+- Đang làm: cập nhật hướng dẫn Word theo luồng mới; viết Chương 3–5 và Phụ lục của quyển báo cáo
+
