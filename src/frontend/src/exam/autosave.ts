@@ -46,6 +46,25 @@ export function loadStoredAnswers(key: string): SaveItem[] {
   }
 }
 
+/** The localStorage key of one candidate's unsent answers in one section; `owner` names the exam and the candidate. */
+export const pendingAnswersKey = (owner: string, sectionId: number) => `${PENDING_PREFIX}${owner}/${sectionId}`
+
+const PENDING_PREFIX = 'exam-pending:'
+
+/**
+ * Exit: every unsent-answers copy this candidate left on the computer goes, so the next person at a shared exam-room
+ * computer cannot read them (final review 6). Other candidates' copies stay.
+ */
+export function clearAllStoredAnswers(owner: string): void {
+  try {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith(`${PENDING_PREFIX}${owner}/`))
+      .forEach((key) => localStorage.removeItem(key))
+  } catch {
+    // Storage blocked: nothing was kept.
+  }
+}
+
 export function clearStoredAnswers(key: string): void {
   try {
     localStorage.removeItem(key)
@@ -60,7 +79,7 @@ export function clearStoredAnswers(key: string): void {
  */
 export class AutosaveQueue {
   private readonly save: (items: SaveItem[]) => Promise<void>
-  private readonly options: AutosaveOptions
+  private options: AutosaveOptions
   private readonly pending = new Map<number, string>()
   private timer: ReturnType<typeof setTimeout> | undefined
   private isSending = false
@@ -110,6 +129,18 @@ export class AutosaveQueue {
   dispose(): void {
     this.isClosed = true
     clearTimeout(this.timer)
+  }
+
+  /**
+   * The section is over: its answers can never be replayed, so the browser copy goes now and a last save that is
+   * still on its way does not write it back (final review 6).
+   */
+  forgetMirror(): void {
+    const key = this.options.storageKey
+    this.options = { ...this.options, storageKey: undefined }
+    if (key) {
+      clearStoredAnswers(key)
+    }
   }
 
   private batches(): SaveItem[][] {

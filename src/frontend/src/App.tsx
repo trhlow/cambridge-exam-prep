@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { candidateApi } from './api/client'
 import type { CandidateProfile, CandidateSection } from './api/types'
 import { clearAnnotations } from './exam/annotations/useAnnotations'
+import { clearAllStoredAnswers } from './exam/autosave'
 import { ExamScreen } from './exam/ExamScreen'
 import { InstructionsScreen, LoggedInScreen, LoginScreen, PinScreen, ReadinessScreen, SectionsScreen } from './screens/SignInScreens'
 
@@ -99,6 +100,7 @@ export default function App() {
           onExit={() => {
             rememberOpenSection(null)
             clearAnnotations()
+            clearAllStoredAnswers(`${stage.profile.examName}/${stage.profile.candidateNumber}`)
             void candidateApi.logout().finally(() => setStage({ kind: 'login', notice: EXIT_NOTICE }))
           }}
         />

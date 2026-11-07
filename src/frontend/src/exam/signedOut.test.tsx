@@ -110,4 +110,24 @@ describe('useAttempt keeps answers', () => {
 
     expect(keepalive).toHaveBeenCalledWith(6, [{ questionNumber: 1, value: 'B' }])
   })
+
+  it('removes the unsent copy from this computer when the section ends while answers are still pending (final review 6)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.spyOn(candidateApi, 'startAttempt').mockResolvedValue(running)
+    const heartbeat = vi.spyOn(candidateApi, 'heartbeat').mockResolvedValue(running)
+    // The network is down: the answer stays pending and mirrored.
+    vi.spyOn(candidateApi, 'saveResponses').mockRejectedValue(new TypeError('Failed to fetch'))
+    const { result } = renderHook(() => useAttempt(6, 'Mock/123'))
+    await waitFor(() => expect(result.current.isLoaded).toBe(true))
+    act(() => result.current.setAnswer(1, 'B'))
+    await act(() => vi.advanceTimersByTimeAsync(1_000))
+    expect(localStorage.getItem('exam-pending:Mock/123/6')).not.toBeNull()
+
+    heartbeat.mockResolvedValue({ ...running, status: 'Submitted' } as AttemptState)
+    await act(() => vi.advanceTimersByTimeAsync(5_000))
+
+    await waitFor(() => expect(result.current.status).toBe('Submitted'))
+    await act(() => vi.advanceTimersByTimeAsync(5_000))
+    expect(localStorage.getItem('exam-pending:Mock/123/6')).toBeNull()
+  })
 })
