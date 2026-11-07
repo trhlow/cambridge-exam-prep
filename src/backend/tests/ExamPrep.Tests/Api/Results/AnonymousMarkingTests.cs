@@ -371,6 +371,45 @@ public sealed class AnonymousMarkingTests(ApiFixture api) : IClassFixture<ApiFix
         }
     }
 
+    /// <summary>
+    /// Final review E: with no eligible examiner left the deal stops and the scripts keep the one they had, so the results
+    /// say which scripts nobody can mark: their examiner is switched off, no longer an examiner or off the session.
+    /// </summary>
+    [Fact]
+    public async Task Results_FlagTheScriptsWhoseExaminerCanNoLongerMarkThem()
+    {
+        api.SkipIfUnavailable();
+        var (exam, _) = await FinishedSessionAsync(2);
+        var (other, _) = await FinishedSessionAsync(1);
+        var only = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        var kept = await api.CreateStaffAsync(UserRole.Examiner, Password);
+        using var admin = await api.AdminClientAsync();
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{exam.ExamId}/examiners", new { userIds = new[] { only.Id } }, ct)).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/admin/exams/{other.ExamId}/examiners", new { userIds = new[] { kept.Id } }, ct)).EnsureSuccessStatusCode();
+        await DeactivateAsync(only.Id);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<MarkingAllocator>().EnsureAllAsync(ct);
+        }
+
+        var stuck = (await admin.GetFromJsonAsync<JsonArray>($"/api/staff/exams/{exam.ExamId}/results", ct))!;
+        var fine = (await admin.GetFromJsonAsync<JsonArray>($"/api/staff/exams/{other.ExamId}/results", ct))!;
+
+        Assert.All(stuck, r => Assert.True((bool)r!["examinerUnavailable"]!));
+        Assert.All(stuck, r => Assert.Equal(only.FullName, (string?)r!["examiner"]));
+        Assert.All(fine, r => Assert.False((bool)r!["examinerUnavailable"]!));
+
+        // Off the session (taken off in the database, so no deal follows) or no longer an examiner: flagged as well.
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            await db.ExamExaminers.Where(x => x.ExamId == other.ExamId).ExecuteDeleteAsync(ct);
+        }
+
+        var offSession = (await admin.GetFromJsonAsync<JsonArray>($"/api/staff/exams/{other.ExamId}/results", ct))!;
+        Assert.All(offSession, r => Assert.True((bool)r!["examinerUnavailable"]!));
+    }
+
     [Fact]
     public async Task AnAccountThatIsNoLongerAnExaminer_IsNotDealtScripts()
     {

@@ -16,7 +16,11 @@ public sealed record SectionResult(int SectionId, string Title, string Status, s
 
 /// <param name="MarkingCode">VE-73: the code the examiner sees instead of the name; null until the Writing is dealt.</param>
 /// <param name="Examiner">VE-73: the examiner the Writing was dealt to.</param>
-public sealed record CandidateResult(int CandidateId, string CandidateNumber, string FullName, IReadOnlyList<SectionResult> Sections, string? MarkingCode = null, string? Examiner = null);
+/// <param name="ExaminerUnavailable">
+/// That examiner can no longer mark it (switched off, no longer an examiner, or off the session). With nobody eligible
+/// left on the session the deal stops, so the script keeps them until an active examiner is assigned (final review E).
+/// </param>
+public sealed record CandidateResult(int CandidateId, string CandidateNumber, string FullName, IReadOnlyList<SectionResult> Sections, string? MarkingCode = null, string? Examiner = null, bool ExaminerUnavailable = false);
 
 /// <param name="Comment">Writing: the teacher's comment with the mark.</param>
 /// <param name="Selection">Where the candidate chooses which questions to answer: Yes, No or Undecided; null elsewhere.</param>
@@ -70,6 +74,11 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
             .ToListAsync(cancellationToken);
         var examinerIds = candidates.Select(c => c.ExaminerUserId).OfType<int>().Distinct().ToList();
         var examiners = await db.Users.AsNoTracking().Where(u => examinerIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+        // The same rule as MarkingAllocator: active, role Examiner, on this session.
+        var eligible = (await db.ExamExaminers.AsNoTracking()
+            .Where(x => x.ExamId == examId && x.User!.IsActive && x.User.Role == UserRole.Examiner)
+            .Select(x => x.UserId)
+            .ToListAsync(cancellationToken)).ToHashSet();
         var attempts = await db.Attempts.AsNoTracking()
             .Where(a => a.ExamSection!.ExamId == examId)
             .Select(a => new { a.Id, a.CandidateId, a.ExamSectionId, a.Status, a.GradingStatus, a.RawScore, a.MaxScore, a.TestPaperId })
@@ -85,7 +94,8 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
                 ? new SectionResult(s.Id, s.Title, a.Status.ToString(), a.GradingStatus.ToString(), a.RawScore, a.MaxScore, a.Id, versions.TryGetValue(a.TestPaperId, out var v) ? v : null)
                 : new SectionResult(s.Id, s.Title, AttemptStatus.NotStarted.ToString(), GradingStatus.NotGraded.ToString(), null, null, null)).ToList(),
             c.MarkingCode,
-            c.ExaminerUserId is { } examinerId ? examiners.GetValueOrDefault(examinerId) : null))
+            c.ExaminerUserId is { } examinerId ? examiners.GetValueOrDefault(examinerId) : null,
+            c.ExaminerUserId is { } dealtTo && !eligible.Contains(dealtTo)))
             .ToList();
     }
 

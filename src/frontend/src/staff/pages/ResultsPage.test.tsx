@@ -26,6 +26,20 @@ describe('ResultsPage warns about scripts without an examiner (B11)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('2 Writing scripts have no examiner')
   })
 
+  it('also counts scripts whose examiner can no longer mark them (switched off, not an examiner, off the session)', async () => {
+    vi.spyOn(staffApi, 'results').mockResolvedValue([
+      { ...candidate(1, 'Ms Hoa', 'NeedsManualMarking'), examinerUnavailable: true },
+      candidate(2, null, 'NeedsManualMarking'),
+      { ...candidate(3, 'Ms Hoa', 'Final'), examinerUnavailable: true },
+      candidate(4, 'Mr Nam', 'NeedsManualMarking'),
+    ])
+
+    render(<ResultsPage examId={1} />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('2 Writing scripts have no examiner who can mark them')
+    expect(screen.getAllByText(/(can no longer mark)/)).toHaveLength(2)
+  })
+
   it('shows no warning when every script has an examiner', async () => {
     vi.spyOn(staffApi, 'results').mockResolvedValue([candidate(1, 'Ms Hoa', 'NeedsManualMarking'), candidate(2, 'Ms Hoa', 'Final')])
 
