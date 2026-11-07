@@ -1,0 +1,93 @@
+{
+  "time": "9 giờ 29 – 10 giờ 12, ngày 07/11/2026 (chạy lại sau đợt rà soát và sửa lỗi 02–07/11, trên mã nguồn đã sửa)",
+  "place": "Máy phát triển của sinh viên; hệ thống chạy bằng Docker (stack thử nghiệm riêng, cổng 8090, CSDL trống)",
+  "exams": "Thi thử A2 2026-11-07 (A2 Key for Schools: Reading & Writing 60 phút, Listening 30 phút) và Thi thử B1 2026-11-07 (B1 Preliminary for Schools, đề trộn 4 mã theo vị trí máy)",
+  "participants": [
+    [
+      "Trần Hoàng Long",
+      "Người tổ chức, lập biên bản",
+      "Viết và chạy kịch bản; theo dõi kết quả"
+    ],
+    [
+      "Trình duyệt tự động 1",
+      "Admin",
+      "hoanglong"
+    ],
+    [
+      "Trình duyệt tự động 2",
+      "Admin thứ hai",
+      "admin2"
+    ],
+    [
+      "Trình duyệt tự động 3",
+      "Giám thị",
+      "giamthi"
+    ],
+    [
+      "Trình duyệt tự động 4",
+      "Giám khảo",
+      "giamkhao"
+    ],
+    [
+      "Trình duyệt tự động 5–10",
+      "6 thí sinh A2 (0101–0106)",
+      "Theo phiếu đăng nhập; 0102 thêm 25 % giờ"
+    ],
+    [
+      "Trình duyệt tự động 11",
+      "Thí sinh B1 (0201)",
+      "Theo phiếu đăng nhập"
+    ]
+  ],
+  "errors": [],
+  "remarks": [
+    "Buổi thi thử chạy lại đúng kịch bản KICH_BAN_THI_THU.md bằng trình duyệt tự động, mỗi người một trình duyệt riêng, sau đợt rà soát toàn hệ thống ngày 02/11 và 42 mục sửa (tự lưu bài khi tạm dừng, kết thúc cả bài thi, phát lại phần nghe, chấm Writing ẩn danh có lịch sử, vòng đời kỳ thi và khoá dòng, sửa đáp án, phân quyền theo vai trò hiện tại, triển khai HTTPS).",
+    "Kết quả 16/16 tình huống đạt, không phát sinh lỗi mới. Listening chạy hết 30 phút thật, thí sinh thêm 25 % giờ chạy 37,5 phút.",
+    "Số đo nổi bật: lệnh tạm dừng đến 6/6 màn hình thí sinh tối đa 166 ms, thông báo cả phòng tối đa 163 ms; trang giám thị báo Offline sau 10 giây mất mạng; mọi thí sinh tự nộp trong vòng 15 giây sau giờ kết thúc, kể cả máy đã tắt.",
+    "Cùng ngày: 1464 kiểm thử backend, 201 kiểm thử giao diện, 69 kiểm thử công cụ chuyển đề và 6 kịch bản đầu-cuối đều đạt; kiểm thử tải 200 thí sinh trong 3 phút không có lỗi máy chủ (setup/loadtest/results/2026-11-07-03-28-200.md).",
+    "Ghi nhận, không sửa: khi đổi sang máy mới, thông báo đã đọc ở máy cũ hiện lại một lần (trạng thái đã đọc nằm trong trình duyệt).",
+    "Chưa thử được bằng cách này: tai nghe, loa, Safe Exam Browser và mạng LAN thật của phòng máy Victory; nên thử lại trên phòng máy khi triển khai."
+  ],
+  "figures": [
+    [
+      "00-phieu-dang-nhap-A2.png",
+      "Hình 1. Phiếu đăng nhập in cho thí sinh"
+    ],
+    [
+      "03-canh-bao-started-early.png",
+      "Hình 2. Cảnh báo thí sinh bắt đầu trước khi giám thị cho phép"
+    ],
+    [
+      "06-ca-phong-tam-dung.png",
+      "Hình 3. Giám thị tạm dừng cả phòng"
+    ],
+    [
+      "08-offline.png",
+      "Hình 4. Trang giám thị báo thí sinh mất kết nối"
+    ],
+    [
+      "11-thi-sinh-nghe-lai.png",
+      "Hình 5. Thí sinh nghe lại sau khi giám thị tua audio"
+    ],
+    [
+      "12-b1-chon-cau.png",
+      "Hình 6. B1 Writing Part 2: chỉ được chọn một câu"
+    ],
+    [
+      "13-end-now.png",
+      "Hình 7. End now: thí sinh kết thúc, không hoàn tác được"
+    ],
+    [
+      "14-het-gio.png",
+      "Hình 8. Listening hết giờ: cả phòng tự nộp"
+    ],
+    [
+      "15-bang-ket-qua.png",
+      "Hình 9. Bảng kết quả sau khi giám khảo chấm Writing"
+    ],
+    [
+      "16-nhat-ky-duyet.png",
+      "Hình 10. Nhật ký duyệt chéo: admin thứ hai duyệt xoá thí sinh"
+    ]
+  ]
+}
