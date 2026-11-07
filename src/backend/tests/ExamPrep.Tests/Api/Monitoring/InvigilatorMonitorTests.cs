@@ -398,6 +398,41 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
     }
 
     [Fact]
+    public async Task AfterEndAllAndTheSweep_StartingTheNextSectionIsRefusedAndCreatesNoAttempt_UntilTheTestEndTimeIsRestored()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        using var candidate = api.CreateClient();
+        (await candidate.PostAsJsonAsync("/api/candidate/auth/login", new LoginRequest(room.First.Username, Password), ct)).EnsureSuccessStatusCode();
+        (await candidate.PostAsJsonAsync("/api/candidate/auth/pin", new PinRequest(room.First.SessionPin), ct)).EnsureSuccessStatusCode();
+        (await candidate.PostAsync($"/api/candidate/sections/{room.First.ReadingWritingSectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
+        (await EndAllAsync(room.Invigilator, room.First.ExamId)).EnsureSuccessStatusCode();
+        await MoveParentEndBackAsync(room.First.ExamId, TimeSpan.FromMinutes(1));
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ExamPrep.Api.Delivery.AttemptExpiry>().SubmitExpiredAsync(ct);
+        }
+
+        var refused = await candidate.PostAsync($"/api/candidate/sections/{room.First.ListeningSectionId}/attempt", null, ct);
+
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Equal("The invigilator has ended your test.", (await refused.Content.ReadFromJsonAsync<ProblemTitle>(ct))!.Title);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+            Assert.False(await db.Attempts.AnyAsync(a => a.CandidateId == room.First.CandidateId && a.ExamSectionId == room.First.ListeningSectionId, ct));
+        }
+
+        (await UseTestEndTimeAsync(room.Invigilator, room.First.ExamId)).EnsureSuccessStatusCode();
+        var started = await candidate.PostAsync($"/api/candidate/sections/{room.First.ListeningSectionId}/attempt", null, ct);
+        Assert.Equal(HttpStatusCode.OK, started.StatusCode);
+        var state = (await started.Content.ReadFromJsonAsync<CandidateAttemptState>(ct))!;
+        Assert.InRange(state.RemainingSeconds, 30 * 60 - 10, 30 * 60);
+    }
+
+    private sealed record ProblemTitle(string? Title);
+
+    [Fact]
     public async Task UseTestEndTime_ForTheWholeTest_GivesARunningSectionItsOwnEndBackAndSkipsCandidatesNeverEnded()
     {
         api.SkipIfUnavailable();

@@ -11,7 +11,7 @@ test('neighbouring computers in the B1 room never get the same version', async (
   await staffSignsIn(page, admin)
   await page.getByRole('link', { name: b1ExamName }).click()
 
-  // Seats 2–8 for seven more candidates; the demo candidate (no seat number) sits at the first computer.
+  // Seats 2–8 for seven more candidates; the demo candidate (seat 1) sits at the first computer.
   await page.getByRole('button', { name: 'Add candidates' }).click()
   const rows = ['Le\tMai', 'Pham\tBinh', 'Vo\tChi', 'Do\tDung', 'Ho\tGiang', 'Ly\tHanh', 'Ta\tKhoa'].map((name, i) => `${String(i + 2).padStart(4, '0')}\t${name}\t\t${i + 2}`)
   await page.getByRole('textbox', { name: 'Candidate rows' }).fill(rows.join('\n'))

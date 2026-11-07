@@ -28,6 +28,11 @@ public sealed class ConcurrencyConflictTests(ApiFixture api) : IClassFixture<Api
 
     private sealed record Problem(string? Title);
 
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
     /// <summary>Changes the attempt's concurrency stamp behind the request's back, a set number of times.</summary>
     private sealed class ConflictMaker : SaveChangesInterceptor
     {
@@ -123,16 +128,19 @@ public sealed class ConcurrencyConflictTests(ApiFixture api) : IClassFixture<Api
             bumped = true;
             db.Database.ExecuteSqlInterpolated($"UPDATE attempts SET concurrency_stamp = UUID() WHERE id = {entry.Entity.Id}");
         };
-        var sweep = ActivatorUtilities.CreateInstance<ExamPrep.Api.Delivery.AttemptExpiry>(scope.ServiceProvider, db);
+        // The sweep under test reads a clock 61 minutes ahead, so its attempts are expired for it alone: the live worker
+        // of the test host runs on the real clock and never sees them as due (moving the starts back raced with it).
+        var later = new FixedClock(DateTimeOffset.UtcNow.AddMinutes(61));
+        var sweep = ActivatorUtilities.CreateInstance<ExamPrep.Api.Delivery.AttemptExpiry>(scope.ServiceProvider, db, (TimeProvider)later);
         foreach (var id in ids)
         {
             await api.StartAttemptAsync(id, first.ReadingWritingSectionId);
-            await api.MoveAttemptStartBackAsync(id, first.ReadingWritingSectionId, TimeSpan.FromMinutes(61));
         }
 
-        await sweep.SubmitExpiredAsync(ct);
+        var submitted = await sweep.SubmitExpiredAsync(ct);
 
         Assert.True(bumped);
+        Assert.Equal(3, submitted);
         using var check = api.Factory.Services.CreateScope();
         var statuses = await check.ServiceProvider.GetRequiredService<ExamPrepDbContext>().Attempts
             .Where(a => ids.Contains(a.CandidateId) && a.ExamSectionId == first.ReadingWritingSectionId)

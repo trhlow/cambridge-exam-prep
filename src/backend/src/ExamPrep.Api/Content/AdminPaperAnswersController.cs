@@ -111,15 +111,16 @@ public sealed class AdminPaperAnswersController(ExamPrepDbContext db, AnswerRema
         }
 
         // Then each submitted attempt on each paper, in its own save (AnswerRemarker reloads and retries a lost race),
-        // and last the counts on each log row.
+        // and last the counts on each log row. The keys are already committed, so this part does not follow the request's
+        // cancellation (closed tab, proxy timeout): otherwise attempts would keep the old key and the log row 0/0.
         var attempts = 0;
         var changed = 0;
         var skipped = new List<int>();
         foreach (var (target, questionId, before, log) in corrections)
         {
-            var result = await remarker.RemarkAsync(questionId, cancellationToken);
+            var result = await remarker.RemarkAsync(questionId, CancellationToken.None);
             await db.AnswerCorrections.Where(c => c.Id == log.Id)
-                .ExecuteUpdateAsync(set => set.SetProperty(c => c.AttemptsRemarked, result.Attempts).SetProperty(c => c.AttemptsSkipped, result.Skipped.Count), cancellationToken);
+                .ExecuteUpdateAsync(set => set.SetProperty(c => c.AttemptsRemarked, result.Attempts).SetProperty(c => c.AttemptsSkipped, result.Skipped.Count), CancellationToken.None);
             logger.LogWarning(
                 "Staff {UserId} corrected the answers of question {Number} of published paper {PaperId} from [{Before}] to [{After}]: {Attempts} attempts marked again, {Changed} scores changed, {Skipped} skipped ({SkippedIds})",
                 User.GetStaffId(), number, target, before, string.Join(" | ", answers), result.Attempts, result.Changed, result.Skipped.Count, string.Join(", ", result.Skipped));

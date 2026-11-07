@@ -51,6 +51,15 @@ describe('useAttempt when the server no longer knows this computer', () => {
     await waitFor(() => expect(result.current.isSignedOut).toBe(true))
     expect(result.current.error).toBeNull()
   })
+
+  it('shows the sentence when Start is refused because the invigilator ended the test (409), and stays signed in', async () => {
+    vi.spyOn(candidateApi, 'startAttempt').mockRejectedValue(new ApiError(409, 'The invigilator has ended your test.'))
+    const { result } = renderHook(() => useAttempt(6))
+
+    await waitFor(() => expect(result.current.error).toBe('The invigilator has ended your test.'))
+    expect(result.current.isSignedOut).toBe(false)
+    expect(result.current.isLoaded).toBe(false)
+  })
 })
 
 /** Task 1 (review of 2 November): answers survive a reload, a closed page and a pause. */

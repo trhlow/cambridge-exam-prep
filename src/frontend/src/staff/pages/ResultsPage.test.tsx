@@ -37,7 +37,8 @@ describe('ResultsPage warns about scripts without an examiner (B11)', () => {
     render(<ResultsPage examId={1} />)
 
     expect(await screen.findByRole('alert')).toHaveTextContent('2 Writing scripts have no examiner who can mark them')
-    expect(screen.getAllByText(/(can no longer mark)/)).toHaveLength(2)
+    // Candidate 3 is Final: nothing is left to mark, so no note beside the examiner.
+    expect(screen.getAllByText(/(can no longer mark)/)).toHaveLength(1)
   })
 
   it('shows no warning when every script has an examiner', async () => {
