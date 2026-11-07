@@ -32,3 +32,14 @@ Lỗi 409 khi lưu bài (3 và 6 lần) là đúng thiết kế: thí sinh đang
 - Phòng thi của Victory nhỏ hơn nhiều so với 100–200 máy, nên hệ thống dư tải trên một máy chủ bình thường.
 - Heartbeat là yêu cầu tốn nhất: mỗi lần ghi `last_heartbeat_at` là một commit xuống đĩa (12 ms trên ổ ảo của Docker Desktop) và đọc lại đồng hồ, câu trả lời, thông báo. Ở 200 thí sinh p99 là 0,55 s, không ảnh hưởng vì nhịp 5 s. Nếu cần phòng lớn hơn: gộp các lần ghi heartbeat thành một lệnh mỗi 1–2 s.
 - CPU của API cao nhất lúc đăng nhập (băm mật khẩu) và khi tạo 100–200 thí sinh (5 s cho cả danh sách); lúc làm bài ổn định 15–25 %.
+
+## Chạy lại ngày 07/11/2026 (sau đợt rà soát và sửa lỗi)
+
+Cùng tham số với lần 200 thí sinh (đăng nhập rải trong 40 s, làm bài 3 phút, tạm dừng rồi cho làm tiếp 20 thí sinh), trên mã nguồn đã sửa. Từ đợt sửa này, Start chạy trong transaction có khoá dòng kỳ thi, heartbeat ghi hai lệnh UPDATE, tải hình và audio kiểm tra lượt làm bài đang chạy, và tự lưu gửi ít nhất mỗi 3 giây khi thí sinh gõ liên tục.
+
+- 200/200 thí sinh vào được bài, 200/200 còn kết nối SignalR lúc kết thúc, 0 lần nối lại, 0 lỗi máy chủ.
+- Start: p95 13 ms (trước 19 ms). Heartbeat: p95 265 ms, p99 502 ms (trước 334 ms, 546 ms). Lưu câu trả lời: p95 17 ms (trước 29 ms).
+- Tạm dừng và cho làm tiếp đến 20/20 màn hình thí sinh trong tối đa 22 ms.
+- 5 lần lưu bị 409 là của các thí sinh đang bị tạm dừng: đúng thiết kế.
+
+Chi tiết: `2026-11-07-03-28-200.md`.

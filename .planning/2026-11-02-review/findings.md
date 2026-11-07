@@ -1,7 +1,9 @@
 # Review toàn hệ thống, 02/11/2026
 
 Tại commit `1552ce0`. Năm reviewer đọc độc lập năm mảng (thí sinh; phòng thi; phân quyền; đề, phiên, chấm; dữ liệu, triển khai).
-Cột **KT**: `x` = tự đọc code xác nhận; `~` = reviewer báo, chưa tự kiểm lại. Chưa mục nào được sửa.
+Cột **KT**: `x` = tự đọc code xác nhận; `~` = reviewer báo, chưa tự kiểm lại.
+
+**Trạng thái 07/11/2026: đã sửa đủ 42 mục** theo `fix-plan.md` (8 nhóm, mỗi nhóm có review riêng, sau đó review toàn nhánh và hai lượt sửa thêm; commit `9d6600c` … `708f213`). Kiểm thử trên mã cuối: backend 1464/1464, frontend 201/201, bộ chuyển đề 69/69, e2e 6/6, buổi thi thử 16/16 (`setup/mock-exam/results/2026-11-07/`), tải 200 thí sinh không lỗi máy chủ (`setup/loadtest/results/2026-11-07-03-28-200.md`). Quyết định khác bản kế hoạch và giới hạn còn lại ghi ở mục cuối.
 
 Kiểm thử chạy lại tại commit này: backend 1345/1345, frontend 119/119, bộ chuyển đề 69/69, e2e 6/6, buổi thi thử 16/16.
 Test đều qua nhưng không phủ các tình huống dưới đây, nên mục nào sửa cũng cần thêm test riêng.
@@ -78,3 +80,12 @@ Test đều qua nhưng không phủ các tình huống dưới đây, nên mục
 ## Đã kiểm, không có vấn đề
 
 Phép toán trộn đề và xếp chỗ; không lộ đáp án cho thí sinh; khoá phần thi theo thứ tự; PIN, xoay stamp; đếm giờ pause, incident, EndIn; 78 endpoint còn lại đúng quy tắc 404/403; duyệt hai admin không tự duyệt được; upload, zip, sanitise, CSV formula; migration giữ dữ liệu.
+
+## Quyết định và giới hạn còn lại (07/11)
+
+- B5: Resume cũng từ chối thí sinh offline (như Pause); thí sinh offline bị dừng chỉ chạy lại khi có mạng và giám thị cho làm tiếp.
+- B4: "End the whole test" có nút hoàn tác cấp bài thi "Use test end time"; phần thi đã nộp vẫn giữ nguyên (bài làm là hồ sơ thi), các phần sau chạy đủ giờ. Sau End all, thí sinh chưa bắt đầu phần sau thì không bắt đầu được (409) cho tới khi giám thị hoàn tác.
+- A7, A8: `manual_marks` giữ lịch sử, điểm mới nhất được tính; không đặt unique index trên `response_id` (mâu thuẫn với lịch sử), thay bằng khoá dòng `FOR UPDATE` khi lưu.
+- A6: sửa đáp án chỉ trên đề gốc hoặc đề thường, tự áp sang các mã đề trộn đã lấy câu đó; mã đề trộn từ chối và chỉ sang đề gốc; ghi nhật ký `answer_corrections`. Gửi lại cùng bản sửa là cách khôi phục nếu việc chấm lại bị gián đoạn.
+- A12: khi chuyển Active, máy trống nhận số máy nhỏ nhất chưa ai gõ; nhãn chữ như "A3" bị từ chối (không ghi đè).
+- Giới hạn còn lại: End now nộp ngay nên câu trả lời còn trong 3 giây chờ tự lưu bị từ chối; `assets.duration_ms` chưa được ghi nên giới hạn tua theo độ dài bản ghi chưa có hiệu lực; heartbeat ghi hai lệnh UPDATE; chưa thử tai nghe, loa, Safe Exam Browser và mạng LAN thật của phòng máy.
