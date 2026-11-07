@@ -97,11 +97,11 @@ Sơ đồ nguồn `.drawio` mở bằng [draw.io](https://www.drawio.com/); file
 
 ### Sơ đồ thực thể – quan hệ (ERD)
 
-28 bảng chia bốn nhóm (hai sơ đồ ERD dưới đây vẽ lúc còn 27 bảng, chưa có bảng nhật ký sửa đáp án `answer_corrections`; sẽ vẽ lại). Sơ đồ tổng quan cho thấy các nhóm tham chiếu nhau ra sao; mỗi nhóm có một ERD chi tiết, chỉ vẽ khoá ngoại trong nhóm, khoá ngoại sang nhóm khác ghi ngay sau cột (“→ exams”).
+28 bảng chia bốn nhóm (sơ đồ vẽ lại ngày 07/11/2026, đã có bảng nhật ký sửa đáp án `answer_corrections`). Sơ đồ tổng quan cho thấy các nhóm tham chiếu nhau ra sao; mỗi nhóm có một ERD chi tiết, chỉ vẽ khoá ngoại trong nhóm, khoá ngoại sang nhóm khác ghi ngay sau cột (“→ exams”).
 
 ![ERD tổng quan](thesis/diagrams/erd.drawio.png)
 
-- **[ERD toàn bộ](thesis/diagrams/erd-full.drawio.png)**: đủ 27 bảng (lúc vẽ) với mọi cột và mọi quan hệ trên một sơ đồ (chỉ các khoá ngoại ghi người tạo, duyệt, chấm, gửi về `users` được ghi bằng chữ “→ users”).
+- **[ERD toàn bộ](thesis/diagrams/erd-full.drawio.png)**: đủ 28 bảng với mọi cột và mọi quan hệ trên một sơ đồ (chỉ các khoá ngoại ghi người tạo, duyệt, chấm, gửi về `users` được ghi bằng chữ “→ users”).
 - [Nội dung đề thi](thesis/diagrams/erd-content.drawio.png) · [Kỳ thi và thí sinh](thesis/diagrams/erd-exams.drawio.png) · [Làm bài, chấm điểm và giám sát](thesis/diagrams/erd-delivery.drawio.png) · [Tài khoản nhân sự và cấu hình](thesis/diagrams/erd-accounts.drawio.png)
 
 Mọi cột trạng thái chỉ nhận đúng các giá trị của enum (ràng buộc CHECK sinh từ code); trạng thái lượt làm bài và các mốc thời gian phải khớp nhau; bài làm không bao giờ bị xoá dây chuyền khi xoá thí sinh, phần thi hay kỳ thi.

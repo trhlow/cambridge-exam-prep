@@ -43,7 +43,7 @@ GROUPS = {
     "content": ("Nội dung đề thi", ("#dae8fc", "#6c8ebf"), [
         ["exam_types", "section_templates"],
         ["test_papers", "paper_mixes", "paper_mix_sources"],
-        ["paper_parts", "assets"],
+        ["paper_parts", "assets", "answer_corrections"],
         ["question_groups", "questions", "answer_keys"],
     ]),
     "exams": ("Kỳ thi và thí sinh", ("#e1d5e7", "#9673a6"), [
@@ -360,12 +360,12 @@ FULL_COLUMNS = [
     ["exams", "candidates", "invigilator_actions"],
     ["exam_types", "exam_sections", "attempts", "security_events"],
     ["section_templates", "test_papers", "paper_mixes", "paper_mix_sources"],
-    ["paper_parts", "assets", "responses", "annotations"],
+    ["paper_parts", "assets", "responses", "annotations", "answer_corrections"],
     ["question_groups", "questions", "answer_keys", "manual_marks"],
 ]
 AUDIT_TO_USERS = {"created_by_user_id", "uploaded_by_user_id", "updated_by_user_id", "sent_by_user_id",
                   "resolved_by_user_id", "marker_user_id", "requested_by_user_id", "decided_by_user_id",
-                  "examiner_user_id"}
+                  "examiner_user_id", "corrected_by_user_id"}
 ACTIONS_USER = {("invigilator_actions", "user_id")}
 
 
