@@ -57,17 +57,50 @@ public sealed class AttemptExpiry(ExamPrepDbContext db, TimeProvider clock, Room
         try
         {
             await db.SaveChangesAsync(cancellationToken);
-            var ended = due.Where(a => a.Status == AttemptStatus.Submitted).ToList();
-            ended.Select(a => a.ExamSectionId).Distinct().ToList().ForEach(notifier.SectionChanged);
-            await notifier.RefreshCandidatesAsync(ended.Select(a => a.CandidateId));
+            await NotifyAsync(due.Where(a => a.Status == AttemptStatus.Submitted).ToList());
             logger.LogInformation("Submitted {Count} attempt(s) whose time ran out", submitted);
             return submitted;
         }
         catch (DbUpdateConcurrencyException)
         {
-            // Another writer (the candidate's own request or an invigilator) changed one of them; the next sweep retries.
-            return 0;
+            // Another writer (a heartbeat, the candidate's own request or an invigilator) changed one of them. That must
+            // not hold back the others until the next sweep: go on one attempt at a time, each from fresh data, as the
+            // marker does (final review 8).
+            db.ChangeTracker.Clear();
         }
+
+        var ended = new List<Attempt>();
+        foreach (var id in due.Select(a => a.Id))
+        {
+            var attempt = await db.Attempts.Include(a => a.ExamSection).Include(a => a.Candidate)
+                .SingleOrDefaultAsync(a => a.Id == id && a.Status == AttemptStatus.InProgress, cancellationToken);
+            if (attempt is null || !SubmitIfExpired(attempt, attempt.ExamSection!, attempt.Candidate!, now))
+            {
+                // Submitted, paused or given more time by the other writer meanwhile.
+                continue;
+            }
+
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                ended.Add(attempt);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Lost again; the next sweep looks at it from fresh data.
+                db.ChangeTracker.Clear();
+            }
+        }
+
+        await NotifyAsync(ended);
+        logger.LogInformation("Submitted {Count} attempt(s) whose time ran out, one at a time after a concurrent change", ended.Count);
+        return ended.Count;
+    }
+
+    private async Task NotifyAsync(List<Attempt> ended)
+    {
+        ended.Select(a => a.ExamSectionId).Distinct().ToList().ForEach(notifier.SectionChanged);
+        await notifier.RefreshCandidatesAsync(ended.Select(a => a.CandidateId));
     }
 }
 
