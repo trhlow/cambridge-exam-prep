@@ -80,16 +80,20 @@ def use_case():
 
     # Victory, 16/10/2026: every staff account is created by an admin; managers ("quản trị viên") create and edit in
     # their areas but never delete; deletions and account changes wait for the other admin; only examiners open
-    # candidates' work. The admin can do everything a manager can (generalisation).
+    # candidates' work. The admin can do everything a manager can (generalisation). Victory 29/10 (VE-70, VE-73): mixes
+    # of 2-6 source papers; examiners mark anonymous Writing scripts dealt to them and see no results; review of 2/11:
+    # admins correct a published answer key, invigilators end the whole test (End all) and undo it.
     blocks = [
-        ("admin", "Admin", ["Quản lý tài khoản nhân sự", "Duyệt yêu cầu xoá, đổi tài khoản", "Xem bảng điểm mọi kỳ thi"]),
-        ("mgr", "Quản trị viên", ["Nhập, kiểm tra và xuất bản đề thi", "Trộn hai đề gốc thành bốn đề",
+        ("admin", "Admin", ["Quản lý tài khoản nhân sự", "Duyệt yêu cầu xoá, đổi tài khoản", "Xem bảng điểm mọi kỳ thi",
+                              "Sửa đáp án đề đã xuất bản (chấm lại)"]),
+        ("mgr", "Quản trị viên", ["Nhập, kiểm tra và xuất bản đề thi", "Trộn 2–6 đề gốc thành nhiều mã đề",
                                   "Tạo kỳ thi, phân công giám thị và giám khảo", "Nhập thí sinh, in phiếu đăng nhập",
                                   "Đổi tên và logo trung tâm", "Gửi yêu cầu xoá (chờ Admin khác duyệt)"]),
-        ("exm", "Giám khảo", ["Xem bài làm của thí sinh", "Chấm bài viết (Writing)", "Xem kết quả kỳ thi được phân công"]),
+        ("exm", "Giám khảo", ["Nhận bài Writing được chia ngẫu nhiên", "Chấm Writing ẩn danh theo mã bài"]),
         ("inv", "Giám thị", ["Theo dõi phòng thi thời gian thực", "Tạm dừng / cho làm tiếp", "Cộng giờ sự cố (incident time)",
                              "Sửa giờ kết thúc (End now / at / in)", "Tua lại phần nghe (Rewind audio)",
-                             "Gửi thông báo cho thí sinh", "Xử lý cảnh báo", "Khôi phục bài kết thúc nhầm"]),
+                             "Gửi thông báo cho thí sinh", "Xử lý cảnh báo", "Kết thúc cả bài thi (End all)",
+                             "Khôi phục bài kết thúc nhầm"]),
     ]
     TOP = 70
     rows = 1 + sum(len(b[2]) for b in blocks)
