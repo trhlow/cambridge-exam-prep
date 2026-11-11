@@ -48,3 +48,6 @@ __pycache__/
 docker/certs/
 *.pem
 *.key
+
+# Local review scratch (subagent briefs, reports, diffs)
+.superpowers/
