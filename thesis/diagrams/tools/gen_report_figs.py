@@ -1,4 +1,4 @@
-"""Generate the figures of report chapters 1-2 into thesis/diagrams/report/*.drawio.
+"""Generate the figures of report chapters 1-3 into thesis/diagrams/report/*.drawio.
 
     python -I thesis/diagrams/tools/gen_report_figs.py        (repo root)
 
@@ -126,8 +126,36 @@ def test_pyramid():
     d.save("test-pyramid.drawio")
 
 
+def deployment():
+    """Figure 3.x: how the system is deployed in the exam room (docker/docker-compose.yml and the production override)."""
+    d = Doc()
+    white = BOX.replace("#dae8fc", "#ffffff")
+    cand = d.vertex("Máy thí sinh (× N)\nWindows, Safe Exam Browser", white, 40, 70, 270, 80)
+    staff = d.vertex("Máy giám thị, nhân viên\nChrome hoặc Edge", white, 40, 250, 270, 80)
+    d.vertex("Máy chủ phòng thi: Docker Compose", f"rounded=1;arcSize=4;whiteSpace=wrap;html=1;{FONT}fontStyle=1;"
+             "fillColor=none;strokeColor=#666666;dashed=1;verticalAlign=top;spacingTop=8;", 420, 20, 920, 420)
+    web = d.vertex("web: nginx\ntệp tĩnh React;\nchuyển tiếp /api, /hubs", BOX, 450, 120, 230, 120)
+    api = d.vertex("api: ASP.NET Core (.NET 10)\nREST API, hub SignalR,\ndịch vụ nền nộp bài và chấm,\nbộ chuyển đề Python",
+                   BOX.replace("#dae8fc", "#d5e8d4").replace("#6c8ebf", "#82b366"), 730, 120, 270, 120)
+    db = d.vertex("mysql: MySQL 8.4\nchỉ mở ở 127.0.0.1", BOX.replace("#dae8fc", "#fff2cc").replace("#6c8ebf", "#d6b656"),
+                  1110, 120, 210, 120)
+    cyl = f"shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;size=10;{FONT}fontSize=13;fillColor=#f5f5f5;strokeColor=#666666;"
+    files = d.vertex("App_Data: hình, audio,\nkhoá Data Protection", cyl, 750, 310, 230, 80)
+    data = d.vertex("mysql-data", cyl, 1130, 310, 170, 80)
+    d.edge(cand, web, "HTTP(S), WebSocket")
+    d.edge(staff, web, "/staff")
+    d.edge(web, api, "")
+    d.edge(api, db, "EF Core")
+    d.edge(api, files, "", "dashed=1;endArrow=none;")
+    d.edge(db, data, "", "dashed=1;endArrow=none;")
+    d.vertex("Bản demo: HTTP cổng 8080, môi trường Development. Bản thi thật: thêm docker-compose.prod.yml, "
+             "HTTPS cổng 443, môi trường Production.", NOTE, 420, 455, 920, 40)
+    d.save("deployment.drawio")
+
+
 if __name__ == "__main__":
     exam_day()
     clean_architecture()
     signalr()
     test_pyramid()
+    deployment()

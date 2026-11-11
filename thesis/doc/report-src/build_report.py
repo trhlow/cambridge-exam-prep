@@ -11,7 +11,9 @@ above, figures below, numbered per chapter with SEQ fields so Word builds the li
 
 Markup of noidung.md: "# X" chapter, "#! X" unnumbered title in the table of contents, "## " / "### " sections,
 "- " bullet, "|table| caption | widths" ... "|end|" (first row is the header), "!fig path | caption | width",
-"[@key]" or "[@key, tr. 5]" citations (refs.py), *italic*, and the @ commands handled in build().
+"[@key]" or "[@key, tr. 5]" citations (refs.py), *italic*, and the @ commands handled in build(). Tables and figures
+after "#! PHỤ LỤC" are numbered PL.1, PL.2, … (a SEQ field restarted at that number, still in the lists of tables
+and figures).
 """
 import copy
 import os
@@ -271,6 +273,7 @@ class Builder:
         self.figures = 0
         self.cited = []
         self.plain_sections = None  # counter while inside an unnumbered title
+        self.appendix = None  # {"Bảng": n, "Hình": n} once inside PHỤ LỤC
 
     # paragraphs are inserted before the final sectPr
     def para(self, style=None, align=None):
@@ -319,6 +322,8 @@ class Builder:
 
     def unnumbered(self, title, in_toc=True):
         self.plain_sections = 0
+        if title == "PHỤ LỤC":
+            self.appendix = {"Bảng": 0, "Hình": 0}
         self.para("DANHMUC" if in_toc else "TieuDe").add_run(title)
 
     def section(self, title, level):
@@ -335,9 +340,15 @@ class Builder:
 
     def caption(self, kind, text):
         p = self.para("Bảng" if kind == "Bảng" else "Caption")
-        n = self.tables if kind == "Bảng" else self.figures
-        p.add_run(f"{kind} {self.chapter}.")
-        add_field(p, f"SEQ {kind} \\* ARABIC \\s 1", str(n))
+        if self.appendix is not None:
+            self.appendix[kind] += 1
+            n = self.appendix[kind]
+            p.add_run(f"{kind} PL.")
+            add_field(p, f"SEQ {kind} \\r {n} \\* ARABIC", str(n))
+        else:
+            n = self.tables if kind == "Bảng" else self.figures
+            p.add_run(f"{kind} {self.chapter}.")
+            add_field(p, f"SEQ {kind} \\* ARABIC \\s 1", str(n))
         self.runs(p, ". " + text)
         return p
 
