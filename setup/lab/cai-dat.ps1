@@ -95,7 +95,15 @@ Step "4/6 Mã nguồn"
 $src = Join-Path $Root "cambridge-exam-prep"
 if (-not (Test-Path $src)) {
     $zip = if ($SourceZip) { (Resolve-Path $SourceZip).Path } else { Fetch "https://github.com/trhlow/cambridge-exam-prep/archive/refs/heads/main.zip" "ma-nguon.zip" }
-    Unzip $zip $src
+    # Only what the server runs: the GitHub archive also carries the report, slides, video and planning.
+    $full = "$src.full"
+    if (Test-Path $full) { Remove-Item $full -Recurse -Force }
+    Unzip $zip $full
+    foreach ($part in "src", "setup\lab", "setup\exam-package\samples") {
+        New-Item -ItemType Directory -Force (Split-Path (Join-Path $src $part)) | Out-Null
+        Move-Item (Join-Path $full $part) (Join-Path $src $part) -ErrorAction Stop
+    }
+    Remove-Item $full -Recurse -Force
 }
 else { Write-Host "Đã có $src (xoá thư mục này rồi chạy lại để lấy bản mới)" }
 

@@ -81,7 +81,9 @@ Chạy ba chương trình trong ba cửa sổ PowerShell: MySQL, API (.NET) và 
 **Trước buổi, trên laptop của bạn.** Chuẩn bị mã nguồn bằng một trong hai cách:
 
 - Đẩy mã nguồn lên GitHub (`git push`), khi đó script tự tải nhánh `main`; hoặc
-- Đóng gói bản đang có trên laptop rồi chép sang máy chủ: `git archive --format zip --prefix cambridge-exam-prep/ -o ma-nguon.zip HEAD`.
+- Đóng gói bản đang có trên laptop rồi chép sang máy chủ. Gói chỉ gồm phần máy chủ cần chạy (mã nguồn, script `setup/lab`, đề mẫu), không có báo cáo, slide hay video: `git archive --format zip --prefix cambridge-exam-prep/ -o ma-nguon.zip HEAD src setup/lab setup/exam-package/samples`.
+
+Tải từ GitHub thì được cả repo, nhưng `cai-dat.ps1` chỉ giữ lại ba phần đó.
 
 **Nhờ người ở trường:** bật máy chủ, cắm dây LAN, mở UltraViewer và gửi ID cùng mật khẩu; tắt chế độ ngủ của máy chủ trong suốt buổi thi; và (người có quyền admin) mở cổng 8080 theo mục 6.
 
