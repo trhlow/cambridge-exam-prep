@@ -43,4 +43,15 @@ describe('MessageCentre', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Messages' })).toBeInTheDocument()
   })
+
+  it('does not show again on another computer what was read on the first, and tells the server what is read', async () => {
+    const onRead = vi.fn()
+    // A new computer: nothing in this tab, but the server says message 4 was read.
+    render(<MessageCentre reader="A2/0101" messages={[message(4, 'Please sit down.'), message(5, 'Ten minutes left.')]} readUpTo={4} onRead={onRead} />)
+
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Ten minutes left.')
+    expect(screen.getByRole('button', { name: /Messages, 1 new/ })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'OK' }))
+    expect(onRead).toHaveBeenCalledWith(5)
+  })
 })

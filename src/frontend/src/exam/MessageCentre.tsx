@@ -4,7 +4,9 @@ import { BellIcon } from '../ui/icons'
 
 /**
  * Messages belong to the exam, not to a section, so what was read is kept per candidate and exam: a message read
- * during Reading & Writing must not pop up again when Listening opens (mock exam, VE-43).
+ * during Reading & Writing must not pop up again when Listening opens (mock exam, VE-43). The server keeps it too
+ * (`readUpTo`), so a candidate moved to another computer does not see them again; this tab's copy covers the moment
+ * before the server has heard.
  */
 const seenKey = (reader: string) => `victory.messages.seen.${reader}`
 
@@ -21,10 +23,11 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour
 /**
  * VE-17: the bell in the candidate header. A new message from the invigilator appears on screen until the candidate
  * presses OK; every message stays listed under the bell, on a screen that hides the test. What was read survives a
- * reload of this tab.
+ * reload and a move to another computer.
  */
-export function MessageCentre({ reader, messages }: { reader: string; messages: CandidateMessage[] }) {
-  const [seenId, setSeenId] = useState(() => readSeen(reader))
+export function MessageCentre({ reader, messages, readUpTo = 0, onRead }: { reader: string; messages: CandidateMessage[]; readUpTo?: number; onRead?: (upTo: number) => void }) {
+  const [localSeenId, setSeenId] = useState(() => readSeen(reader))
+  const seenId = Math.max(localSeenId, readUpTo)
   const [isOpen, setIsOpen] = useState(false)
   const unread = messages.filter((m) => m.id > seenId)
   const newest = unread.at(-1)
@@ -32,6 +35,9 @@ export function MessageCentre({ reader, messages }: { reader: string; messages: 
   const markRead = () => {
     const lastId = messages.at(-1)?.id ?? seenId
     setSeenId(lastId)
+    if (lastId > readUpTo) {
+      onRead?.(lastId)
+    }
     try {
       sessionStorage.setItem(seenKey(reader), String(lastId))
     } catch {

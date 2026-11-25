@@ -31,6 +31,8 @@ export interface AttemptView {
   playAudio: () => Promise<number>
   /** From the invigilator, oldest first. */
   messages: CandidateMessage[]
+  /** The newest message already read, as the server knows it. */
+  messagesReadUpTo: number
   /** When the server's figures were last received (changes on every heartbeat). */
   syncedAt: number | null
   /** The server no longer knows this computer (401): the candidate signed in on another one, or the session ended. */
@@ -47,6 +49,7 @@ type Clock = { status: AttemptState['status']; remaining: number; audioPositionM
 export function useAttempt(sectionId: number, owner?: string): AttemptView {
   const [clock, setClock] = useState<Clock | null>(null)
   const [messages, setMessages] = useState<CandidateMessage[]>([])
+  const [messagesReadUpTo, setMessagesReadUpTo] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
   const [selections, setSelections] = useState<Selections>({})
   const selectionsRef = useRef<Selections>({})
@@ -60,6 +63,7 @@ export function useAttempt(sectionId: number, owner?: string): AttemptView {
   const apply = useCallback((state: AttemptState) => {
     setClock({ status: state.status, remaining: state.remainingSeconds, audioPositionMs: state.audioPositionMs, receivedAt: Date.now() })
     setMessages((current) => (sameMessages(current, state.messages ?? []) ? current : (state.messages ?? [])))
+    setMessagesReadUpTo(state.messagesReadUpTo ?? 0)
   }, [])
 
   const sync = useCallback(() => {
@@ -183,6 +187,7 @@ export function useAttempt(sectionId: number, owner?: string): AttemptView {
     audioPositionNow,
     playAudio,
     messages,
+    messagesReadUpTo,
     syncedAt: clock?.receivedAt ?? null,
     isSignedOut,
   }

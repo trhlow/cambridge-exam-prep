@@ -42,6 +42,12 @@ public class Candidate
 
     public ContrastMode Contrast { get; set; } = ContrastMode.BlackOnWhite;
 
+    /// <summary>
+    /// The newest invigilator message the candidate has pressed OK on (message ids only grow), kept on the server so a
+    /// message read on one computer does not pop up again on the next; 0 before any.
+    /// </summary>
+    public int MessagesReadUpTo { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     /// <summary>VE-73: the examiner who marks this candidate's Writing, dealt at random and evenly; null until dealt.</summary>

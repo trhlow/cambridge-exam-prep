@@ -695,4 +695,41 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
         Assert.Equal(["Thirty minutes left."], state!.Messages.Select(m => m.Text));
         Assert.True(monitor!.Candidates.Single(c => c.CandidateId == room.First.CandidateId).IsOnline);
     }
+
+    private sealed record ReadState(List<MessageView> Messages, int MessagesReadUpTo);
+
+    [Fact]
+    public async Task MessagesRead_AreKeptOnTheServer_SoTheNextComputerDoesNotShowThemAgain()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var sectionId = room.First.ReadingWritingSectionId;
+        async Task<HttpClient> SignInAsync()
+        {
+            var client = api.CreateClient();
+            (await client.PostAsJsonAsync("/api/candidate/auth/login", new LoginRequest(room.First.Username, Password), ct)).EnsureSuccessStatusCode();
+            (await client.PostAsJsonAsync("/api/candidate/auth/pin", new PinRequest(room.First.SessionPin), ct)).EnsureSuccessStatusCode();
+            return client;
+        }
+
+        using var first = await SignInAsync();
+        (await first.PostAsync($"/api/candidate/sections/{sectionId}/attempt", null, ct)).EnsureSuccessStatusCode();
+        (await room.Invigilator.PostAsJsonAsync($"/api/staff/exams/{room.First.ExamId}/messages", new { text = "Please sit down." }, ct)).EnsureSuccessStatusCode();
+        (await room.Invigilator.PostAsJsonAsync($"/api/staff/exams/{room.First.ExamId}/messages", new { text = "Not for you.", candidateIds = new[] { room.SecondId } }, ct)).EnsureSuccessStatusCode();
+        (await room.Invigilator.PostAsJsonAsync($"/api/staff/exams/{room.First.ExamId}/messages", new { text = "Ten minutes left." }, ct)).EnsureSuccessStatusCode();
+        var all = (await room.Invigilator.GetFromJsonAsync<List<MessageView>>($"/api/staff/exams/{room.First.ExamId}/messages", ct))!;
+        var seen = (await (await first.PostAsync($"/api/candidate/sections/{sectionId}/heartbeat", null, ct)).Content.ReadFromJsonAsync<ReadState>(ct))!.Messages;
+
+        var notTheirs = await first.PutAsJsonAsync("/api/candidate/auth/messages-read", new { upTo = all.Single(m => m.Text == "Not for you.").Id }, ct);
+        var read = await first.PutAsJsonAsync("/api/candidate/auth/messages-read", new { upTo = seen[^1].Id }, ct);
+        var back = await first.PutAsJsonAsync("/api/candidate/auth/messages-read", new { upTo = seen[0].Id }, ct);
+        // The candidate moves to another computer: signing in again signs the first one out.
+        using var second = await SignInAsync();
+        var state = (await (await second.PostAsync($"/api/candidate/sections/{sectionId}/heartbeat", null, ct)).Content.ReadFromJsonAsync<ReadState>(ct))!;
+
+        Assert.Equal(HttpStatusCode.BadRequest, notTheirs.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, read.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, back.StatusCode);
+        Assert.Equal(seen[^1].Id, state.MessagesReadUpTo);
+    }
 }

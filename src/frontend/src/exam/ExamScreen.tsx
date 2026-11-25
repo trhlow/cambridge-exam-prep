@@ -221,7 +221,14 @@ export function ExamScreen({ profile, section, onFinished, onProfileChange, onSi
         isNotesDisabled={!canNote}
         saveStatus={attempt.saveStatus}
         isAudioPlaying={player.state === 'playing'}
-        bell={<MessageCentre reader={`${profile.examName}/${profile.candidateNumber}`} messages={attempt.messages} />}
+        bell={
+          <MessageCentre
+            reader={`${profile.examName}/${profile.candidateNumber}`}
+            messages={attempt.messages}
+            readUpTo={attempt.messagesReadUpTo}
+            onRead={(upTo) => void candidateApi.markMessagesRead(upTo).catch(() => {})}
+          />
+        }
         volume={isListening ? { value: player.volume, onChange: player.setVolume } : undefined}
       />
       {audioNotice && (

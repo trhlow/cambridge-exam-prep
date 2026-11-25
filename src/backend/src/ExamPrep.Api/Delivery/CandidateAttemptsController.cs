@@ -16,6 +16,7 @@ namespace ExamPrep.Api.Delivery;
 /// <summary>Where the candidate stands in a section: the server's clock, every saved answer and the invigilator's messages.</summary>
 /// <param name="AudioPositionMs">Listening only: where the recording is now; null until the candidate presses Play.</param>
 /// <param name="Selections">"Answering this question?" answers other than Undecided (B1 Writing Part 2), by question number.</param>
+/// <param name="MessagesReadUpTo">The newest message the candidate has already read, on any computer.</param>
 public sealed record AttemptState(
     int SectionId,
     string Status,
@@ -25,7 +26,8 @@ public sealed record AttemptState(
     IReadOnlyDictionary<int, string> Answers,
     int? AudioPositionMs,
     IReadOnlyList<CandidateMessageView> Messages,
-    IReadOnlyDictionary<int, string>? Selections = null);
+    IReadOnlyDictionary<int, string>? Selections = null,
+    int MessagesReadUpTo = 0);
 
 public sealed record ResponseItem([Range(1, 1000)] int QuestionNumber, [StringLength(20_000)] string Value);
 
@@ -462,7 +464,7 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         int? audioPosition = attempt.AudioStartedAt is null ? null : (int)attemptClock.AudioPosition(now).TotalMilliseconds;
 
         var messages = await CandidateMessages.ForCandidateAsync(db, section.ExamId, candidate.Id, cancellationToken);
-        return new AttemptState(section.Id, attempt.Status.ToString(), attempt.EndsAt, (int)Math.Ceiling(remaining.TotalSeconds), now, answers, audioPosition, messages, selections);
+        return new AttemptState(section.Id, attempt.Status.ToString(), attempt.EndsAt, (int)Math.Ceiling(remaining.TotalSeconds), now, answers, audioPosition, messages, selections, candidate.MessagesReadUpTo);
     }
 
     private async Task<CandidateSectionSummary?> FindSectionAsync(int sectionId, CancellationToken cancellationToken) =>

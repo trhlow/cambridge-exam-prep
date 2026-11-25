@@ -43,6 +43,8 @@ export const candidateApi = {
   enterPin: (pin: string) => post<CandidateProfile>('/api/candidate/auth/pin', { pin }),
   logout: () => post<void>('/api/candidate/auth/logout'),
   savePreferences: (textSize: TextSize, contrast: Contrast) => put<CandidateProfile>('/api/candidate/auth/preferences', { textSize, contrast }),
+  /** Messages up to this id are read, so another computer does not show them again. */
+  markMessagesRead: (upTo: number) => put<void>('/api/candidate/auth/messages-read', { upTo }),
   sections: () => request<CandidateSection[]>('/api/candidate/sections'),
   paper: (sectionId: number) => request<Paper>(`/api/candidate/sections/${sectionId}/paper`),
   /** Starts the section, or returns the running attempt unchanged (after a reload). */

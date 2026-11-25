@@ -12,3 +12,6 @@ public sealed record CandidatePinRequest([Required, StringLength(16)] string Pin
 
 /// <summary>The Options screen: text size (Regular, Large, ExtraLarge) and contrast (BlackOnWhite, WhiteOnBlack, YellowOnBlack).</summary>
 public sealed record CandidatePreferencesRequest([Required] string TextSize, [Required] string Contrast);
+
+/// <param name="UpTo">The id of the newest message the candidate pressed OK on.</param>
+public sealed record MessagesReadRequest([Range(1, int.MaxValue)] int UpTo);

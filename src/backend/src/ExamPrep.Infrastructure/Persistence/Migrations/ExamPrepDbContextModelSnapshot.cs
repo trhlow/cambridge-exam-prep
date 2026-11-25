@@ -494,6 +494,10 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnName("marking_code")
                         .IsFixedLength();
 
+                    b.Property<int>("MessagesReadUpTo")
+                        .HasColumnType("int")
+                        .HasColumnName("messages_read_up_to");
+
                     b.Property<DateTime?>("ParentEndOverrideAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("parent_end_override_at");
@@ -553,6 +557,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_candidates_contrast_values", "contrast IN ('BlackOnWhite', 'WhiteOnBlack', 'YellowOnBlack')");
 
                             t.HasCheckConstraint("CK_candidates_marking_code", "marking_code IS NULL OR REGEXP_LIKE(marking_code, '^[A-HJ-NP-Z2-9]{6}$', 'c')");
+
+                            t.HasCheckConstraint("CK_candidates_messages_read", "messages_read_up_to >= 0");
 
                             t.HasCheckConstraint("CK_candidates_planned_extra", "planned_extra_percent BETWEEN 0 AND 100");
 

@@ -172,6 +172,27 @@ public sealed class CandidateAuthController(
         return CandidateProfile.From(candidate, candidate.Exam!, User.IsPinVerified());
     }
 
+    /// <summary>
+    /// The candidate pressed OK on the invigilator's messages up to this one. Kept on the server so moving to another
+    /// computer does not show them again; never moves back.
+    /// </summary>
+    [HttpPut("messages-read")]
+    [Authorize(Policy = CandidateAuthDefaults.ExamPolicy)]
+    public async Task<IActionResult> MarkMessagesRead(MessagesReadRequest request, CancellationToken cancellationToken)
+    {
+        var candidateId = User.GetCandidateId();
+        var examId = User.GetExamId();
+        if (!await db.CandidateMessages.AnyAsync(m => m.Id == request.UpTo && m.ExamId == examId && (m.CandidateId == null || m.CandidateId == candidateId), cancellationToken))
+        {
+            return Problem(title: "There is no such message.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        // One conditional UPDATE: two tabs or computers pressing OK at once keep the higher of the two.
+        await db.Candidates.Where(c => c.Id == candidateId && c.MessagesReadUpTo < request.UpTo)
+            .ExecuteUpdateAsync(set => set.SetProperty(c => c.MessagesReadUpTo, request.UpTo), cancellationToken);
+        return NoContent();
+    }
+
     private static bool PinMatches(string entered, string expected) =>
         CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(entered.Trim()), Encoding.UTF8.GetBytes(expected));
 

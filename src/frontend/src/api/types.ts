@@ -103,6 +103,8 @@ export interface AttemptState {
   messages: CandidateMessage[]
   /** "Answering this question?" choices other than Undecided (B1 Writing Part 2). */
   selections?: Selections
+  /** The newest message the candidate has already pressed OK on, on any computer. */
+  messagesReadUpTo?: number
 }
 
 export interface CandidateMessage {
