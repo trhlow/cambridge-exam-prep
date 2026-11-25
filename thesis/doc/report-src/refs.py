@@ -19,6 +19,14 @@ REFS = {
     "b1hb": ("Cambridge Assessment English 2", "Cambridge Assessment English, *B1 Preliminary for Schools: Handbook for "
              "Teachers for Exams from 2020*. Cambridge, U.K.: UCLES, 2021. [Online]. Available: "
              "https://www.cambridgeenglish.org/de/Images/168143-cambridge-english-preliminary-for-schools-teachers-handbook.pdf"),
+    "cescale_a2": ("Cambridge Assessment English 3", "Cambridge Assessment English, “A2 Key and A2 Key for Schools for "
+                   "exams from 2020: Practice test score to Cambridge English Scale score,” UCLES, Cambridge, U.K., "
+                   "CER/4240/V2/AUG19, Aug. 2019. [Online]. Available: "
+                   "https://www.cambridgeenglish.org/fr/Images/646302-a1a2scale.pdf"),
+    "cescale_b1": ("Cambridge Assessment English 4", "Cambridge Assessment English, “B1 Preliminary and B1 Preliminary for "
+                   "Schools for exams from 2020: Practice test score to Cambridge English Scale score,” UCLES, Cambridge, "
+                   "U.K., CER/4240/V2/AUG19, Aug. 2019. [Online]. Available: "
+                   "https://www.cambridgeenglish.org/fr/Images/646303-b1scale.pdf"),
     "digital": ("Cambridge English", "Cambridge English, “Cambridge English Qualifications Digital.” " + ACCESSED +
                 "https://www.cambridgeenglish.org/exams-and-tests/qualifications/ways-to-take-exam/digital/"),
     "booklet": ("Cambridge University Press & Assessment 1", "Cambridge University Press & Assessment, *Exam Day Booklet "

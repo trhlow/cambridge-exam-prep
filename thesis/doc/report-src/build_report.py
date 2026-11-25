@@ -126,14 +126,19 @@ def setup_styles(doc):
     set_child(p, "w:pageBreakBefore")
     set_child(p, "w:spacing", **{"w:before": 0, "w:after": 360, "w:line": 360, "w:lineRule": "auto"})
     set_child(p, "w:ind", **{"w:left": 0, "w:firstLine": 0})
+    # the template's chapter titles ("CHƯƠNG 1: TỔNG QUAN") are centred bold 14 pt with no rule under them
+    for old in p.findall(qn("w:pBdr")):
+        p.remove(old)
     order_ppr(p)
+    for name in ("Heading 1", "Heading 2"):
+        for tag in ("w:sz", "w:szCs"):
+            set_child(rpr(styles[name].element), tag, **{"w:val": 28})
     for name in ("Heading 2", "Heading 3"):
         p = ppr(styles[name].element)
         set_child(p, "w:spacing", **{"w:before": 240, "w:after": 120, "w:line": 360, "w:lineRule": "auto"})
         set_child(p, "w:jc", **{"w:val": "both"})
         order_ppr(p)
-    # 2.1.1 in bold italic, as usual for the third level
-    set_child(rpr(styles["Heading 3"].element), "w:i")
+    # Heading 3 stays as in the template: bold 13 pt, not italic
 
     # Unnumbered titles: DANHMUC goes into the table of contents, TieuDe (copy) does not.
     dm = styles["DANHMUC"].element
@@ -144,7 +149,9 @@ def setup_styles(doc):
     set_child(p, "w:jc", **{"w:val": "center"})
     set_child(p, "w:outlineLvl", **{"w:val": 0})
     order_ppr(p)
-    set_child(rpr(dm), "w:sz", **{"w:val": 26})
+    # unnumbered titles in the template are bold 14 pt (LỜI CAM ĐOAN, MỤC LỤC, TÓM TẮT ĐỒ ÁN, ...)
+    for tag in ("w:sz", "w:szCs"):
+        set_child(rpr(dm), tag, **{"w:val": 28})
     td = copy.deepcopy(dm)
     set_child(ppr(td), "w:outlineLvl", **{"w:val": 9})
     td.set(qn("w:styleId"), "TieuDe")
@@ -167,7 +174,6 @@ def setup_styles(doc):
         tabs.append(el("w:tab", **{"w:val": "right", "w:leader": "dot", "w:pos": TEXT_WIDTH_TWIPS}))
         set_child(p, "w:spacing", **{"w:before": 60, "w:after": 60, "w:line": 312, "w:lineRule": "auto"})
         order_ppr(p)
-    set_child(rpr(styles["table of figures"].element), "w:i", **{"w:val": 0})
 
     add_bullet_style(doc)
 
@@ -234,7 +240,7 @@ def fill_covers(doc):
             p.runs[0].text = TITLE
             for r in p.runs[1:]:
                 r.text = ""
-            p.runs[0].font.size = Pt(18)
+            p.runs[0].font.size = Pt(20)  # as the template; a long title wraps onto centred lines
         if text in STUDENT:
             r = p.add_run(" " + STUDENT[text])
             r.font.size, r.font.name = p.runs[0].font.size, "Times New Roman"
@@ -246,7 +252,7 @@ def fill_footer(doc):
         if "GVHD" in p.text:
             runs = p.runs
             runs[0].text = "GVHD: ThS. Nhan Minh Phúc"
-            runs[-1].text = "SVTH: Trần Hoàng Long"
+            runs[-1].text = "\tSVTH: Trần Hoàng Long"  # two tabs as in the template: SVTH sits at the right tab
     sec = doc.sections[1]
     sec.left_margin, sec.right_margin = Cm(3), Cm(1.5)
     sec.top_margin, sec.bottom_margin = Cm(2), Cm(2)
@@ -408,12 +414,20 @@ class Builder:
             first = False
 
     def comment_page(self, title, signer):
+        """As the template: the centred title, two blank lines, 33 dotted writing lines (a tab with a dot leader to the
+        right margin), a blank line, then the signer in bold and "(Ký và ghi rõ họ tên)" on the right."""
         self.unnumbered(title, in_toc=False)
-        for _ in range(16):
-            p = self.para()
-            p.paragraph_format.line_spacing = 1.5
-            p.add_run("." * 132)
-        self.sign(f"Vĩnh Long, ngày … tháng … năm 2026|{signer}|(Ký và ghi rõ họ tên)")
+        for n in range(36):
+            p = self.para(align=WD_ALIGN_PARAGRAPH.JUSTIFY)
+            pf = p.paragraph_format
+            pf.space_before, pf.space_after, pf.line_spacing, pf.first_line_indent = Pt(0), Pt(0), Pt(16), Cm(0)  # single line of 14 pt, as the template
+            if 2 <= n < 35:
+                tabs = set_child(ppr(p._p), "w:tabs")
+                tabs.append(el("w:tab", **{"w:val": "right", "w:leader": "dot", "w:pos": TEXT_WIDTH_TWIPS}))
+                order_ppr(p._p.pPr)
+                p.add_run("\t")
+        self.para(align=WD_ALIGN_PARAGRAPH.RIGHT).add_run(signer).bold = True
+        self.para(align=WD_ALIGN_PARAGRAPH.RIGHT).add_run("(Ký và ghi rõ họ tên)")
 
     def toc(self, title, instr):
         self.unnumbered(title, in_toc=title != "MỤC LỤC")
