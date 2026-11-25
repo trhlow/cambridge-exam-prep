@@ -74,6 +74,48 @@ Làm theo `setup/INSTALL.md` mục 1, 3 và 6 (hoặc tài liệu từng bước
 
 Chạy ba chương trình trong ba cửa sổ PowerShell: MySQL, API (.NET) và trang web (Node.js). Tất cả đặt trong một thư mục, ví dụ `D:\examprep`, nằm trên ổ không bị đóng băng. Cách này đã được thử ngày 18/11/2026: API tự tạo bảng trên cơ sở dữ liệu trống, tạo kỳ thi demo, và máy khác vào được qua địa chỉ LAN.
 
+### 5.0. Cách nhanh: hai script (dùng khi cài từ xa, ví dụ qua UltraViewer)
+
+`setup/lab/cai-dat.ps1` làm hết các bước 5.1–5.5 bằng một lệnh; `setup/lab/chay.ps1` bật ba cửa sổ và in địa chỉ cho máy con. Cả hai chạy bằng tài khoản thường, không cần quyền admin.
+
+**Trước buổi, trên laptop của bạn.** Chuẩn bị mã nguồn bằng một trong hai cách:
+
+- Đẩy mã nguồn lên GitHub (`git push`), khi đó script tự tải nhánh `main`; hoặc
+- Đóng gói bản đang có trên laptop rồi chép sang máy chủ: `git archive --format zip --prefix cambridge-exam-prep/ -o ma-nguon.zip HEAD`.
+
+**Nhờ người ở trường:** bật máy chủ, cắm dây LAN, mở UltraViewer và gửi ID cùng mật khẩu; tắt chế độ ngủ của máy chủ trong suốt buổi thi; và (người có quyền admin) mở cổng 8080 theo mục 6.
+
+**Qua UltraViewer, trên máy chủ:**
+
+1. Chép `cai-dat.ps1` (và `ma-nguon.zip` nếu không dùng GitHub) vào `D:\examprep-setup` bằng chức năng gửi tệp của UltraViewer. Nếu đã push, có thể tải thẳng trong PowerShell:
+
+   ```powershell
+   mkdir D:\examprep-setup; cd D:\examprep-setup
+   Invoke-WebRequest https://raw.githubusercontent.com/trhlow/cambridge-exam-prep/main/setup/lab/cai-dat.ps1 -OutFile cai-dat.ps1
+   ```
+
+2. Mở PowerShell thường (không cần *Run as administrator*) và cài. Lần đầu tải khoảng 500 MB, mất 10–20 phút tuỳ mạng:
+
+   ```powershell
+   cd D:\examprep-setup
+   powershell -ExecutionPolicy Bypass -File cai-dat.ps1                            # mã nguồn từ GitHub
+   powershell -ExecutionPolicy Bypass -File cai-dat.ps1 -SourceZip .\ma-nguon.zip  # hoặc từ tệp zip
+   ```
+
+   Mọi thứ nằm trong `D:\examprep` (máy không có ổ D: thì trong thư mục người dùng). Chạy lại lệnh thì những phần đã có được bỏ qua.
+
+3. Bật hệ thống:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File D:\examprep\cambridge-exam-prep\setup\lab\chay.ps1
+   ```
+
+   Ba cửa sổ *1 MySQL*, *2 API*, *3 Web* hiện ra. Để chúng mở suốt buổi. Cuối cùng script in địa chỉ cho thí sinh và giám thị, và nhắc lệnh mở cổng nếu tường lửa chưa có luật.
+
+4. Làm mục 6 (mở cổng, thử từ một máy con), rồi mục 7.
+
+Thoát UltraViewer không làm tắt hệ thống, vì nó chạy trên máy chủ. Để tắt: `chay.ps1 -Stop`.
+
 ### 5.1. Tải về (có thể tải ở nhà rồi chép bằng USB)
 
 | Thành phần | Tải | Giải nén vào |
