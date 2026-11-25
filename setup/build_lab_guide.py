@@ -1,10 +1,11 @@
-"""Builds setup/HuongDan_PhongMay.docx from setup/HUONG_DAN_PHONG_MAY.md.
+"""Builds the Word lab guides from their Markdown: setup/HuongDan_PhongMay.docx from setup/HUONG_DAN_PHONG_MAY.md, and
+with the argument cai-tu-xa setup/HuongDan_CaiTuXa_UltraViewer.docx from setup/HUONG_DAN_CAI_TU_XA.md.
 
 The Word guide for non-technical readers (HuongDan_CaiDat_ChayThu.docx) is the template: its cover, styles, header,
 table of contents and block shapes (grey command box, coloured notes, blue-headed tables, "Bước n." lists) are
 copied, so both guides look alike. Run from the repository root:
 
-    python -I setup/build_lab_guide.py
+    python -I setup/build_lab_guide.py [cai-tu-xa]
     powershell -ExecutionPolicy Bypass -File thesis/doc/report-src/update_fields.ps1 -Doc setup/HuongDan_PhongMay.docx
 
 The second command lets Word fill the table of contents and page numbers (Word must not have the file open).
@@ -12,20 +13,24 @@ The second command lets Word fill the table of contents and page numbers (Word m
 import copy
 import os
 import re
+import sys
 
 import docx
 from docx.oxml.ns import qn
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE = os.path.join(HERE, "HuongDan_CaiDat_ChayThu.docx")
-SOURCE = os.path.join(HERE, "HUONG_DAN_PHONG_MAY.md")
-OUT = os.path.join(HERE, "HuongDan_PhongMay.docx")
-
-COVER = {
-    "HƯỚNG DẪN CÀI ĐẶT VÀ CHẠY THỬ": "HƯỚNG DẪN CHẠY THỬ TRÊN PHÒNG MÁY",
-    "Dành cho người không có chuyên môn công nghệ thông tin": "Một máy chủ và nhiều máy con trong mạng LAN",
+# name: (Markdown, Word file, cover title, cover subtitle, page header)
+GUIDES = {
+    "phong-may": ("HUONG_DAN_PHONG_MAY.md", "HuongDan_PhongMay.docx", "HƯỚNG DẪN CHẠY THỬ TRÊN PHÒNG MÁY",
+                  "Một máy chủ và nhiều máy con trong mạng LAN", "Hướng dẫn chạy thử trên phòng máy – hệ thống thi Victory"),
+    "cai-tu-xa": ("HUONG_DAN_CAI_TU_XA.md", "HuongDan_CaiTuXa_UltraViewer.docx", "HƯỚNG DẪN CÀI MÁY CHỦ TỪ XA",
+                  "Cài qua UltraViewer, máy con vào thi qua mạng LAN", "Hướng dẫn cài máy chủ từ xa – hệ thống thi Victory"),
 }
-HEADER = "Hướng dẫn chạy thử trên phòng máy – hệ thống thi Victory"
+source, out, title, subtitle, HEADER = GUIDES[sys.argv[1] if len(sys.argv) > 1 else "phong-may"]
+SOURCE = os.path.join(HERE, source)
+OUT = os.path.join(HERE, out)
+COVER = {"HƯỚNG DẪN CÀI ĐẶT VÀ CHẠY THỬ": title, "Dành cho người không có chuyên môn công nghệ thông tin": subtitle}
 TABLE_WIDTH = 9071
 INLINE = re.compile(r"(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)")
 
@@ -265,6 +270,11 @@ def build():
                 in_list = False
             b.paragraph(stripped)
         i += 1
+    # The template's own screenshots stay in the package after its body is replaced: drop the ones nothing shows.
+    xml = b.doc.element.xml
+    for rid, rel in list(b.doc.part.rels.items()):
+        if rel.reltype.endswith("/image") and f'"{rid}"' not in xml:
+            del b.doc.part.rels[rid]
     b.doc.save(OUT)
     print(f"wrote {OUT}")
 
