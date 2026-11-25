@@ -21,7 +21,7 @@ $src = Join-Path $Root "cambridge-exam-prep"
 if (-not (Test-Path $src)) { throw "Chưa cài ở ${Root}: chạy cai-dat.ps1 trước" }
 
 if ($Stop) {
-    Get-Process node, dotnet, ExamPrep.Api -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$Root*" } | Stop-Process -Force
+    Get-Process node, dotnet, ExamPrep.Api, VBCSCompiler -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$Root*" } | Stop-Process -Force
     & "$bin\mysqladmin.exe" -uroot "-p$RootPassword" "--port=$DbPort" shutdown 2>$null
     Write-Host "Đã tắt"
     return

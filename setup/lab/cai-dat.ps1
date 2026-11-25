@@ -118,6 +118,7 @@ Push-Location (Join-Path $src "src\backend")
 try {
     dotnet build src/ExamPrep.Api -v q
     if ($LASTEXITCODE -ne 0) { throw "dotnet build lỗi" }
+    dotnet build-server shutdown | Out-Null  # the compiler server would otherwise keep files of the folder open
 }
 finally { Pop-Location }
 
