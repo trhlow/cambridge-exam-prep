@@ -527,6 +527,11 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                         .HasColumnType("char(36)")
                         .HasColumnName("security_stamp");
 
+                    b.Property<decimal?>("SpeakingScore")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)")
+                        .HasColumnName("speaking_score");
+
                     b.Property<string>("TextSize")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -561,6 +566,8 @@ namespace ExamPrep.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("CK_candidates_messages_read", "messages_read_up_to >= 0");
 
                             t.HasCheckConstraint("CK_candidates_planned_extra", "planned_extra_percent BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("CK_candidates_speaking_score", "speaking_score IS NULL OR (speaking_score >= 0 AND speaking_score * 2 = FLOOR(speaking_score * 2))");
 
                             t.HasCheckConstraint("CK_candidates_text_size_values", "text_size IN ('Regular', 'Large', 'ExtraLarge')");
                         });

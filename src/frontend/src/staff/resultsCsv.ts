@@ -15,6 +15,22 @@ const FORMULA_START = /^[=+\-@\t\r]/
 export const quote = (text: string) => `"${(FORMULA_START.test(text) ? `'${text}` : text).replace(/"/g, '""')}"`
 const cell = (value: number | null) => (value === null ? '' : String(value))
 
+const SCALE_HEADER = ['Reading (scale)', 'Writing (scale)', 'Listening (scale)', 'Speaking marks', 'Speaking (scale)', 'Overall (scale)', 'Grade', 'CEFR']
+
+const scaleCells = (r: CandidateResult) => {
+  const skill = (name: string) => r.skills?.find((s) => s.skill === name)
+  return [
+    cell(skill('Reading')?.scale ?? null),
+    cell(skill('Writing')?.scale ?? null),
+    cell(skill('Listening')?.scale ?? null),
+    cell(skill('Speaking')?.rawScore ?? null),
+    cell(skill('Speaking')?.scale ?? null),
+    cell(r.overall ?? null),
+    quote(r.grade ?? ''),
+    quote(r.cefr ?? ''),
+  ]
+}
+
 /**
  * Results as CSV for Excel: a byte-order mark so Vietnamese names open correctly, text quoted, one score and
  * maximum column per section, and a status column so a score that still lacks its Writing marks is not read as final.
@@ -23,13 +39,16 @@ export function resultsCsv(results: CandidateResult[]): string {
   const sections = results[0]?.sections ?? []
   // Sections with mixed papers (VE-67) also get the version each candidate sat.
   const mixed = sections.map((_, i) => results.some((r) => r.sections[i]?.paperVersion))
-  const header = [quote('Candidate number'), quote('Name'), quote('Writing script'), quote('Examiner'), ...sections.flatMap((s, i) => [quote(s.title), quote(`${s.title} max`), quote(`${s.title} status`), ...(mixed[i] ? [quote(`${s.title} version`)] : [])])]
+  // A2 Key and B1 Preliminary also get the Cambridge English Scale: each skill, Speaking marks, overall, grade, CEFR.
+  const scaled = results.some((r) => r.skills)
+  const header = [quote('Candidate number'), quote('Name'), quote('Writing script'), quote('Examiner'), ...sections.flatMap((s, i) => [quote(s.title), quote(`${s.title} max`), quote(`${s.title} status`), ...(mixed[i] ? [quote(`${s.title} version`)] : [])]), ...(scaled ? SCALE_HEADER.map(quote) : [])]
   const rows = results.map((r) => [
     quote(r.candidateNumber),
     quote(r.fullName),
     quote(r.markingCode ?? ''),
     quote(r.examiner ?? ''),
     ...r.sections.flatMap((s, i) => [cell(s.rawScore), cell(s.maxScore), quote(s.status === 'NotStarted' ? '' : (GRADING_TEXT[s.gradingStatus] ?? s.gradingStatus)), ...(mixed[i] ? [cell(s.paperVersion ?? null)] : [])]),
+    ...(scaled ? scaleCells(r) : []),
   ])
   return String.fromCharCode(0xfeff) + [header, ...rows].map((row) => row.join(',')).join('\r\n')
 }

@@ -167,6 +167,63 @@ public sealed class MarkingTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.StartsWith("Hi Jo", essay.Response);
     }
 
+    private sealed record SkillResult(string Skill, decimal? RawScore, decimal? MaxScore, int? Scale);
+
+    private sealed record ScaledResult(int CandidateId, List<SkillResult> Skills, int? Overall, string? Grade, string? Cefr);
+
+    [Fact]
+    public async Task Results_PutEachSkillOnTheCambridgeEnglishScale_WithTheSpeakingMarksAnAdministratorEnters()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await CandidateAsync();
+        using var _ = client;
+        await TakeSectionAsync(client, candidate, candidate.ReadingWritingSectionId, ReadingWritingAnswers);
+        var attemptId = (await api.GetAttemptAsync(candidate.CandidateId, candidate.ReadingWritingSectionId)).Id;
+        using (var examiner = await ExaminerClientAsync(candidate.ExamId))
+        {
+            (await examiner.PostAsJsonAsync($"/api/staff/attempts/{attemptId}/writing-marks", new { questionNumber = 31, score = 13 }, ct)).EnsureSuccessStatusCode();
+            (await examiner.PostAsJsonAsync($"/api/staff/attempts/{attemptId}/writing-marks", new { questionNumber = 32, score = 13 }, ct)).EnsureSuccessStatusCode();
+        }
+
+        await api.SubmitSectionAsync(candidate.CandidateId, candidate.ListeningSectionId);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>().Attempts
+                .Where(a => a.CandidateId == candidate.CandidateId && a.ExamSectionId == candidate.ListeningSectionId)
+                .ExecuteUpdateAsync(set => set.SetProperty(a => a.GradingStatus, GradingStatus.AutoGraded).SetProperty(a => a.RawScore, 23m).SetProperty(a => a.MaxScore, 25m), ct);
+        }
+
+        using var staff = await StaffClientAsync();
+        var speaking = $"/api/staff/exams/{candidate.ExamId}/candidates/{candidate.CandidateId}/speaking";
+        var tooMany = await staff.PutAsJsonAsync(speaking, new { score = 46 }, ct);
+        var notHalf = await staff.PutAsJsonAsync(speaking, new { score = 27.3 }, ct);
+        var entered = await staff.PutAsJsonAsync(speaking, new { score = 41 }, ct);
+        var row = Assert.Single((await staff.GetFromJsonAsync<List<ScaledResult>>($"/api/staff/exams/{candidate.ExamId}/results", ct))!);
+
+        Assert.Equal(HttpStatusCode.BadRequest, tooMany.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, notHalf.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, entered.StatusCode);
+        // Four automatic marks of 30 are below the 7 Cambridge reports from, so Reading has no scale score and no overall yet.
+        Assert.Equal(new SkillResult("Reading", 4, 30, null), row.Skills[0]);
+        Assert.Equal(new SkillResult("Writing", 26, 30, 140), row.Skills[1]);
+        Assert.Equal(new SkillResult("Listening", 23, 25, 140), row.Skills[2]);
+        Assert.Equal(new SkillResult("Speaking", 41, 45, 140), row.Skills[3]);
+        Assert.Null(row.Overall);
+    }
+
+    [Fact]
+    public async Task SpeakingMarks_AreForAdministratorsOnly()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await CandidateAsync();
+        using var _ = client;
+        using var examiner = await ExaminerClientAsync(candidate.ExamId);
+
+        var response = await examiner.PutAsJsonAsync($"/api/staff/exams/{candidate.ExamId}/candidates/{candidate.CandidateId}/speaking", new { score = 20 }, ct);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     [Fact]
     public async Task Results_AreNotVisibleToCandidates()
     {

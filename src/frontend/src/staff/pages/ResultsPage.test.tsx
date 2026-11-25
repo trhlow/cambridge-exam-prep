@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { staffApi, type CandidateResult } from '../api'
 import { ResultsPage } from './ResultsPage'
 
@@ -50,3 +51,34 @@ describe('ResultsPage warns about scripts without an examiner (B11)', () => {
     expect(screen.queryByRole('alert')).toBeNull()
   })
 })
+
+describe('ResultsPage on the Cambridge English Scale', () => {
+  beforeEach(() => {
+    vi.spyOn(staffApi, 'exam').mockResolvedValue({ id: 1, name: 'Mock' } as never)
+  })
+
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows each skill, the overall score and grade, and saves the Speaking marks', async () => {
+    const scaled: CandidateResult = {
+      ...candidate(1, 'Ms Hoa', 'Final'),
+      skills: [
+        { skill: 'Reading', rawScore: 28, maxScore: 30, scale: 140 },
+        { skill: 'Writing', rawScore: 22, maxScore: 30, scale: 130 },
+        { skill: 'Listening', rawScore: 5, maxScore: 25, scale: null },
+        { skill: 'Speaking', rawScore: null, maxScore: 45, scale: null },
+      ],
+    }
+    const results = vi.spyOn(staffApi, 'results').mockResolvedValue([scaled])
+    const setSpeaking = vi.spyOn(staffApi, 'setSpeaking').mockResolvedValue(undefined)
+
+    render(<ResultsPage examId={1} />)
+
+    expect(await screen.findByText('R 140 · W 130 · L < · S –')).toBeInTheDocument()
+    const input = screen.getByRole('spinbutton', { name: 'Speaking marks of Candidate 1' })
+    await userEvent.type(input, '27.5{Enter}')
+    expect(setSpeaking).toHaveBeenCalledWith(1, 1, 27.5)
+    await waitFor(() => expect(results).toHaveBeenCalledTimes(2))
+  })
+})
+

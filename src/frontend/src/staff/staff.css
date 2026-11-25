@@ -514,6 +514,14 @@
   white-space: nowrap;
 }
 
+.st-speaking {
+  width: 5em;
+  padding: 4px 6px;
+  font: inherit;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .st-score {
   margin-top: 4px;
   font-size: 18px;

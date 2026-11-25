@@ -1,4 +1,6 @@
-import { staffApi } from '../api'
+import { useState } from 'react'
+import { staffApi, type CandidateResult } from '../api'
+import { messageOf } from '../format'
 import { Link } from '../Link'
 import { Badge, ErrorBox, PageHeader, VersionBadge } from '../ui'
 import { GRADING_TEXT, downloadCsv, resultsCsv } from '../resultsCsv'
@@ -10,8 +12,9 @@ import { useLoad } from '../useLoad'
  */
 export function ResultsPage({ examId }: { examId: number }) {
   const { data: exam } = useLoad(() => staffApi.exam(examId), `exam-${examId}`)
-  const { data: results, error } = useLoad(() => staffApi.results(examId), examId)
+  const { data: results, error, reload } = useLoad(() => staffApi.results(examId), examId)
   const sections = results?.[0]?.sections ?? []
+  const scaled = (results ?? []).some((r) => r.skills)
   // B11: Writing finished but held by nobody who can mark it: never dealt (no examiner on the session), or dealt to one
   // since switched off, no longer an examiner or off the session (the server flags those; the deal waits for an eligible one).
   const undealt = (results ?? []).filter(
@@ -32,6 +35,12 @@ export function ResultsPage({ examId }: { examId: number }) {
       />
       <p className="st-faint">Reading and Listening are marked automatically when a section ends. Writing is dealt at random and evenly to the session's examiners, who see only its code; the score is final once every Writing question has a mark.</p>
       <ErrorBox error={error} />
+      {scaled && (
+        <p className="st-faint">
+          The Cambridge English Scale scores follow Cambridge&apos;s conversion tables for practice tests (exams from 2020): an indication of readiness, not
+          the score of a live exam. The overall score and grade appear once Speaking is entered and every skill is marked.
+        </p>
+      )}
       {undealt > 0 && (
         <p className="st-error" role="alert">
           {undealt} Writing script{undealt === 1 ? ' has' : 's have'} no examiner who can mark them. Assign an active examiner to the session and they will be dealt.
@@ -47,6 +56,8 @@ export function ResultsPage({ examId }: { examId: number }) {
               {sections.map((s) => (
                 <th key={s.sectionId}>{s.title}</th>
               ))}
+              {scaled && <th>Speaking</th>}
+              {scaled && <th>Cambridge English Scale</th>}
             </tr>
           </thead>
           <tbody>
@@ -77,11 +88,79 @@ export function ResultsPage({ examId }: { examId: number }) {
                     {s.status === 'Submitted' && <div className="st-faint">{GRADING_TEXT[s.gradingStatus] ?? s.gradingStatus}</div>}
                   </td>
                 ))}
+                {scaled && (
+                  <td>
+                    <SpeakingInput examId={examId} candidate={candidate} onSaved={reload} />
+                  </td>
+                )}
+                {scaled && (
+                  <td>
+                    <ScaleCell candidate={candidate} />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       )}
+    </>
+  )
+}
+
+/** Each skill's scale score (– not marked yet, < below the minimum reported), then the overall score and grade. */
+function ScaleCell({ candidate }: { candidate: CandidateResult }) {
+  const skills = candidate.skills ?? []
+  return (
+    <>
+      <div className="st-faint">
+        {skills.map((s) => `${s.skill[0]} ${s.scale ?? (s.rawScore === null ? '–' : '<')}`).join(' · ')}
+      </div>
+      {candidate.overall != null && (
+        <div className="st-score">
+          {candidate.overall}
+          {candidate.grade ? ` · ${candidate.grade} (${candidate.cefr})` : ' · below the level'}
+        </div>
+      )}
+    </>
+  )
+}
+
+/** The face-to-face Speaking marks, saved when the field is left or Enter is pressed; empty clears them. */
+function SpeakingInput({ examId, candidate, onSaved }: { examId: number; candidate: CandidateResult; onSaved: () => void }) {
+  const speaking = candidate.skills?.find((s) => s.skill === 'Speaking')
+  const saved = speaking?.rawScore == null ? '' : String(speaking.rawScore)
+  const [value, setValue] = useState(saved)
+  const [error, setError] = useState<string | null>(null)
+  const save = () => {
+    if (value.trim() === saved) {
+      return
+    }
+
+    staffApi.setSpeaking(examId, candidate.candidateId, value.trim() === '' ? null : Number(value)).then(
+      () => {
+        setError(null)
+        onSaved()
+      },
+      (e: unknown) => setError(messageOf(e)),
+    )
+  }
+
+  return (
+    <>
+      <input
+        type="number"
+        className="st-speaking"
+        min={0}
+        max={speaking?.maxScore ?? undefined}
+        step={0.5}
+        value={value}
+        aria-label={`Speaking marks of ${candidate.fullName}`}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => e.key === 'Enter' && save()}
+      />
+      {speaking?.maxScore != null && <span className="st-faint"> / {speaking.maxScore}</span>}
+      {error && <div className="st-error">{error}</div>}
     </>
   )
 }

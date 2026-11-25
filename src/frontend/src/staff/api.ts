@@ -561,6 +561,21 @@ export interface CandidateResult {
   examiner?: string | null
   /** That examiner is switched off, no longer an examiner or off the session: nobody can mark the script until one is assigned. */
   examinerUnavailable?: boolean
+  /** Reading, Writing, Listening, Speaking on the Cambridge English Scale; missing for an exam type without a table. */
+  skills?: SkillResult[] | null
+  /** Once all four skills have a scale score. */
+  overall?: number | null
+  grade?: string | null
+  cefr?: string | null
+}
+
+export interface SkillResult {
+  skill: 'Reading' | 'Writing' | 'Listening' | 'Speaking'
+  rawScore: number | null
+  /** Speaking: the most marks it can have (A2 Key 45, B1 Preliminary 30), also before it is entered. */
+  maxScore: number | null
+  /** Null until marked, or when below the minimum Cambridge reports. */
+  scale: number | null
 }
 
 export type ApprovalKind = 'DeletePaper' | 'DeleteExam' | 'DeleteCandidate' | 'DeleteMix' | 'ChangeStaffAccount' | 'CreateAdmin'
@@ -618,6 +633,8 @@ export const staffApi = {
   loginSlips: (id: number) => request<LoginSlip[]>(`${exam(id)}/login-slips`),
   roomPlan: (id: number) => request<RoomPlanView>(`${exam(id)}/room-plan`),
   results: (id: number) => request<CandidateResult[]>(`${exam(id)}/results`),
+  /** The face-to-face Speaking marks of a candidate; null clears them. */
+  setSpeaking: (examId: number, candidateId: number, score: number | null) => put<void>(`${exam(examId)}/candidates/${candidateId}/speaking`, { score }),
 
   monitor: (examId: number, sectionId: number) => request<MonitorView>(`${exam(examId)}/sections/${sectionId}/monitor`),
   act: (examId: number, sectionId: number, body: MonitorActionRequest) => post<ActionOutcome>(`${exam(examId)}/sections/${sectionId}/actions`, body),

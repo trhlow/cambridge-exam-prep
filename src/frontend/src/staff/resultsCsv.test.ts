@@ -48,4 +48,24 @@ describe('resultsCsv', () => {
 
     expect(csv).toContain(`"'=HYPERLINK(""http://evil"")"`)
   })
+
+  it('adds the Cambridge English Scale columns when the exam type has them', () => {
+    const scaled = {
+      ...result('0006', 'Em Phạm', ['Submitted', 50, 60], ['Submitted', 23, 25]),
+      skills: [
+        { skill: 'Reading' as const, rawScore: 28, maxScore: 30, scale: 140 },
+        { skill: 'Writing' as const, rawScore: 22, maxScore: 30, scale: 130 },
+        { skill: 'Listening' as const, rawScore: 23, maxScore: 25, scale: 140 },
+        { skill: 'Speaking' as const, rawScore: 27, maxScore: 45, scale: 120 },
+      ],
+      overall: 133,
+      grade: 'B',
+      cefr: 'A2',
+    }
+
+    const [header, row] = resultsCsv([scaled]).slice(1).split(String.fromCharCode(13, 10))
+
+    expect(header.endsWith('"Reading (scale)","Writing (scale)","Listening (scale)","Speaking marks","Speaking (scale)","Overall (scale)","Grade","CEFR"')).toBe(true)
+    expect(row.endsWith('140,130,140,27,120,133,"B","A2"')).toBe(true)
+  })
 })

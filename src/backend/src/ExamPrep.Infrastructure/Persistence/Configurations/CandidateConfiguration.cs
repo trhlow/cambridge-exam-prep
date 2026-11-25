@@ -11,6 +11,8 @@ internal sealed class CandidateConfiguration : IEntityTypeConfiguration<Candidat
     {
         builder.HasKey(c => c.Id);
         builder.ToTable(t => t.HasCheckConstraint("CK_candidates_planned_extra", "planned_extra_percent BETWEEN 0 AND 100"));
+        // Half marks at most (Cambridge Speaking); the upper limit depends on the exam type and is checked by the API.
+        builder.ToTable(t => t.HasCheckConstraint("CK_candidates_speaking_score", "speaking_score IS NULL OR (speaking_score >= 0 AND speaking_score * 2 = FLOOR(speaking_score * 2))"));
         builder.ToTable(t => t.HasCheckConstraint("CK_candidates_messages_read", "messages_read_up_to >= 0"));
         builder.Property(c => c.CandidateNumber).HasMaxLength(16);
         builder.Property(c => c.FirstName).HasMaxLength(100);

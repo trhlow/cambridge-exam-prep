@@ -48,6 +48,12 @@ public class Candidate
     /// </summary>
     public int MessagesReadUpTo { get; set; }
 
+    /// <summary>
+    /// The Speaking marks, entered by an administrator from the face-to-face test (A2 Key out of 45, B1 Preliminary out of
+    /// 30; half marks allowed), so the result has all four skills; null until entered.
+    /// </summary>
+    public decimal? SpeakingScore { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     /// <summary>VE-73: the examiner who marks this candidate's Writing, dealt at random and evenly; null until dealt.</summary>

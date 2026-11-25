@@ -20,7 +20,14 @@ public sealed record SectionResult(int SectionId, string Title, string Status, s
 /// That examiner can no longer mark it (switched off, no longer an examiner, or off the session). With nobody eligible
 /// left on the session the deal stops, so the script keeps them until an active examiner is assigned (final review E).
 /// </param>
-public sealed record CandidateResult(int CandidateId, string CandidateNumber, string FullName, IReadOnlyList<SectionResult> Sections, string? MarkingCode = null, string? Examiner = null, bool ExaminerUnavailable = false);
+/// <param name="Skills">Reading, Writing, Listening and Speaking on the Cambridge English Scale; null for an exam type without a conversion table.</param>
+/// <param name="Overall">The overall scale score, once all four skills have one.</param>
+/// <param name="Grade">From the overall score: A, B, C or the level below; null below that level.</param>
+public sealed record CandidateResult(int CandidateId, string CandidateNumber, string FullName, IReadOnlyList<SectionResult> Sections, string? MarkingCode = null, string? Examiner = null, bool ExaminerUnavailable = false,
+    IReadOnlyList<SkillResult>? Skills = null, int? Overall = null, string? Grade = null, string? Cefr = null);
+
+/// <param name="Score">The candidate's Speaking marks; null clears them.</param>
+public sealed record SpeakingScoreRequest(decimal? Score);
 
 /// <param name="Comment">Writing: the teacher's comment with the mark.</param>
 /// <param name="Selection">Where the candidate chooses which questions to answer: Yes, No or Undecided; null elsewhere.</param>
@@ -62,15 +69,16 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
             return NotFound();
         }
 
+        var examType = await db.Exams.Where(e => e.Id == examId).Select(e => e.ExamType!.Code).SingleAsync(cancellationToken);
         var sections = await db.ExamSections.AsNoTracking()
             .Where(s => s.ExamId == examId)
             .OrderBy(s => s.OrderNo)
-            .Select(s => new { s.Id, s.SectionTemplate!.Title })
+            .Select(s => new { s.Id, s.SectionTemplate!.Title, s.SectionTemplate.Skill })
             .ToListAsync(cancellationToken);
         var candidates = await db.Candidates.AsNoTracking()
             .Where(c => c.ExamId == examId)
             .OrderBy(c => c.CandidateNumber)
-            .Select(c => new { c.Id, c.CandidateNumber, c.FirstName, c.LastName, c.MarkingCode, c.ExaminerUserId })
+            .Select(c => new { c.Id, c.CandidateNumber, c.FirstName, c.LastName, c.MarkingCode, c.ExaminerUserId, c.SpeakingScore })
             .ToListAsync(cancellationToken);
         var examinerIds = candidates.Select(c => c.ExaminerUserId).OfType<int>().Distinct().ToList();
         var examiners = await db.Users.AsNoTracking().Where(u => examinerIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
@@ -81,22 +89,62 @@ public sealed class StaffResultsController(ExamPrepDbContext db) : ControllerBas
             .ToListAsync(cancellationToken)).ToHashSet();
         var attempts = await db.Attempts.AsNoTracking()
             .Where(a => a.ExamSection!.ExamId == examId)
-            .Select(a => new { a.Id, a.CandidateId, a.ExamSectionId, a.Status, a.GradingStatus, a.RawScore, a.MaxScore, a.TestPaperId })
+            .Select(a => new { a.Id, a.CandidateId, a.ExamSectionId, a.Status, a.GradingStatus, a.RawScore, a.MaxScore, a.TestPaperId, AutoRaw = a.Responses.Sum(r => r.AutoScore ?? 0) })
             .ToListAsync(cancellationToken);
+        var paperIds = attempts.Select(a => a.TestPaperId).Distinct().ToList();
+        // What each paper's automatically marked questions are worth: the Reading half of A2 Reading & Writing.
+        var autoMax = await db.Questions.AsNoTracking()
+            .Where(q => paperIds.Contains(q.QuestionGroup!.PaperPart!.TestPaperId) && q.QuestionGroup.InteractionType != InteractionType.Essay)
+            .GroupBy(q => q.QuestionGroup!.PaperPart!.TestPaperId)
+            .Select(g => new { PaperId = g.Key, Points = g.Sum(q => q.Points) })
+            .ToDictionaryAsync(g => g.PaperId, g => g.Points, cancellationToken);
         var byKey = attempts.ToDictionary(a => (a.CandidateId, a.ExamSectionId));
         var versions = await Delivery.PaperAssignment.MixVersionsAsync(db, attempts.Select(a => a.TestPaperId), cancellationToken);
 
-        return candidates.Select(c => new CandidateResult(
-            c.Id,
-            c.CandidateNumber,
-            $"{c.FirstName} {c.LastName}",
-            sections.Select(s => byKey.TryGetValue((c.Id, s.Id), out var a)
-                ? new SectionResult(s.Id, s.Title, a.Status.ToString(), a.GradingStatus.ToString(), a.RawScore, a.MaxScore, a.Id, versions.TryGetValue(a.TestPaperId, out var v) ? v : null)
-                : new SectionResult(s.Id, s.Title, AttemptStatus.NotStarted.ToString(), GradingStatus.NotGraded.ToString(), null, null, null)).ToList(),
-            c.MarkingCode,
-            c.ExaminerUserId is { } examinerId ? examiners.GetValueOrDefault(examinerId) : null,
-            c.ExaminerUserId is { } dealtTo && !eligible.Contains(dealtTo)))
-            .ToList();
+        return candidates.Select(c =>
+        {
+            var sat = sections.Where(s => byKey.ContainsKey((c.Id, s.Id))).Select(s => (s.Skill, Attempt: byKey[(c.Id, s.Id)]));
+            var scale = SkillScores.For(examType, sat.Select(x => new SkillScores.SectionAttempt(
+                x.Skill, x.Attempt.Status, x.Attempt.GradingStatus, x.Attempt.RawScore, x.Attempt.MaxScore, x.Attempt.AutoRaw, autoMax.GetValueOrDefault(x.Attempt.TestPaperId))), c.SpeakingScore);
+            return new CandidateResult(
+                c.Id,
+                c.CandidateNumber,
+                $"{c.FirstName} {c.LastName}",
+                sections.Select(s => byKey.TryGetValue((c.Id, s.Id), out var a)
+                    ? new SectionResult(s.Id, s.Title, a.Status.ToString(), a.GradingStatus.ToString(), a.RawScore, a.MaxScore, a.Id, versions.TryGetValue(a.TestPaperId, out var v) ? v : null)
+                    : new SectionResult(s.Id, s.Title, AttemptStatus.NotStarted.ToString(), GradingStatus.NotGraded.ToString(), null, null, null)).ToList(),
+                c.MarkingCode,
+                c.ExaminerUserId is { } examinerId ? examiners.GetValueOrDefault(examinerId) : null,
+                c.ExaminerUserId is { } dealtTo && !eligible.Contains(dealtTo),
+                scale?.Skills,
+                scale?.Overall,
+                scale?.Band?.Grade,
+                scale?.Band?.Cefr);
+        }).ToList();
+    }
+
+    /// <summary>
+    /// The Speaking marks from the face-to-face test, so the result has all four skills: administrators, as for results.
+    /// Out of the exam type's Speaking marks (A2 Key 45, B1 Preliminary 30), whole or half marks; null clears them.
+    /// </summary>
+    [HttpPut("exams/{examId:int}/candidates/{candidateId:int}/speaking")]
+    [Authorize(Policy = StaffAuthDefaults.ResultsPolicy)]
+    public async Task<IActionResult> SetSpeaking(int examId, int candidateId, SpeakingScoreRequest request, CancellationToken cancellationToken)
+    {
+        var examType = await db.Exams.ResultsVisibleTo(User).Where(e => e.Id == examId).Select(e => e.ExamType!.Code).SingleOrDefaultAsync(cancellationToken);
+        if (examType is null || !await db.Candidates.AnyAsync(c => c.Id == candidateId && c.ExamId == examId, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        if (request.Score is { } score && (CambridgeScale.SpeakingMax(examType) is not { } max || score < 0 || score > max || score * 2 != Math.Floor(score * 2)))
+        {
+            var limit = CambridgeScale.SpeakingMax(examType);
+            return Problem(title: limit is null ? "This exam type has no Speaking marks." : $"Speaking marks are whole or half marks from 0 to {limit:0}.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        await db.Candidates.Where(c => c.Id == candidateId).ExecuteUpdateAsync(set => set.SetProperty(c => c.SpeakingScore, request.Score), cancellationToken);
+        return NoContent();
     }
 
     /// <summary>
