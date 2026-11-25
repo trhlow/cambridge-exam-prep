@@ -43,3 +43,14 @@ Cùng tham số với lần 200 thí sinh (đăng nhập rải trong 40 s, làm 
 - 5 lần lưu bị 409 là của các thí sinh đang bị tạm dừng: đúng thiết kế.
 
 Chi tiết: `2026-11-07-03-28-200.md`.
+
+## Chạy lại ngày 25/11/2026 (sau đợt hoàn thiện)
+
+Cùng tham số, trên mã nguồn sau đợt hoàn thiện 25/11 (SEB cho kênh thời gian thực, nhật ký giám thị, thông báo đã đọc lưu trên máy chủ, thang điểm Cambridge). Trong lần này máy xách tay còn chạy trình giả lập Android LDPlayer, chiếm khoảng 2 lõi CPU, nên mọi thời gian phản hồi đều cao hơn lần 07/11; đăng nhập thí sinh (chủ yếu là băm mật khẩu, mã nguồn không đổi) cũng chậm khoảng 1,7 lần.
+
+- 200/200 thí sinh vào được bài, 200/200 còn kết nối SignalR lúc kết thúc, 0 lần nối lại, 0 lỗi máy chủ.
+- Lưu câu trả lời p50 / p95 / p99: 19 / 65 / 177 ms. Heartbeat: 406 / 523 / 849 ms. Đăng nhập thí sinh p50 / p95: 100 / 124 ms.
+- Tạm dừng đến 20/20 màn hình thí sinh trong 128 ms, cho làm tiếp trong 29 ms.
+- 11 lần lưu bị 409 là của các thí sinh đang bị tạm dừng: đúng thiết kế.
+
+Chi tiết: `2026-11-25-08-41-200.md`.
