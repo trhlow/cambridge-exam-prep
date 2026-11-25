@@ -116,7 +116,7 @@ Bài thi máy của Cambridge chạy trên nền tảng Inspera. Trước giờ 
 ## Quy trình tổ chức một buổi thi trên máy
 ### Trước và khi bắt đầu giờ thi
 Tài liệu ngày thi của Cambridge mô tả các bước thí sinh vào bài. Thí sinh kiểm tra tên đăng nhập, vốn bắt đầu bằng các chữ cái của họ, rồi đăng nhập bằng tên đăng nhập và mật khẩu. Tiếp theo, thí sinh nhập mã PIN do giám thị cung cấp và chọn *Unlock and Select* (mở khóa và chọn bài) để mở bài, sau đó kiểm tra lại họ tên hiển thị trên màn hình [@booklet, tr. 11]. Trong lúc đó, giám thị theo dõi cổng quản lý và tạm dừng những thí sinh bắt đầu làm bài sớm hơn hiệu lệnh [@booklet, tr. 12]. Hình 1.1 tóm tắt quy trình của một buổi thi trên máy.
-!fig ../../diagrams/report/exam-day.drawio.png | Quy trình một buổi thi trên máy (tổng hợp từ [@booklet] và [@invig]) | 16
+!fig ../../diagrams/report/exam-day.drawio.png | Quy trình một buổi thi trên máy (tổng hợp từ [@booklet] và [@invig]) | 16 | ngang
 ### Các thao tác của giám thị trong giờ thi
 Tài liệu tập huấn giám thị mô tả các thao tác trên cổng quản lý [@invig]. Thao tác thường gặp nhất là tạm dừng và cho làm tiếp. Giám thị chọn một hoặc nhiều thí sinh, chọn *Pause* (tạm dừng) và ghi lý do, khi đó màn hình thí sinh hiện thông báo bài thi đang tạm dừng [@invig, tr. 13]. Để theo dõi thời gian, giám thị có thể thêm vào màn hình theo dõi các cột thời gian còn lại, thời gian bù sự cố, thời gian cộng thêm và thời điểm bắt đầu [@invig, tr. 11]. Giờ kết thúc được sửa bằng chức năng *Edit End Time*, trong đó lựa chọn *End now* kết thúc bài làm của thí sinh ngay lập tức [@invig, tr. 18].
 Hai tình huống sự cố được hướng dẫn riêng. Khi có sự cố trong phần Listening, giám thị phải tua âm thanh lại một số phút và cộng đúng số phút đó vào thời gian bù sự cố, và đây là hai thao tác tách biệt [@invig, tr. 20]. Khi mất điện, thí sinh chuyển sang trạng thái ngoại tuyến và giám thị không tạm dừng được. Thí sinh có thể đăng nhập lại trên máy khác hoặc trên chính máy đó khi có điện, sau đó giám thị cộng thời gian bù cho số phút bị gián đoạn [@invig, tr. 15]. Thời gian đi vệ sinh không được cộng thêm giờ [@booklet, tr. 13].
@@ -187,8 +187,8 @@ Buổi thi tại phòng máy của trung tâm có giám thị trong phòng và m
 Bộ hướng dẫn của ITC về thi trên máy tính và qua Internet được Hội đồng ITC thông qua tháng 7 năm 2005 và đăng trên tạp chí International Journal of Testing năm 2006 [@itc]. Các hướng dẫn được chia thành bốn nhóm, lần lượt là chú ý các vấn đề công nghệ, bảo đảm chất lượng, kiểm soát việc tổ chức thi, và bảo mật cùng bảo vệ dữ liệu riêng tư [@itc, tr. 5]. Mỗi hướng dẫn được viết riêng cho ba đối tượng là đơn vị phát triển bài thi, đơn vị phát hành và đơn vị sử dụng. Bảng 2.2 chọn ra những hướng dẫn ảnh hưởng trực tiếp đến thiết kế của đồ án và nêu hệ quả của từng hướng dẫn.
 |table| Một số hướng dẫn của ITC và hệ quả đối với thiết kế | 8,8.5
 Hướng dẫn của ITC|Hệ quả đối với thiết kế
-Bài thi tính giờ phải phản hồi ngay, độ trễ trên màn hình không quá 2 giây; thời gian chuyển câu và ghi nhận câu trả lời không tính vào thời gian làm bài [@itc, tr. 15–16].|Câu trả lời được lưu ngầm, không chặn thao tác của thí sinh; đồng hồ do máy chủ tính theo thời điểm bắt đầu.
-Giảm thiểu ảnh hưởng của treo máy, mất kết nối; không để mất thông tin khi mất kết nối [@itc, tr. 16].|Câu trả lời được giữ lại ở trình duyệt và gửi lại khi có mạng; máy chủ tự nộp bài khi hết giờ kể cả khi thí sinh ngoại tuyến.
+Bài thi tính giờ phải phản hồi ngay, độ trễ trên màn hình không quá 2 giây; thời gian chuyển câu và ghi nhận câu trả lời không tính vào thời gian làm bài [@itc, tr. 15–16].|Câu trả lời được lưu ngầm, không chặn thao tác của thí sinh; đồng hồ do máy chủ tính từ lúc bắt đầu.
+Giảm thiểu ảnh hưởng của treo máy và mất kết nối, không để mất thông tin [@itc, tr. 16].|Câu trả lời được giữ lại ở trình duyệt và gửi lại khi có mạng; máy chủ tự nộp bài khi hết giờ kể cả khi thí sinh ngoại tuyến.
 Thiết kế “an toàn khi lỗi”: ngăn thí sinh vô tình thoát bài, thông báo lỗi rõ ràng [@itc, tr. 15].|Thí sinh không có nút nộp bài; bài thi chạy trong trình duyệt khóa.
 Hiển thị tên bài thi, số câu và hướng dẫn ở cùng vị trí trên mọi trang [@itc, tr. 17].|Bố cục màn hình thí sinh cố định theo bài thi máy của Cambridge.
 Tạo đủ cơ hội để thí sinh làm quen với phần mềm và thiết bị thi [@itc, tr. 20].|Mục đích chính của hệ thống: cho thí sinh thi thử trên giao diện giống bài thi thật.
@@ -208,7 +208,7 @@ TypeScript bổ sung hệ thống kiểu tĩnh cho JavaScript, nên lỗi kiểu
 ### Kiến trúc phân lớp và Clean Architecture
 Việc chia ứng dụng thành các lớp theo trách nhiệm giúp quản lý độ phức tạp, tái sử dụng mã và giới hạn phạm vi ảnh hưởng của một thay đổi [@arch]. Kiến trúc N lớp truyền thống (giao diện, nghiệp vụ, truy cập dữ liệu) có nhược điểm là lớp nghiệp vụ phụ thuộc lớp truy cập dữ liệu, khiến việc kiểm thử nghiệp vụ cần đến cơ sở dữ liệu thật [@arch].
 Clean Architecture đảo ngược chiều phụ thuộc này. Nghiệp vụ và mô hình ứng dụng nằm ở trung tâm (Application Core), lớp hạ tầng cài đặt các interface do lõi định nghĩa, còn lớp giao diện chỉ làm việc với lõi thông qua các interface đó. Các phụ thuộc lúc biên dịch luôn hướng vào lõi, còn phần cài đặt cụ thể được nối vào lúc chạy bằng cơ chế tiêm phụ thuộc (dependency injection) [@arch]. Hình 2.1 minh họa kiến trúc này theo chiều ngang.
-!fig ../../diagrams/report/clean-architecture.drawio.png | Clean Architecture theo chiều ngang (phỏng theo [@arch]) | 16
+!fig ../../diagrams/report/clean-architecture.drawio.png | Clean Architecture theo chiều ngang (phỏng theo [@arch]) | 16 | ngang
 Lợi ích chính của cách tổ chức trên là lõi không phụ thuộc hạ tầng. Các quy tắc nghiệp vụ, chẳng hạn quy tắc tính giờ của một lượt làm bài, vì thế có thể được kiểm thử đơn vị độc lập với cơ sở dữ liệu.
 ## Giao tiếp thời gian thực
 ### Giao thức WebSocket
@@ -216,7 +216,7 @@ Trong mô hình HTTP truyền thống, chỉ trình duyệt mới chủ động 
 ### Thư viện SignalR
 ASP.NET Core SignalR là thư viện mã nguồn mở bổ sung chức năng thời gian thực cho ứng dụng, cho phép mã phía máy chủ đẩy nội dung xuống máy khách ngay lập tức. Các ứng dụng phù hợp với SignalR gồm bảng điều khiển, ứng dụng giám sát và ứng dụng cần gửi thông báo [@signalr]. SignalR giao tiếp qua hub. Máy khách gọi được phương thức trên máy chủ, ngược lại máy chủ cũng gọi được phương thức ở máy khách, và thông điệp có thể gửi tới mọi máy khách, tới một máy khách hoặc tới một nhóm máy khách [@signalr].
 SignalR tự chọn phương thức truyền tốt nhất mà cả hai phía hỗ trợ, theo thứ tự WebSockets, Server-Sent Events rồi Long Polling. Dữ liệu được mã hóa bằng giao thức văn bản dựa trên JSON (mặc định) hoặc giao thức nhị phân MessagePack [@signalr]. Mô hình hoạt động này được minh họa trong Hình 2.2.
-!fig ../../diagrams/report/signalr.drawio.png | Máy chủ đẩy dữ liệu qua hub SignalR và thứ tự chọn phương thức truyền (tổng hợp từ [@signalr]) | 15
+!fig ../../diagrams/report/signalr.drawio.png | Máy chủ đẩy dữ liệu qua hub SignalR và thứ tự chọn phương thức truyền (tổng hợp từ [@signalr]) | 15 | ngang
 Trang theo dõi của giám thị dùng SignalR theo cách này: mỗi khi trạng thái của thí sinh thay đổi, máy chủ chỉ báo cho nhóm giám thị đang theo dõi đúng phần thi đó.
 ### Duy trì và phát hiện mất kết nối
 Để phát hiện kết nối bị đứt, hai bên định kỳ gửi thông điệp giữ kết nối (keep-alive). Ở phía máy chủ, tham số chu kỳ giữ kết nối (KeepAliveInterval), mặc định 15 giây, quy định chu kỳ gửi thông điệp ping. Tham số thời gian chờ máy khách (ClientTimeoutInterval), mặc định 30 giây, là khoảng thời gian mà nếu không nhận được thông điệp nào thì máy chủ coi máy khách đã ngắt kết nối. Giá trị khuyến nghị của thời gian chờ là gấp đôi chu kỳ giữ kết nối. Ở phía máy khách JavaScript, chu kỳ giữ kết nối nên nhỏ hơn hoặc bằng một nửa thời gian chờ của máy chủ [@signalr_config]. Quan hệ giữa thời gian chờ và chu kỳ ping này là căn cứ để cấu hình kênh thời gian thực của hệ thống sao cho kết nối không bị cắt khi phòng thi yên lặng. Mục 4.5.1 cho thấy hậu quả khi quan hệ này bị vi phạm.
@@ -375,7 +375,7 @@ QT03|Thí sinh không có nút nộp bài; phần thi kết thúc khi hết gi�
 QT04|Giám thị chỉ tạm dừng, cho làm tiếp những thí sinh đang trực tuyến và đang làm bài.|[@invig, tr. 15]
 QT05|*End now* ở cấp phần thi kết thúc bài ngay, không hoàn tác được và chỉ rút ngắn giờ kết thúc.|[@invig, tr. 18]
 QT06|Tua lại phần nghe và cộng giờ bù là hai thao tác riêng; chỉ tua khi thí sinh không bị tạm dừng và không quá phần đã phát.|[@invig, tr. 20]
-QT07|Không cộng giờ cho thời gian đi vệ sinh; thời gian cộng thêm theo kế hoạch cố định từ lúc thí sinh bắt đầu, sự cố được bù bằng giờ bù riêng.|[@booklet, tr. 13]; thiết kế
+QT07|Không cộng giờ cho thời gian đi vệ sinh; thời gian cộng thêm theo kế hoạch cố định từ lúc thí sinh bắt đầu, sự cố được bù bằng giờ bù riêng.|[@booklet, tr. 13] và thiết kế của đồ án
 QT08|Mỗi phòng thi có ít nhất một giám thị cho 25 thí sinh; hệ thống cảnh báo khi thiếu.|[@booklet, tr. 4]
 QT09|Xóa đề, kỳ thi, thí sinh, bộ đề trộn và thay đổi tài khoản nhân viên phải được một quản trị viên khác duyệt.|Trung tâm, 16/10
 QT10|Hai máy kề nhau không làm cùng một mã đề; đề của thí sinh cố định từ lúc bắt đầu phần thi.|Trung tâm, 20/10 và 29/10
@@ -399,7 +399,7 @@ Bảo mật|Phân quyền ở API; duyệt chéo; khóa tài khoản khi nhập 
 ## Thiết kế kiến trúc
 ### Kiến trúc tổng thể
 Hệ thống chạy trên một máy chủ đặt trong phòng thi và gồm ba thành phần, đóng gói thành ba container Docker như trong Hình 3.2. Thành phần thứ nhất là nginx, vừa phục vụ các tệp tĩnh của giao diện React vừa chuyển tiếp các yêu cầu API và các kết nối thời gian thực tới máy chủ ứng dụng. Thành phần thứ hai là ứng dụng ASP.NET Core, cung cấp REST API, hai hub SignalR và các dịch vụ nền, đồng thời chạy bộ chuyển đề PDF viết bằng Python. Thành phần thứ ba là cơ sở dữ liệu MySQL 8.4. Vì nginx đứng trước, trình duyệt chỉ làm việc với một địa chỉ duy nhất, và cookie đăng nhập nhờ vậy giữ được thuộc tính SameSite=Strict.
-!fig ../../diagrams/report/deployment.drawio.png | Sơ đồ triển khai hệ thống trong phòng thi | 16
+!fig ../../diagrams/report/deployment.drawio.png | Sơ đồ triển khai hệ thống trong phòng thi | 16 | ngang
 Máy thí sinh chỉ cần trình duyệt, và trong kỳ thi thật trình duyệt đó là Safe Exam Browser. Máy của giám thị và nhân viên dùng Chrome hoặc Edge để mở cổng nhân viên. Cơ sở dữ liệu chỉ lắng nghe ở địa chỉ nội bộ 127.0.0.1 của máy chủ, nên các máy khác trong mạng không kết nối trực tiếp được. Hình ảnh, âm thanh của đề và khóa mã hóa cookie được lưu trong một thư mục dữ liệu riêng, tách khỏi cơ sở dữ liệu.
 ### Kiến trúc phía máy chủ
 Mã nguồn phía máy chủ được chia thành ba project theo Clean Architecture (mục 2.2.3), cộng thêm một project kiểm thử. Trách nhiệm của từng project được tóm tắt trong Bảng 3.12.
@@ -421,7 +421,7 @@ Hệ thống có hai hub SignalR. Hub thứ nhất phục vụ trang theo dõi c
 Thông số|Giá trị|Ghi chú
 Chu kỳ nhịp kiểm tra kết nối của máy thí sinh|5 giây|Đồng hồ, trạng thái, thông báo, vị trí phần nghe
 Cửa sổ trực tuyến|15 giây|Không có nhịp kiểm tra kết nối trong 15 giây thì coi là ngoại tuyến
-Thời gian chờ của máy chủ SignalR (ClientTimeoutInterval)|12 giây|Kết nối im lặng quá thời gian này bị ngắt
+ClientTimeoutInterval (thời gian chờ của máy chủ SignalR)|12 giây|Kết nối im lặng quá thời gian này bị ngắt
 Chu kỳ giữ kết nối của trình duyệt|4 giây|Nhỏ hơn một nửa thời gian chờ của máy chủ
 Gộp thông điệp báo phần thi thay đổi|500 mili giây|Tối đa hai lần tải lại mỗi giây cho mỗi phần thi
 Trang theo dõi tự tải lại|20 giây hoặc 3 giây|20 giây khi có SignalR, 3 giây khi mất kết nối SignalR
@@ -445,16 +445,16 @@ Hình 3.3 cho thấy bốn nhóm bảng cùng các khóa ngoại nối giữa c�
 Sơ đồ thực thể – liên kết được vẽ tự động bằng một chương trình đọc trực tiếp lược đồ MySQL đang chạy, nên luôn khớp với bản di trú mới nhất. Mỗi nhóm có một sơ đồ chi tiết riêng, từ Hình 3.4 đến Hình 3.7. Các sơ đồ chi tiết chỉ vẽ khóa ngoại trong nhóm, còn khóa ngoại sang nhóm khác được ghi ngay sau tên cột.
 ### Nhóm nội dung đề thi
 Quyết định thiết kế quan trọng nhất của lược đồ là mô tả loại bài thi bằng dữ liệu. Một bảng chứa các loại bài thi (A2 Key for Schools, B1 Preliminary for Schools), bảng còn lại chứa các phần thi của mỗi loại theo thứ tự cùng thời lượng, trong đó A2 có hai phần thi và B1 có ba. Vì vậy, B1 dùng chung bộ máy với A2 mà không phải sửa mã, và IELTS sau này chỉ cần thêm dữ liệu. Hình 3.4 trình bày chi tiết nhóm bảng này.
-!fig ../../diagrams/erd-content.drawio.png | Sơ đồ thực thể – liên kết nhóm nội dung đề thi | 16
+!fig ../../diagrams/erd-content.drawio.png | Sơ đồ thực thể – liên kết nhóm nội dung đề thi | 16 | ngang
 Một đề thi thuộc một mẫu phần thi và gồm nhiều part. Mỗi part có các nhóm câu, mỗi nhóm câu có các câu hỏi, và mỗi câu hỏi có một hoặc nhiều đáp án được chấp nhận. Kiểu tương tác của nhóm câu quyết định giao diện câu hỏi. Mỗi part Listening tham chiếu một tệp âm thanh. Bảng tệp chỉ lưu thông tin của hình và âm thanh, còn nội dung tệp nằm trên đĩa và được đặt tên theo băm SHA-256. Một bộ đề trộn ghi lại các đề gốc theo vị trí A, B, C… Mỗi đề trộn lại là một đề thi bình thường, chỉ có thêm mã đề và mẫu trộn (ví dụ “ACBBA”). Bảng nhật ký sửa đáp án ghi lại mỗi lần quản trị viên sửa đáp án của một đề đã xuất bản.
 ### Nhóm kỳ thi và thí sinh
 Nhóm thứ hai lưu kỳ thi, thí sinh và các phân công, được trình bày trong Hình 3.5.
-!fig ../../diagrams/erd-exams.drawio.png | Sơ đồ thực thể – liên kết nhóm kỳ thi và thí sinh | 16
+!fig ../../diagrams/erd-exams.drawio.png | Sơ đồ thực thể – liên kết nhóm kỳ thi và thí sinh | 16 | ngang
 Một kỳ thi có trạng thái, mã PIN, mật khẩu giám thị, khóa cấu hình Safe Exam Browser (nếu dùng) và số máy mỗi dãy. Mỗi phần thi của kỳ thi gắn với một đề hoặc một bộ đề trộn và ghi thời điểm giám thị báo bắt đầu. Thông tin của thí sinh gồm số báo danh, số máy, phần trăm thời gian cộng thêm, mật khẩu đã băm, mốc kết thúc ở cấp bài thi, giám khảo được chia, mã bài Writing, mốc thông báo đã đọc và điểm Speaking do quản trị viên nhập. Ba bảng phân công nối kỳ thi với giám thị, giám khảo và quản trị viên mảng thí sinh, còn một bảng riêng lưu thông báo của giám thị cho cả phòng hoặc cho từng thí sinh.
 Kỳ thi có bốn trạng thái là nháp (Draft), đã lên lịch (Scheduled), đang mở (Active) và đã đóng (Closed), và chỉ chuyển giữa chúng theo các bước hợp lệ. Kỳ thi nháp và kỳ thi đã lên lịch chuyển qua lại được với nhau. Từ trạng thái đã lên lịch, kỳ thi được mở. Một kỳ thi đang mở chỉ quay về đã lên lịch khi chưa ai bắt đầu làm bài, và chỉ đóng được khi không còn ai đang làm bài. Chỉ quản trị viên mới mở lại được một kỳ thi đã đóng. Để mở kỳ thi, hệ thống yêu cầu đã có thí sinh, giám thị và số máy dạng số.
 ### Nhóm làm bài, chấm điểm và giám sát
 Hình 3.6 trình bày nhóm bảng làm bài, chấm điểm và giám sát, trong đó bảng lượt làm bài là trung tâm của toàn hệ thống.
-!fig ../../diagrams/erd-delivery.drawio.png | Sơ đồ thực thể – liên kết nhóm làm bài, chấm điểm và giám sát | 16
+!fig ../../diagrams/erd-delivery.drawio.png | Sơ đồ thực thể – liên kết nhóm làm bài, chấm điểm và giám sát | 16 | ngang
 Mỗi thí sinh có một lượt làm bài cho mỗi phần thi. Các cột của bảng lượt làm bài chia thành bốn nhóm, gồm trạng thái làm bài và chấm bài, các mốc và đại lượng của đồng hồ, trạng thái phần nghe, và trạng thái kết nối. Bảng 3.15 giải thích các cột của đồng hồ, vốn là phần phức tạp nhất.
 |table| Các cột đồng hồ của bảng attempts | 5,11.5
 Cột|Ý nghĩa
@@ -472,7 +472,7 @@ Một cột quan trọng khác ghi đề mà lượt làm bài sử dụng. Cộ
 Các bảng còn lại của nhóm có vai trò đơn giản hơn. Câu trả lời được lưu theo từng câu hỏi, kèm lựa chọn *Yes*, *No* hoặc *Undecided* ở phần Writing chọn một trong hai câu của B1. Điểm Writing của giám khảo được lưu dưới dạng lịch sử, và điểm mới nhất được tính. Ghi chú và tô sáng có bảng riêng. Hai bảng giám sát ghi nhật ký mọi thao tác của giám thị và các cảnh báo mà máy chủ quan sát được.
 ### Nhóm tài khoản nhân sự và cấu hình
 Nhóm cuối cùng lưu tài khoản nhân sự và cấu hình của trung tâm (Hình 3.7).
-!fig ../../diagrams/erd-accounts.drawio.png | Sơ đồ thực thể – liên kết nhóm tài khoản nhân sự và cấu hình | 16
+!fig ../../diagrams/erd-accounts.drawio.png | Sơ đồ thực thể – liên kết nhóm tài khoản nhân sự và cấu hình | 16 | ngang
 Bảng người dùng chỉ chứa nhân viên, mỗi người có một trong bốn vai trò là quản trị viên, quản trị viên theo mảng, giám khảo và giám thị. Các mảng của quản trị viên theo mảng (đề thi, kỳ thi, thí sinh, trung tâm) nằm ở một bảng riêng. Bảng yêu cầu duyệt vừa là hàng đợi vừa là nhật ký của cơ chế duyệt chéo. Mỗi dòng ghi loại yêu cầu, người yêu cầu, người quyết định, trạng thái và dữ liệu của thay đổi, với năm trạng thái là chờ duyệt (Pending), đã duyệt (Approved), bị từ chối (Rejected), đã hủy (Cancelled) và thất bại (Failed). Bảng cấu hình chỉ có một dòng, chứa tên và logo của trung tâm.
 ### Ràng buộc toàn vẹn và điều khiển tương tranh
 Ngoài khóa chính, khóa ngoại và chỉ mục duy nhất, lược đồ dùng ràng buộc CHECK của MySQL để cơ sở dữ liệu tự từ chối dữ liệu sai, kể cả khi mã ứng dụng có lỗi. Các ràng buộc được chia thành năm loại.
@@ -486,7 +486,7 @@ Với các thao tác liên quan đến cả kỳ thi, như đổi trạng thái 
 ## Thiết kế xử lý
 ### Vòng đời của lượt làm bài
 Hình 3.8 là sơ đồ máy trạng thái của một lượt làm bài. Trạng thái làm bài và trạng thái chấm được lưu ở hai cột riêng. Trạng thái làm bài gồm chưa bắt đầu (NotStarted), đang làm bài (InProgress), đang tạm dừng (Paused) và đã nộp (Submitted). Trạng thái chấm gồm chưa chấm (NotGraded), đã chấm tự động (AutoGraded), chờ giám khảo chấm (NeedsManualMarking) và đã chấm xong (Final). Sau khi nộp, lượt làm bài tiếp tục di chuyển trong các trạng thái chấm.
-!fig ../../diagrams/attempt-state.drawio.png | Sơ đồ máy trạng thái của một lượt làm bài | 16
+!fig ../../diagrams/attempt-state.drawio.png | Sơ đồ máy trạng thái của một lượt làm bài | 16 | ngang
 Một lượt làm bài được nộp với một trong hai lý do. Lý do thứ nhất là hết giờ (TimeExpired), kể cả khi giờ kết thúc bị kéo về sớm bởi *End in*, *End at* hoặc lệnh kết thúc cả bài thi. Lý do thứ hai là giám thị bấm *End now* (InvigilatorEndNow). Việc tách hai trạng thái giúp một bài đã nộp vẫn chờ giám khảo chấm được mà không ảnh hưởng đến các quy tắc của đồng hồ.
 ### Đồng hồ do máy chủ tính
 Mọi thay đổi đồng hồ đều đi qua một lớp tính giờ làm bài nằm trong lõi nghiệp vụ. Lớp này không cho sửa giờ kết thúc trực tiếp. Thay vào đó, mỗi khi có thao tác, giờ kết thúc được tính lại từ các đại lượng ở Bảng 3.15 theo các công thức sau.
@@ -515,7 +515,7 @@ Hình 3.9 là sơ đồ tuần tự của use case UC01. Giống Inspera, việc
 Tên đăng nhập được sinh theo quy tắc của Cambridge, gồm năm chữ cái đầu của họ (bỏ dấu), chữ cái đầu của tên và số báo danh. Ví dụ, thí sinh Nguyễn An có số báo danh 0101 sẽ có tên đăng nhập nguyea0101. Nếu họ ngắn hơn năm chữ cái, hệ thống lấy thêm chữ cái của tên để đủ sáu chữ cái khi có thể. Mật khẩu được sinh ngẫu nhiên. Mật khẩu được băm để kiểm tra khi đăng nhập, đồng thời được mã hóa bằng Data Protection để in lại phiếu khi cần.
 ### Lệnh của giám thị và cập nhật tức thì
 Hình 3.10 là sơ đồ tuần tự của use case UC03. Trang theo dõi giữ kết nối với hub của nhân viên, còn máy thí sinh giữ kết nối với hub của thí sinh. Khi giám thị bấm *Pause*, máy chủ xét từng thí sinh theo các quy tắc thao tác của giám thị, áp dụng lớp tính giờ, ghi nhật ký, rồi gửi thông điệp yêu cầu làm mới tới máy của những thí sinh bị ảnh hưởng. Máy thí sinh gửi nhịp kiểm tra kết nối ngay, nhận trạng thái tạm dừng và che màn hình. Song song với đó, trang theo dõi nhận thông điệp báo phần thi thay đổi và tải lại bảng. Giống cách Inspera báo, kết quả trả về cho giám thị ghi rõ thao tác đã áp dụng cho bao nhiêu người, bỏ qua những ai và vì sao.
-!fig ../../diagrams/seq-invigilator-pause.drawio.png | Sơ đồ tuần tự giám thị tạm dừng thí sinh | 16
+!fig ../../diagrams/seq-invigilator-pause.drawio.png | Sơ đồ tuần tự giám thị tạm dừng thí sinh | 16 | ngang
 Mọi lệnh của giám thị đều được ghi vào bảng nhật ký thao tác. Trang *Invigilator log* của kỳ thi đọc lại bảng này theo thời gian, nên nhà trường có sẵn biên bản sự cố mà không phải ghi tay. Nếu kênh SignalR bị đứt, cả hai phía vẫn hoạt động nhờ thăm dò định kỳ. Máy thí sinh vẫn gửi nhịp kiểm tra kết nối 5 giây một lần, và trang theo dõi tự tải lại mỗi 3 giây. Nói cách khác, SignalR chỉ giúp cập nhật đến sớm hơn chứ không phải điều kiện để hệ thống chạy đúng.
 ### Tự lưu câu trả lời
 Hàng đợi tự lưu ở trình duyệt được thiết kế để không mất câu trả lời trong những tình huống đã gặp khi kiểm thử. Trước hết, các thay đổi được gom lại và gửi sau 800 mili giây không có thay đổi mới, nhưng không quá 3 giây kể từ thay đổi chưa gửi đầu tiên, nên thí sinh gõ liên tục vẫn được lưu đều đặn. Yêu cầu lưu dùng phương thức PUT và ghi đè câu trả lời của từng câu, vì vậy gửi lại nhiều lần không tạo dữ liệu trùng (tính lũy đẳng, mục 2.2.1).
@@ -605,8 +605,8 @@ Thành phần|Công nghệ|Ghi chú
 Máy chủ|.NET 10, ASP.NET Core, C#|SDK 10.0.401
 Truy cập dữ liệu|EF Core 10, MySql.EntityFrameworkCore 10.0.9|Nhà cung cấp của Oracle, vì Pomelo chưa có bản cho EF Core 10
 Cơ sở dữ liệu|MySQL 8.4|InnoDB, bảng mã utf8mb4
-Thời gian thực|ASP.NET Core SignalR; @microsoft/signalr 8|WebSocket là phương thức chính
-Giao diện|React 19, TypeScript 6, Vite 8|DOMPurify 3 làm sạch HTML
+Thời gian thực|ASP.NET Core SignalR; @microsoft/signalr 8|Chủ yếu dùng WebSocket
+Giao diện|React 19, TypeScript 6, Vite 8|Làm sạch HTML bằng DOMPurify 3
 Làm sạch HTML máy chủ|HtmlSanitizer 9|
 Bộ chuyển đề|Python 3, PyMuPDF 1.28|ffmpeg cho công cụ tách bản ghi Listening
 Kiểm thử|xUnit v3, Vitest 5, Testing Library, Playwright 1.56, pytest|
@@ -717,7 +717,7 @@ Số kiểm thử qua các mốc của dự án được trình bày trong Bản
 Ngày|Mốc|Máy chủ|Giao diện|Chuyển đề|Đầu-cuối
 13/10|Rà soát đầu tiên|231|71|35|–
 21/10|Hết sprint 3 (A2 hoàn chỉnh, trộn đề)|350|88|60|–
-21/10|Hết sprint 6 (B1 chạy đầu-cuối)|381|98|69|6
+21/10|Hết sprint 6 (kiểm thử đầu-cuối B1)|381|98|69|6
 26/10|Hết sprint 7 (thi thử, sửa lỗi)|390|104|69|6
 02/11|Bắt đầu rà soát|1345|119|69|6
 07/11|Sau khi sửa 42 vấn đề|1464|201|69|6
@@ -737,26 +737,26 @@ STT|Tình huống|Kết quả quan sát|Đánh giá
 6|Tạm dừng một thí sinh, cả phòng; cho làm tiếp|Một thí sinh dừng sau 165 ms; cả phòng 6/6 sau tối đa 224 ms; đồng hồ đứng yên trong 10 giây dừng|Đạt
 7|Thông báo cho cả phòng và một thí sinh|Cả phòng 6/6 sau tối đa 180 ms; thông báo riêng chỉ đến đúng người|Đạt
 8|Mất mạng 1 phút rồi vào lại|Trang giám thị báo *Offline* sau 9 giây, có cảnh báo; đồng hồ vẫn chạy; câu trả lời chọn lúc mất mạng được lưu khi có mạng|Đạt
-9|Chuyển sang máy khác|Máy cũ về màn hình đăng nhập; máy mới tiếp tục cùng lượt làm bài và không hiện lại thông báo đã đọc|Đạt
+9|Đổi sang máy khác|Máy cũ về màn hình đăng nhập; máy mới tiếp tục cùng lượt làm bài và không hiện lại thông báo đã đọc|Đạt
 10|Cộng giờ bù sự cố; *End in*|+5 phút: thời gian còn lại tăng 300 giây; *End in* 2 phút: tự nộp khi hết 2 phút|Đạt
 11|Listening: tua lại 1 phút và cộng 1 phút|Vị trí phát từ 75 giây về 16 giây; hộp cộng giờ mở sẵn 1 phút|Đạt
 12|B1 Writing Part 2 chọn một câu|*1 of 1 question selected*; gọi thẳng API để chọn thêm câu bị từ chối với mã 409|Đạt
-13|*End now* cho một thí sinh|Màn hình kết thúc sau 145 ms, ghi *Ended by invigilator*, không hoàn tác được|Đạt
+13|Kết thúc sớm một thí sinh (*End now*)|Màn hình kết thúc sau 145 ms, ghi *Ended by invigilator*, không hoàn tác được|Đạt
 14|Hết giờ tự nộp|Cả 6 thí sinh tự nộp trong 15 giây sau giờ kết thúc, kể cả thí sinh thêm 25 % giờ (37,5 phút) và máy đã tắt|Đạt
 15|Chấm Writing ẩn danh, điểm Speaking, bảng điểm, CSV|Điểm 6 tự động + 7 Writing = 13/60, trạng thái đã chấm xong; Speaking 30/45 quy đổi thành 124; CSV đọc đúng tiếng Việt, có các cột thang Cambridge|Đạt
-16|Yêu cầu xóa thí sinh, quản trị viên khác duyệt|Chưa xóa khi chờ duyệt; người yêu cầu không có nút duyệt; sau khi quản trị viên thứ hai duyệt thì xóa và ghi nhật ký|Đạt
+16|Xóa thí sinh cần quản trị viên khác duyệt|Chưa xóa khi chờ duyệt; người yêu cầu không có nút duyệt; sau khi quản trị viên thứ hai duyệt thì xóa và ghi nhật ký|Đạt
 17|Giám thị xem nhật ký thao tác, tải CSV|Nhật ký 27 dòng gồm báo bắt đầu, tạm dừng, làm tiếp, cộng giờ, thông báo, *End in*, *End now*, tua Listening; CSV 27 dòng kèm tiêu đề|Đạt
 |end|
 Các số đo trong bảng cho thấy lệnh của giám thị đến màn hình thí sinh trong khoảng 145 đến 224 mili giây, kể cả khi áp dụng cho cả phòng. Tình huống 14 kiểm chứng trực tiếp nguyên tắc đồng hồ do máy chủ tính, vì thí sinh đã tắt máy vẫn được nộp bài đúng giờ.
 ## Kết quả kiểm thử tải
 Kiểm thử tải được chạy trên một máy xách tay (16 luồng CPU, 7,6 GiB RAM dành cho Docker), trên đó cả hệ thống chạy bằng Docker Desktop. Công cụ kiểm thử chạy trên cùng máy, nên số liệu đã bao gồm cả tải của công cụ. Mỗi thí sinh ảo đăng nhập, nhập PIN, bắt đầu phần Reading & Writing A2, gửi nhịp kiểm tra kết nối 5 giây một lần, lưu một câu trả lời mỗi 4 đến 12 giây và giữ kết nối SignalR. Một giám thị ảo theo dõi qua SignalR, tải lại trang theo dõi mỗi 3 giây và giữa giờ tạm dừng rồi cho làm tiếp một nhóm thí sinh. Thời gian phản hồi được báo theo phân vị (percentile) 50, 95 và 99, ký hiệu p50, p95 và p99. Bảng 4.5 là kết quả của bốn lần chạy.
 |table| Kết quả kiểm thử tải | 4.4,3,3,3,3.1
-Chỉ số|100 thí sinh, 5 phút (22/10)|200 thí sinh, 3 phút (22/10)|200 thí sinh, 3 phút (07/11)|200 thí sinh, 3 phút (25/11)
+Chỉ số|Ngày 22/10, 100 thí sinh trong 5 phút|Ngày 22/10, 200 thí sinh trong 3 phút|Ngày 07/11, 200 thí sinh trong 3 phút|Ngày 25/11, 200 thí sinh trong 3 phút
 Vào được bài; còn kết nối lúc kết thúc|100/100; 100/100|200/200; 200/200|200/200; 200/200|200/200; 200/200
 Tổng yêu cầu; lỗi máy chủ|10 322; 0|12 681; 0|12 676; 0|12 654; 0
-Lưu câu trả lời p50 / p95 / p99 (ms)|17 / 27 / 35|15 / 29 / 73|11 / 17 / 55|19 / 65 / 177
-Nhịp kiểm tra kết nối p50 / p95 / p99 (ms)|118 / 144 / 161|208 / 334 / 546|219 / 265 / 502|406 / 523 / 849
-Đăng nhập thí sinh p50 / p95 (ms)|65 / 72|65 / 76|59 / 71|100 / 124
+Lưu câu trả lời p50/p95/p99 (ms)|17/27/35|15/29/73|11/17/55|19/65/177
+Nhịp kiểm tra kết nối p50/p95/p99 (ms)|118/144/161|208/334/546|219/265/502|406/523/849
+Đăng nhập thí sinh p50/p95 (ms)|65/72|65/76|59/71|100/124
 Lệnh tạm dừng đến màn hình thí sinh|10/10, 16 ms|20/20, 73 ms|20/20, tối đa 20 ms|20/20, 128 ms
 Số lần SignalR phải nối lại|0|0|0|0
 |end|
@@ -866,7 +866,7 @@ POST|/api/admin/papers/{id}/publish|Xuất bản
 DELETE|/api/admin/papers/{id}|Yêu cầu xóa (202)
 PUT|/api/admin/papers/{id}, /parts/{n}, /parts/{n}/groups/{m}, /questions/{n}|Sửa đề nháp
 POST|/api/admin/papers/{id}/parts/{n}/audio, /images, /questions/{n}/options/{key}/image|Tải âm thanh, hình
-PUT|/api/admin/papers/{id}/questions/{n}/answers|Quản trị viên sửa đáp án đề đã xuất bản
+PUT|/api/admin/papers/{id}/questions/{n}/answers|Quản trị viên sửa đáp án của đề đã xuất bản
 GET, POST|/api/admin/paper-mixes, /paper-mixes/{id}|Xem, tạo bộ đề trộn
 DELETE|/api/admin/paper-mixes/{id}|Yêu cầu xóa bộ đề trộn (202)
 GET|/api/admin/exam-types, /exam-papers, /exam-paper-mixes, /assignable-staff|Dữ liệu cho biểu mẫu kỳ thi
@@ -889,7 +889,7 @@ GET, POST|/api/staff/exams/{id}/messages|Thông báo cho thí sinh
 GET|/api/staff/exams/{id}/results|Quản trị viên: bảng điểm, thang Cambridge English Scale
 PUT|/api/staff/exams/{id}/candidates/{cid}/speaking|Quản trị viên: điểm Speaking
 GET|/api/staff/exams/{id}/actions|Người giám sát phiên: nhật ký thao tác của giám thị
-GET|/api/staff/marking, /api/staff/attempts/{id}/marking|Giám khảo: bài được chia, bài cần chấm
+GET|/api/staff/marking, /api/staff/attempts/{id}/marking|Giám khảo xem bài được chia và bài cần chấm
 POST|/api/staff/attempts/{id}/writing-marks|Giám khảo: lưu điểm Writing
 GET, POST|/api/staff/approvals, /approvals/{id}/approve, /reject, /cancel|Duyệt chéo
 WS|/hubs/staff, /hubs/candidate|Hub SignalR

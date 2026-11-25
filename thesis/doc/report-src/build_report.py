@@ -10,7 +10,10 @@ with the content of noidung.md. Faculty rules (0_MOT_SO_QUY_DINH_CHUNG_2026.doc)
 above, figures below, numbered per chapter with SEQ fields so Word builds the lists of tables and figures.
 
 Markup of noidung.md: "# X" chapter, "#! X" unnumbered title in the table of contents, "## " / "### " sections,
-"- " bullet, "|table| caption | widths" ... "|end|" (first row is the header), "!fig path | caption | width",
+"- " bullet, "|table| caption | widths" ... "|end|" (first row is the header; the widths only set the table width and
+a starting point: table_widths() moves width between columns so no cell ends on a line of one word),
+"!fig path | caption | width [| ngang]" (a figure from thesis/diagrams fills the text width or the page height,
+whichever comes first, whatever the width says; "ngang" puts it alone on a landscape page),
 "[@key]" or "[@key, tr. 5]" citations (refs.py), *italic*, and the @ commands handled in build(). Tables and figures
 after "#! PHỤ LỤC" are numbered PL.1, PL.2, … (a SEQ field restarted at that number, still in the lists of tables
 and figures).
@@ -21,6 +24,8 @@ import re
 import sys
 
 import docx
+import pymupdf
+from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -36,7 +41,12 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "thesis", "doc", 
 
 TITLE = "XÂY DỰNG WEBSITE HỖ TRỢ THI CHỨNG CHỈ TIẾNG ANH CAMBRIDGE"
 STUDENT = {"Sinh viên:": "Trần Hoàng Long", "Lớp:": "DA23TTA", "MSSV:": "110123025", "GVHD:": "ThS. Nhan Minh Phúc"}
+FONTS = {bold: pymupdf.Font(fontfile=os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts", name))
+         for bold, name in ((False, "times.ttf"), (True, "timesbd.ttf"))}
 TEXT_WIDTH_TWIPS = 9355  # A4 21 cm - 3 cm - 1.5 cm
+TEXT_WIDTH_CM, TEXT_HEIGHT_CM = 16.5, 25.7  # portrait text area; landscape is 25.2 x 17
+CAPTION_ROOM_CM = 2.5  # a caption of up to two lines under a figure that fills the page
+CELL_PAD_CM = 0.38  # left and right cell margins of Table Grid (0.19 cm each)
 
 
 # ---------------------------------------------------------------- low-level XML helpers
@@ -175,7 +185,126 @@ def setup_styles(doc):
         set_child(p, "w:spacing", **{"w:before": 60, "w:after": 60, "w:line": 312, "w:lineRule": "auto"})
         order_ppr(p)
 
+    # links (URLs in the references) are black like all text
+    link = doc.styles["Hyperlink"].element
+    set_child(rpr(link), "w:color", **{"w:val": "000000"})
+
     add_bullet_style(doc)
+
+
+_WIDTHS = {}
+
+
+def fix_widths(table, widths):
+    """Fixed layout with the grid set: Word otherwise autofits the columns to their text and the widths chosen by
+    table_widths() are lost."""
+    table.autofit = False
+    for col, w in zip(table.columns, widths):
+        col.width = Cm(w)
+
+
+def text_pt(text, bold=False):
+    """Width in points of text in 13 pt Times New Roman, measured with the font file Word uses."""
+    key = (text, bold)
+    if key not in _WIDTHS:
+        _WIDTHS[key] = FONTS[bold].text_length(text, fontsize=13)
+    return _WIDTHS[key]
+
+
+def words_of(text):
+    return [w for w in re.split("[ \t\n​]+", text.strip()) if w]  # no break at the no-break spaces of citations
+
+
+def cell_lines(text, width_cm, bold=False):
+    """Lines a cell takes and words on its last line, breaking between words as Word does."""
+    avail = (width_cm - CELL_PAD_CM) / 2.54 * 72
+    space = text_pt(" ", bold)
+    lines, current, last = 0, None, 0
+    for word in words_of(text):
+        # Word may also break after a hyphen inside a word ("đầu-cuối")
+        for k, part in enumerate(re.split(r"(?<=-)(?=.)", word)):
+            w = text_pt(part, bold)
+            gap = space if k == 0 else 0
+            if current is not None and current + gap + w > avail:
+                lines, current, last = lines + 1, w, 1
+            else:
+                current, last = (w if current is None else current + gap + w), (last + 1 if k == 0 else last)
+    return lines + (current is not None), last
+
+
+def table_widths(rows, widths):
+    """Same total width; chooses the column widths (1 mm steps) with the fewest cells whose last line is one word, then
+    the lowest table. Never narrower than a column's longest word, nor than a header of one or two words."""
+    total = sum(widths)
+    plain = [[re.sub(r"\[@[^\]]+\]", lambda m: re.sub(r"@[\w-]+", "12", m.group()).replace(" ", " "),
+                     c.replace("*", "")) for c in r] for r in rows]  # [@key, tr. 5] -> [12, tr. 5], unbreakable
+
+    def floor_of(j):
+        need = max(text_pt(w, i == 0) for i, r in enumerate(plain) for w in words_of(r[j]) or [""])
+        if len(words_of(plain[0][j])) <= 2:
+            need = max(need, text_pt(plain[0][j].strip(), True))
+        return need / 72 * 2.54 + CELL_PAD_CM + 0.1
+
+    floor = [floor_of(j) for j in range(len(widths))]
+
+    def cost(ws):
+        orphans = height = 0
+        for r in plain:
+            row = []
+            for j, c in enumerate(r):
+                bold = r is plain[0]
+                n, last = cell_lines(c, ws[j], bold)
+                # a line within a few points of the edge may break either way in Word: test a little narrower and wider
+                if len(c.split()) >= 3:
+                    orphans += any(k >= 2 and l == 1 for k, l in
+                                   (cell_lines(c, ws[j] + d * (ws[j] - CELL_PAD_CM), bold) for d in (-0.02, 0, 0.01)))
+                row.append(n)
+            height += max(row)
+        return orphans * 1000 + height
+
+    # start from the given widths, scaled so every column keeps at least its floor
+    extra = [max(w - f, 0.01) for w, f in zip(widths, floor)]
+    room = max(total - sum(floor), 0)
+    ws = [round(f + e * room / sum(extra), 1) for f, e in zip(floor, extra)]
+    ws[-1] = round(total - sum(ws[:-1]), 1)
+    best = start = cost(ws)
+    n = len(ws)
+    if n <= 3:
+        # few columns: try every split in 1 mm steps
+        steps = int(round(total * 10))
+        lo = [int(f * 10 + 0.999) for f in floor]
+        for a in range(lo[0], steps + 1):
+            for b in (range(lo[1], steps - a + 1) if n == 3 else [steps - a]):
+                trial = [a / 10, b / 10] + ([(steps - a - b) / 10] if n == 3 else [])
+                if all(t >= f for t, f in zip(trial, floor)):
+                    c = cost(trial)
+                    if c < best:
+                        best, ws = c, trial
+    else:
+        for _ in range(400):
+            move = None
+            for step in (0.1, 0.3, 0.6, 1.0, 2.0):
+                for a in range(n):
+                    for b in range(n):
+                        if a == b or ws[a] - step < floor[a]:
+                            continue
+                        trial = ws[:]
+                        trial[a] -= step
+                        trial[b] += step
+                        c = cost(trial)
+                        if c < best:
+                            best, move = c, trial
+            if move is None:
+                break
+            ws = move
+    if best >= 1000:
+        print(f"  table {rows[0][0]!r}: {best // 1000} cells may end on one word (was {start // 1000})")
+        for i, r in enumerate(plain):
+            for j, c in enumerate(r):
+                if len(c.split()) >= 3 and any(k >= 2 and l == 1 for k, l in (
+                        cell_lines(c, ws[j] + d * (ws[j] - CELL_PAD_CM), i == 0) for d in (-0.02, 0, 0.01))):
+                    print(f"    {ws[j]:.1f} cm: {c}")
+    return ws
 
 
 def add_bullet_style(doc):
@@ -246,6 +375,36 @@ def fill_covers(doc):
             r.font.size, r.font.name = p.runs[0].font.size, "Times New Roman"
 
 
+def landscape_footers(doc):
+    """Landscape sections get a footer of their own: the template's text, with its tab stops and the framed page number
+    moved out to the wider page (the template places them at fixed positions for a portrait page)."""
+    portrait = doc.sections[1]
+    main = portrait.footer._element
+    for sec in doc.sections:
+        if sec.orientation != WD_ORIENT.LANDSCAPE:
+            continue
+        for ref in sec._sectPr.findall(qn("w:footerReference")):
+            sec._sectPr.remove(ref)
+        sec.footer.is_linked_to_previous = False  # a new, empty footer part for this section
+        ftr = sec.footer._element
+        for k in list(ftr):
+            ftr.remove(k)
+        for k in main:
+            ftr.append(copy.deepcopy(k))
+        widen = sec.page_width.twips - portrait.page_width.twips
+        scale = (sec.page_width.twips - sec.left_margin.twips - sec.right_margin.twips) /                 (portrait.page_width.twips - portrait.left_margin.twips - portrait.right_margin.twips)
+        for frame in ftr.iter(qn("w:framePr")):
+            frame.set(qn("w:x"), str(int(frame.get(qn("w:x"))) + widen))
+        for p in ftr.findall(qn("w:p")):
+            if p.find(".//" + qn("w:tab")) is None or p.find(qn("w:pPr")) is None:
+                continue
+            tabs = set_child(p.find(qn("w:pPr")), "w:tabs")
+            for kind, pos in (("center", 4320), ("right", 8640)):  # the Footer style's stops
+                tabs.append(el("w:tab", **{"w:val": "clear", "w:pos": pos}))
+                tabs.append(el("w:tab", **{"w:val": kind, "w:pos": int(pos * scale)}))
+            order_ppr(p.find(qn("w:pPr")))
+
+
 def fill_footer(doc):
     footer = doc.sections[1].footer
     for p in footer.paragraphs:
@@ -302,7 +461,7 @@ class Builder:
             if key not in self.cited:
                 self.cited.append(key)
             parts.append(f"{key}" + (f", {loc.strip()}" if loc else ""))
-        return "[" + "; ".join(parts) + "]"
+        return ("[" + "; ".join(parts) + "]").replace(" ", " ")  # a citation never breaks across lines
 
     def runs(self, p, text, italic=False):
         text = re.sub(r"\[(@[^\]]+)\]", self.cite, text)
@@ -359,6 +518,11 @@ class Builder:
         return p
 
     def table(self, caption, widths, rows):
+        # long paths may wrap after "/" (a zero-width space) instead of being cut mid-word
+        rows = [[re.sub(r"\S{21,}", lambda m: m.group().replace("/", "/​"), c) for c in r] for r in rows]
+        widths = table_widths(rows, widths)
+        # a column is centred only when all its cells are short (numbers, codes), never half and half
+        short = [all(len(r[j]) < 18 for r in rows[1:]) for j in range(len(rows[0]))]
         self.tables += 1
         self.caption("Bảng", caption)
         t = self.doc.add_table(rows=len(rows), cols=len(rows[0]))
@@ -367,6 +531,7 @@ class Builder:
         t.alignment = 1
         tblpr = t._tbl.tblPr
         set_child(tblpr, "w:tblW", **{"w:w": int(sum(widths) * 567), "w:type": "dxa"})
+        fix_widths(t, widths)
         for i, row in enumerate(rows):
             tr = t.rows[i]
             if i == 0:
@@ -380,7 +545,7 @@ class Builder:
                 p = cell.paragraphs[0]
                 pf = p.paragraph_format
                 pf.space_before, pf.space_after, pf.line_spacing = Pt(3), Pt(3), 1.15
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER if (i == 0 or len(value) < 18) else WD_ALIGN_PARAGRAPH.LEFT
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER if (i == 0 or short[j]) else WD_ALIGN_PARAGRAPH.LEFT
                 self.runs(p, value)
                 for r in p.runs:
                     r.font.name, r.font.size = "Times New Roman", Pt(13)
@@ -389,13 +554,43 @@ class Builder:
         # a little air after the table
         self.para("DoanVan").paragraph_format.space_after = Pt(0)
 
-    def figure(self, path, caption, width):
+    def section_break(self, landscape):
+        """Ends the section running so far here (its orientation is the opposite of the one starting) and starts a
+        landscape or portrait one. The first break keeps the body's page-number restart; later sections continue it."""
+        sect = copy.deepcopy(self.sect)
+        restart = self.sect.find(qn("w:pgNumType"))
+        if restart is not None and restart.get(qn("w:start")) is not None:
+            del restart.attrib[qn("w:start")]  # only the first body section restarts at 1, and it keeps its copy
+        elif sect.find(qn("w:pgNumType")) is not None:
+            sect.find(qn("w:pgNumType")).attrib.pop(qn("w:start"), None)
+        if not landscape:  # the section that ends is the landscape one
+            size = sect.find(qn("w:pgSz"))
+            w, h = size.get(qn("w:w")), size.get(qn("w:h"))
+            size.set(qn("w:w"), h)
+            size.set(qn("w:h"), w)
+            size.set(qn("w:orient"), "landscape")
+        p = self.para()
+        pf = p.paragraph_format
+        pf.space_before = pf.space_after = Pt(0)
+        p._p.get_or_add_pPr().append(sect)
+
+    def figure(self, path, caption, width, landscape=False):
         self.figures += 1
+        full = os.path.normpath(os.path.join(HERE, path))
+        if landscape:
+            self.section_break(landscape=True)
+        if landscape or "diagrams" in path:
+            from docx.image.image import Image
+            img = Image.from_file(full)
+            text_w, text_h = (25.2, 17.0) if landscape else (TEXT_WIDTH_CM, TEXT_HEIGHT_CM)
+            width = min(text_w, (text_h - CAPTION_ROOM_CM) * img.px_width / img.px_height)
         p = self.para(align=WD_ALIGN_PARAGRAPH.CENTER)
         p.paragraph_format.keep_with_next = True
         p.paragraph_format.space_before = Pt(6)
-        p.add_run().add_picture(os.path.normpath(os.path.join(HERE, path)), width=Cm(width))
+        p.add_run().add_picture(full, width=Cm(width))
         self.caption("Hình", caption)
+        if landscape:
+            self.section_break(landscape=False)
 
     def sign(self, lines):
         first = True
@@ -435,20 +630,22 @@ class Builder:
 
     def abbrev(self, lines):
         rows = [["Chữ viết tắt", "Ý nghĩa"]] + [l.split("|", 1) for l in lines]
+        widths = table_widths(rows, [3.5, 13])
         t = self.doc.add_table(rows=len(rows), cols=2)
         self.sect.addprevious(t._tbl)
         t.style = self.doc.styles["Table Grid"]
         t.alignment = 1
+        fix_widths(t, widths)
         for i, row in enumerate(rows):
             for j, value in enumerate(row):
                 cell = t.rows[i].cells[j]
-                cell.width = Cm(3.5 if j == 0 else 13)
+                cell.width = Cm(widths[j])
                 p = cell.paragraphs[0]
                 p.paragraph_format.space_before = p.paragraph_format.space_after = Pt(3)
                 p.paragraph_format.line_spacing = 1.15
                 r = p.add_run(value)
                 r.font.name, r.font.size = "Times New Roman", Pt(13)
-                r.bold = i == 0 or j == 0
+                r.bold = i == 0
                 if i == 0:
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -479,6 +676,7 @@ class Builder:
 
 
 def build():
+    sys.stdout.reconfigure(encoding="utf-8")
     doc = docx.Document(TEMPLATE)
     setup_styles(doc)
     fill_covers(doc)
@@ -513,8 +711,8 @@ def build():
             i += 1
             b.table(caption, [float(w) for w in widths.split(",")], rows)
         elif line.startswith("!fig "):
-            path, caption, width = [s.strip() for s in line[5:].split(" | ")]
-            b.figure(path, caption, float(width))
+            path, caption, width, *flags = [s.strip() for s in line[5:].split(" | ")]
+            b.figure(path, caption, float(width), landscape="ngang" in flags)
         elif line.startswith("@sign "):
             b.sign(line[6:])
         elif line.startswith("@nhanxet "):
@@ -544,6 +742,15 @@ def build():
     for t in doc.element.body.iter(qn("w:t")):
         if t.text and "" in t.text:
             t.text = re.sub(r"([^]+)", lambda m: str(refs_numbers[m.group(1)]), t.text)
+
+    landscape_footers(doc)
+
+    # all text black (the template leaves a few coloured runs)
+    for part in [doc.element.body] + [s.footer._element for s in doc.sections]:
+        for color in part.iter(qn("w:color")):
+            for attr in ("w:themeColor", "w:themeShade", "w:themeTint"):
+                color.attrib.pop(qn(attr), None)
+            color.set(qn("w:val"), "000000")
 
     doc.core_properties.title = TITLE.capitalize()
     doc.core_properties.author = "Trần Hoàng Long"
