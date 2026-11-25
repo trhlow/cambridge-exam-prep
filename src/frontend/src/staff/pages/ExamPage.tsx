@@ -103,6 +103,11 @@ export function ExamPage({ examId, access }: { examId: number; access: Access })
                 Room plan
               </a>
             )}
+            {access.monitors && exam.canMonitor !== false && (
+              <Link to={`/staff/exams/${exam.id}/log`} className="st-btn">
+                Invigilator log
+              </Link>
+            )}
             {access.seesResults && (
               <Link to={`/staff/exams/${exam.id}/results`} className="st-btn">
                 Results

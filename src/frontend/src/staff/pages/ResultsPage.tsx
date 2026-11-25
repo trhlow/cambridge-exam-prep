@@ -1,7 +1,7 @@
 import { staffApi } from '../api'
 import { Link } from '../Link'
 import { Badge, ErrorBox, PageHeader, VersionBadge } from '../ui'
-import { GRADING_TEXT, resultsCsv } from '../resultsCsv'
+import { GRADING_TEXT, downloadCsv, resultsCsv } from '../resultsCsv'
 import { useLoad } from '../useLoad'
 
 /**
@@ -17,18 +17,7 @@ export function ResultsPage({ examId }: { examId: number }) {
   const undealt = (results ?? []).filter(
     (c) => (!c.examiner || c.examinerUnavailable) && c.sections.some((s) => s.status === 'Submitted' && s.gradingStatus === 'NeedsManualMarking'),
   ).length
-  const download = () => {
-    if (!results) {
-      return
-    }
-
-    const url = URL.createObjectURL(new Blob([resultsCsv(results)], { type: 'text/csv;charset=utf-8' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `results-${(exam?.name ?? `exam-${examId}`).replace(/[^\p{L}\p{N}]+/gu, '-')}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
-  }
+  const download = () => results && downloadCsv(resultsCsv(results), 'results', exam?.name ?? `exam-${examId}`)
 
   return (
     <>

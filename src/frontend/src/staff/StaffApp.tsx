@@ -15,6 +15,7 @@ import { PaperPage } from './pages/PaperPage'
 import { PapersPage } from './pages/PapersPage'
 import { RoomPlanPage } from './pages/RoomPlanPage'
 import { ResultsPage } from './pages/ResultsPage'
+import { ActionLogPage } from './pages/ActionLogPage'
 import { StaffUsersPage } from './pages/StaffUsersPage'
 import { Link } from './Link'
 import { navigate, useRoute, type Route } from './router'
@@ -162,6 +163,8 @@ function Page({ route, access }: { route: Route; access: Access }) {
       return access.monitors ? <MonitorPage examId={route.examId} sectionId={route.sectionId} /> : <NotAllowed />
     case 'results':
       return access.seesResults ? <ResultsPage examId={route.examId} /> : <NotAllowed />
+    case 'log':
+      return access.monitors ? <ActionLogPage examId={route.examId} /> : <NotAllowed />
     case 'marking':
       return access.marks ? <MarkingPage attemptId={route.attemptId} /> : <NotAllowed />
     case 'scripts':

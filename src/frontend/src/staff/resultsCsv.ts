@@ -12,7 +12,7 @@ export const GRADING_TEXT: Record<string, string> = {
 const FORMULA_START = /^[=+\-@\t\r]/
 
 /** Quoted, with a formula-like start neutralised by a leading apostrophe. */
-const quote = (text: string) => `"${(FORMULA_START.test(text) ? `'${text}` : text).replace(/"/g, '""')}"`
+export const quote = (text: string) => `"${(FORMULA_START.test(text) ? `'${text}` : text).replace(/"/g, '""')}"`
 const cell = (value: number | null) => (value === null ? '' : String(value))
 
 /**
@@ -32,4 +32,14 @@ export function resultsCsv(results: CandidateResult[]): string {
     ...r.sections.flatMap((s, i) => [cell(s.rawScore), cell(s.maxScore), quote(s.status === 'NotStarted' ? '' : (GRADING_TEXT[s.gradingStatus] ?? s.gradingStatus)), ...(mixed[i] ? [cell(s.paperVersion ?? null)] : [])]),
   ])
   return String.fromCharCode(0xfeff) + [header, ...rows].map((row) => row.join(',')).join('\r\n')
+}
+
+/** Saves CSV text as a file named after the exam, e.g. `results-A2-Key-June.csv`. */
+export function downloadCsv(csv: string, prefix: string, examName: string) {
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${prefix}-${examName.replace(/[^\p{L}\p{N}]+/gu, '-')}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
 }

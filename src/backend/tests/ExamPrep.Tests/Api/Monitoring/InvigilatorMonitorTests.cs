@@ -96,6 +96,40 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
         Assert.False(waiting.IsOnline);
     }
 
+    public sealed record ActionLogRow(string Action, string By, string? CandidateNumber, string? Candidate, string? Section, int? Minutes, bool WholeTest, string? Message, int? Recipients, string? Reason);
+
+    [Fact]
+    public async Task TheInvigilatorLog_ListsEveryActionOfTheSession_ForThoseWhoMonitorIt()
+    {
+        api.SkipIfUnavailable();
+        var room = await RoomAsync();
+        var sectionId = room.First.ReadingWritingSectionId;
+        var first = new[] { room.First.CandidateId };
+        await api.StartAttemptAsync(room.First.CandidateId, sectionId);
+        (await room.Invigilator.PostAsync($"/api/staff/exams/{room.First.ExamId}/sections/{sectionId}/announce-start", null, ct)).EnsureSuccessStatusCode();
+        await ActAsync(room.Invigilator, room.First, sectionId, new { action = "Pause", candidateIds = first, reason = "Fire alarm" });
+        await ActAsync(room.Invigilator, room.First, sectionId, new { action = "Resume", candidateIds = first });
+        await ActAsync(room.Invigilator, room.First, sectionId, new { action = "AddIncidentTime", candidateIds = first, minutes = 5, reason = "Fire alarm" });
+        (await room.Invigilator.PostAsJsonAsync($"/api/staff/exams/{room.First.ExamId}/messages", new { text = "Ten minutes left." }, ct)).EnsureSuccessStatusCode();
+        var outsider = await api.CreateStaffAsync(UserRole.Invigilator, Password);
+        using var other = await api.StaffClientAsync(outsider.Username, Password);
+
+        var log = (await room.Invigilator.GetFromJsonAsync<List<ActionLogRow>>($"/api/staff/exams/{room.First.ExamId}/actions", ct))!;
+        var hidden = await other.GetAsync($"/api/staff/exams/{room.First.ExamId}/actions", ct);
+
+        Assert.Equal(["AnnounceStart", "Pause", "Resume", "AddIncidentTime", "SendMessage"], log.Select(r => r.Action));
+        Assert.Equal("Reading & Writing", log[0].Section);
+        Assert.Null(log[0].Candidate);
+        Assert.False(string.IsNullOrEmpty(log[1].CandidateNumber));
+        Assert.NotNull(log[1].Candidate);
+        Assert.Equal("Fire alarm", log[1].Reason);
+        Assert.Equal(5, log[3].Minutes);
+        Assert.Equal("Ten minutes left.", log[4].Message);
+        Assert.Equal(0, log[4].Recipients);
+        Assert.All(log, r => Assert.False(string.IsNullOrEmpty(r.By)));
+        Assert.Equal(HttpStatusCode.NotFound, hidden.StatusCode);
+    }
+
     [Fact]
     public async Task Monitor_IsHiddenFromInvigilatorsOfOtherSessions()
     {

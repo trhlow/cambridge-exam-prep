@@ -434,6 +434,25 @@ export interface WarningView {
   resolvedBy: string | null
 }
 
+/** One line of the session's invigilator log; `action` is what the invigilator chose (EndAt, EndIn…). */
+export interface ActionLogRow {
+  id: number
+  at: string
+  action: string
+  by: string
+  candidateNumber: string | null
+  candidate: string | null
+  section: string | null
+  minutes: number | null
+  endAt: string | null
+  disregardExtraTime: boolean
+  wholeTest: boolean
+  message: string | null
+  /** A message only: how many candidates it went to; 0 is the whole room. */
+  recipients: number | null
+  reason: string | null
+}
+
 export interface MonitorView {
   examId: number
   examName: string
@@ -603,6 +622,7 @@ export const staffApi = {
   monitor: (examId: number, sectionId: number) => request<MonitorView>(`${exam(examId)}/sections/${sectionId}/monitor`),
   act: (examId: number, sectionId: number, body: MonitorActionRequest) => post<ActionOutcome>(`${exam(examId)}/sections/${sectionId}/actions`, body),
   messages: (examId: number) => request<MessageView[]>(`${exam(examId)}/messages`),
+  actionLog: (examId: number) => request<ActionLogRow[]>(`${exam(examId)}/actions`),
   sendMessage: (examId: number, text: string, candidateIds: number[]) => post<MessageView[]>(`${exam(examId)}/messages`, { text, candidateIds }),
   /** Parent-level end: the whole test ends for these candidates (none given: for everyone entered). */
   endAll: (examId: number, candidateIds: number[], reason?: string) => post<ActionOutcome>(`${exam(examId)}/end-all`, { candidateIds, reason }),

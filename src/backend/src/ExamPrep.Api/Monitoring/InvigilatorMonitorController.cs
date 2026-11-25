@@ -441,6 +441,37 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
             .ToListAsync(cancellationToken);
     }
 
+    /// <summary>Every invigilator action of the session, oldest first, for the incident record.</summary>
+    [HttpGet("actions")]
+    public async Task<ActionResult<IReadOnlyList<ActionLogRow>>> Actions(int examId, CancellationToken cancellationToken)
+    {
+        if (!await db.Exams.MonitorableBy(User).AnyAsync(e => e.Id == examId, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        var actions = await db.InvigilatorActions.AsNoTracking()
+            .Where(a => a.ExamId == examId)
+            .OrderBy(a => a.CreatedAt).ThenBy(a => a.Id)
+            .Select(a => new { Action = a, By = a.User!.FullName, CandidateId = (int?)a.Attempt!.CandidateId, ExamSectionId = (int?)a.Attempt.ExamSectionId })
+            .ToListAsync(cancellationToken);
+        var candidates = await db.Candidates.AsNoTracking().Where(c => c.ExamId == examId).ToDictionaryAsync(c => c.Id, cancellationToken);
+        var sections = await db.ExamSections.AsNoTracking().Where(s => s.ExamId == examId)
+            .Select(s => new { s.Id, s.SectionTemplate!.Title })
+            .ToDictionaryAsync(s => s.Id, s => s.Title, cancellationToken);
+
+        return actions.Select(a =>
+        {
+            int? candidateId = a.Action.AttemptId is null ? ActionLog.Id(a.Action.PayloadJson, "candidateId") : a.CandidateId;
+            int? sectionId = a.Action.AttemptId is null ? ActionLog.Id(a.Action.PayloadJson, "sectionId") : a.ExamSectionId;
+            return ActionLog.Row(
+                a.Action,
+                a.By,
+                candidateId is { } c ? candidates.GetValueOrDefault(c) : null,
+                sectionId is { } s ? sections.GetValueOrDefault(s) : null);
+        }).ToList();
+    }
+
     /// <summary>To the whole room (no candidates given) or to each selected candidate. Shown under the bell icon.</summary>
     [HttpPost("messages")]
     public async Task<ActionResult<IReadOnlyList<CandidateMessageView>>> SendMessage(int examId, SendMessageRequest request, CancellationToken cancellationToken)
