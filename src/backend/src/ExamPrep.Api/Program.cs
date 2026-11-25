@@ -7,6 +7,7 @@ using ExamPrep.Api.Demo;
 using ExamPrep.Api.Realtime;
 using ExamPrep.Api.Security;
 using ExamPrep.Infrastructure;
+using ExamPrep.Infrastructure.Content;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -69,6 +70,22 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStart"))
 }
 
 await AdminBootstrapper.EnsureAdminAsync(app.Services, app.Configuration);
+
+try
+{
+    using var scope = app.Services.CreateScope();
+    var filled = await AudioDuration.FillMissingAsync(
+        scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>(), scope.ServiceProvider.GetRequiredService<IAssetStorage>(), CancellationToken.None);
+    if (filled > 0)
+    {
+        app.Logger.LogInformation("Read the length of {Count} recording(s) stored before lengths were kept.", filled);
+    }
+}
+catch (Exception e)
+{
+    // Only the rewind cap and the monitor's audio end depend on it: the API still starts.
+    app.Logger.LogError(e, "Reading the length of stored recordings failed.");
+}
 
 if (app.Environment.IsDevelopment())
 {

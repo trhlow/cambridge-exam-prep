@@ -127,6 +127,12 @@ public sealed class PaperPackageImporter(ExamPrepDbContext db, IAssetStorage sto
             {
                 asset = await db.Assets.FirstOrDefaultAsync(a => a.Sha256 == sha && a.UploadedByUserId == userId, cancellationToken)
                     ?? await CreateAssetAsync(path, kind, content, sha, userId, cancellationToken);
+                // Recordings imported before lengths were read get theirs when the same file comes in again.
+                if (kind == AssetKind.Audio)
+                {
+                    asset.DurationMs ??= AudioDuration.Milliseconds(content, Path.GetExtension(path));
+                }
+
                 bySha[sha] = asset;
             }
 

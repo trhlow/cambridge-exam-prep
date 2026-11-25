@@ -47,13 +47,15 @@ public static class AssetUploads
         ExamPrepDbContext db, IAssetStorage storage, byte[] content, string fileName, AssetKind kind, int userId, DateTime now, CancellationToken cancellationToken)
     {
         var sha = Convert.ToHexStringLower(SHA256.HashData(content));
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        var durationMs = kind == AssetKind.Audio ? AudioDuration.Milliseconds(content, extension) : null;
         var existing = await db.Assets.FirstOrDefaultAsync(a => a.Sha256 == sha && a.UploadedByUserId == userId, cancellationToken);
         if (existing is not null)
         {
+            existing.DurationMs ??= durationMs;
             return existing;
         }
 
-        var extension = Path.GetExtension(fileName).ToLowerInvariant();
         var asset = new Asset
         {
             Kind = kind,
@@ -61,6 +63,7 @@ public static class AssetUploads
             StoredPath = await storage.SaveAsync(content, sha, extension, cancellationToken),
             ContentType = PackageFileTypes.For(kind)[extension],
             SizeBytes = content.Length,
+            DurationMs = durationMs,
             Sha256 = sha,
             UploadedByUserId = userId,
             CreatedAt = now,

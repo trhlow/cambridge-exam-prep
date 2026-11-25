@@ -24,6 +24,7 @@
   <!-- The sample exam packages in setup/ double as format documentation and as test fixtures. -->
   <ItemGroup>
     <None Include="..\..\..\..\setup\exam-package\samples\**\*.json" LinkBase="Samples" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\..\setup\exam-package\samples\a2-key-fs-listening\audio\part1.mp3" Link="Samples\a2-key-fs-listening\audio\part1.mp3" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

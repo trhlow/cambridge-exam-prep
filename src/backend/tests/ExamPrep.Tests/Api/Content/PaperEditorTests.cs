@@ -110,6 +110,32 @@ public sealed class PaperEditorTests(ApiFixture api) : IClassFixture<ApiFixture>
         Assert.Equal(mp3, served);
     }
 
+    [Fact]
+    public async Task AnUploadedRecording_KeepsItsLength_ForTheRewindCap()
+    {
+        api.SkipIfUnavailable();
+        var (client, paperId) = await DraftAsync(SamplePackages.Listening);
+        var mp3 = await File.ReadAllBytesAsync(Path.Combine(AppContext.BaseDirectory, "Samples", "a2-key-fs-listening", "audio", "part1.mp3"), ct);
+        var file = new ByteArrayContent(mp3);
+        file.Headers.ContentType = new MediaTypeHeaderValue("audio/mpeg");
+
+        (await client.PostAsync($"/api/admin/papers/{paperId}/parts/1/audio", new MultipartFormDataContent { { file, "audio", "part1.mp3" } }, ct)).EnsureSuccessStatusCode();
+
+        using var scope = api.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>();
+        var part = db.PaperParts.Where(p => p.TestPaperId == paperId && p.PartNo == 1);
+        var uploaded = await part.Select(p => p.AudioAsset!.DurationMs).SingleAsync(ct);
+        // A recording stored before lengths were kept gets its length at the next start-up.
+        var assetId = await part.Select(p => p.AudioAssetId!.Value).SingleAsync(ct);
+        await db.Assets.Where(a => a.Id == assetId).ExecuteUpdateAsync(set => set.SetProperty(a => a.DurationMs, (int?)null), ct);
+        await AudioDuration.FillMissingAsync(db, scope.ServiceProvider.GetRequiredService<IAssetStorage>(), ct);
+        var filled = await db.Assets.Where(a => a.Id == assetId).Select(a => a.DurationMs).SingleAsync(ct);
+
+        // ffmpeg plays it as 4:23.74.
+        Assert.InRange(uploaded!.Value, 263_640, 263_840);
+        Assert.Equal(uploaded, filled);
+    }
+
     private static readonly byte[] Png = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg==");
 
