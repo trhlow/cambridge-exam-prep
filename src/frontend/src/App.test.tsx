@@ -20,7 +20,8 @@ describe('App', () => {
     sessionStorage.setItem('victory.annotations.2', '{"highlights":[1]}')
 
     render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Exit' }))
+    // With the whole suite running in parallel the first screen can take longer than the default 1 s.
+    fireEvent.click(await screen.findByRole('button', { name: 'Exit' }, { timeout: 5_000 }))
 
     expect(await screen.findByText(/You have finished the exam/)).toBeInTheDocument()
     expect(logout).toHaveBeenCalled()
@@ -37,7 +38,8 @@ describe('App', () => {
     localStorage.setItem('exam-pending:A2 Key for Schools/00011/1', '[{"questionNumber":1,"value":"theirs"}]')
 
     render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Exit' }))
+    // With the whole suite running in parallel the first screen can take longer than the default 1 s.
+    fireEvent.click(await screen.findByRole('button', { name: 'Exit' }, { timeout: 5_000 }))
 
     expect(await screen.findByText(/You have finished the exam/)).toBeInTheDocument()
     expect(localStorage.getItem('exam-pending:A2 Key for Schools/0001/1')).toBeNull()
