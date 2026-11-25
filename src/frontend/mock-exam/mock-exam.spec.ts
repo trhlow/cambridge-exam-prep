@@ -255,7 +255,7 @@ async function prepareExam(page: Page, options: { name: string; type: string; se
   return { examId, slipsPage, byNumber }
 }
 
-test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) => {
+test('mock exam: the 17 situations of KICH_BAN_THI_THU.md', async ({ browser }) => {
   fs.mkdirSync(OUT, { recursive: true })
   note(`Kết quả ghi vào ${OUT}`)
 
@@ -580,11 +580,10 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
     await expect(page.getByRole('radiogroup', { name: 'Answers for question 1' }).getByRole('radio').first()).toBeChecked()
     s.notes.push('Máy mới tiếp tục cùng lượt làm bài, còn đáp án câu 1')
     await shot(s, page, 'may-moi')
-    // What was read lives in the browser tab, so the new computer shows the room message once more.
-    const popup = page.getByRole('alertdialog', { name: 'Message from the invigilator' })
-    await expect(popup).toBeVisible({ timeout: 12_000 })
-    await popup.getByRole('button', { name: 'OK' }).click()
-    s.notes.push('Máy mới hiện lại thông báo chung đã đọc ở máy cũ một lần (ghi nhận, không phải lỗi)')
+    // 25/11: what was read is kept on the server, so the new computer does not show the room message again.
+    await expect(page.getByRole('button', { name: 'Messages', exact: true })).toBeVisible({ timeout: 12_000 })
+    await expect(page.getByRole('alertdialog', { name: 'Message from the invigilator' })).toHaveCount(0)
+    s.notes.push('Máy mới không hiện lại thông báo chung đã đọc ở máy cũ (chuông không báo tin mới)')
     await oldContext.close()
     dung.context = context
     dung.page = page
@@ -854,7 +853,13 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
     s.notes.push(`${an.name} (bài mã ${code}, giám khảo không thấy tên): chấm tự động ${before.rawScore} (đúng 6 câu Part 1 đã trả lời theo đáp án) + Writing 7 = ${after.rawScore}/${after.maxScore}, trạng thái Final`)
 
     await adminPage.goto(`/staff/exams/${a2.examId}/results`)
-    await expect(adminPage.getByRole('row', { name: new RegExp(an.name) }).getByText('Final')).toBeVisible()
+    const anRow = adminPage.getByRole('row', { name: new RegExp(an.name) })
+    await expect(anRow.getByText('Final')).toBeVisible()
+    // 25/11: the face-to-face Speaking marks complete the four skills on the Cambridge English Scale (30 of 45 → 124).
+    await anRow.getByLabel(`Speaking marks of ${an.name}`).fill('30')
+    await anRow.getByLabel(`Speaking marks of ${an.name}`).press('Enter')
+    await expect(anRow.getByText(/S 124/)).toBeVisible()
+    s.notes.push(`Admin nhập Speaking 30/45 cho ${an.name}: thang Cambridge ${(await anRow.getByText(/^R .* S 124$/).innerText()).trim()}`)
     await shot(s, adminPage, 'bang-ket-qua')
     const [download] = await Promise.all([adminPage.waitForEvent('download'), adminPage.getByRole('button', { name: 'Download for Excel (.csv)' }).click()])
     const file = path.join(OUT, 'ket-qua-thi-thu-A2.csv')
@@ -866,8 +871,29 @@ test('mock exam: the 16 situations of KICH_BAN_THI_THU.md', async ({ browser }) 
       expect(text).toContain(c.name)
     }
 
-    s.notes.push('CSV có BOM UTF-8 (Excel đọc đúng tiếng Việt), đủ 6 thí sinh, điểm Reading & Writing và Listening')
+    expect(text).toContain('"Speaking marks"')
+    s.notes.push('CSV có BOM UTF-8 (Excel đọc đúng tiếng Việt), đủ 6 thí sinh, điểm Reading & Writing và Listening, các cột thang Cambridge')
     await examinerContext.close()
+  })
+
+  await situation(17, 'Giám thị xem nhật ký thao tác của buổi thi, tải CSV', async (s) => {
+    await portal.goto(`/staff/exams/${a2.examId}`)
+    await portal.getByRole('link', { name: 'Invigilator log' }).click()
+    await expect(portal.getByRole('heading', { name: 'Invigilator log' })).toBeVisible()
+    const rows = portal.locator('tbody tr')
+    for (const action of ['Start announced', 'Paused', 'Resumed', 'Incident extra time', 'Message', 'End now', 'Audio rewound']) {
+      await expect(rows.filter({ hasText: action }).first()).toBeVisible()
+    }
+
+    const count = await rows.count()
+    await shot(s, portal, 'nhat-ky-giam-thi')
+    const [download] = await Promise.all([portal.waitForEvent('download'), portal.getByRole('button', { name: 'Download for Excel (.csv)' }).click()])
+    const file = path.join(OUT, 'nhat-ky-giam-thi-A2.csv')
+    await download.saveAs(file)
+    const bytes = fs.readFileSync(file)
+    expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf])
+    expect(bytes.toString('utf8').split(String.fromCharCode(13, 10))).toHaveLength(count + 1)
+    s.notes.push(`Nhật ký ${count} dòng (Announce start, tạm dừng, làm tiếp, cộng giờ, thông báo, End in, End now, tua Listening…), CSV ${count} dòng kèm tiêu đề`)
   })
 
   for (const c of candidates) {

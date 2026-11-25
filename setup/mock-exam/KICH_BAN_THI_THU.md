@@ -42,8 +42,9 @@ Mỗi dòng là một mục trong biên bản; ghi **Đạt / Không đạt** v�
 | 12 | Writing B1 | Thí sinh | Part 2 chọn câu 2 (Yes), thử chọn thêm câu 3 | Câu 3 không chọn Yes được; dòng "1 of 1 question selected" |
 | 13 | Cuối giờ | Giám thị | End now cho một thí sinh (hai lần bấm) | Thí sinh thấy "The test has now finished"; không hoàn tác được |
 | 14 | Cuối giờ | Hệ thống | Để các thí sinh còn lại hết giờ (kể cả người được 25 % thêm giờ) | Tự nộp đúng giờ của từng người, kể cả máy đang offline |
-| 15 | Sau thi | Giám khảo | Chấm Writing, xem bảng kết quả, xuất CSV mở bằng Excel | Điểm Final = tự động + Writing; CSV đọc đúng tiếng Việt |
+| 15 | Sau thi | Giám khảo, admin | Chấm Writing; admin nhập điểm Speaking, xem bảng kết quả, xuất CSV mở bằng Excel | Điểm Final = tự động + Writing; có điểm thang Cambridge từng kỹ năng; CSV đọc đúng tiếng Việt |
 | 16 | Sau thi | Admin | Yêu cầu xoá một thí sinh; admin2 duyệt | Không xoá ngay; xoá sau khi admin khác duyệt; có nhật ký |
+| 17 | Sau thi | Giám thị | Mở *Invigilator log* của kỳ thi, tải CSV | Đủ các thao tác đã làm trong buổi (Announce start, tạm dừng, cộng giờ, thông báo, End in, End now, tua Listening) với thí sinh, phần thi, lý do, người làm; CSV đọc đúng tiếng Việt |
 
 ## Ghi lỗi
 
@@ -57,7 +58,7 @@ Sau buổi thi, đưa các lỗi vào Jira (VE-43) và sửa hết lỗi mức C
 
 ## Chạy tự động bằng trình duyệt (`npm run mock-exam`)
 
-Kịch bản trên cũng có bản chạy bằng Playwright (`src/frontend/mock-exam/mock-exam.spec.ts`). Mỗi người là một trình duyệt riêng: admin, admin thứ hai, giám thị, giám khảo và 6 thí sinh A2 (một người được 25 % thêm giờ, một người vắng). Kịch bản tự chuẩn bị qua cổng nhân viên: tạo kỳ thi A2 và B1 (B1 dùng đề trộn), dán danh sách thí sinh, phân công giám thị và giám khảo, chuyển sang Active, đọc phiếu đăng nhập. Sau đó nó đi qua đủ 16 tình huống, đo thời gian và chụp màn hình.
+Kịch bản trên cũng có bản chạy bằng Playwright (`src/frontend/mock-exam/mock-exam.spec.ts`). Mỗi người là một trình duyệt riêng: admin, admin thứ hai, giám thị, giám khảo và 6 thí sinh A2 (một người được 25 % thêm giờ, một người vắng). Kịch bản tự chuẩn bị qua cổng nhân viên: tạo kỳ thi A2 và B1 (B1 dùng đề trộn), dán danh sách thí sinh, phân công giám thị và giám khảo, chuyển sang Active, đọc phiếu đăng nhập. Sau đó nó đi qua đủ 17 tình huống, đo thời gian và chụp màn hình.
 
 Phần Listening chạy hết 30 phút thật (người được 25 % thêm giờ là 37,5 phút), nên mỗi lần chạy mất khoảng 50 phút. Nếu một tình huống không đạt, kịch bản ghi lại rồi chạy tiếp, giống một buổi thi thử thật.
 

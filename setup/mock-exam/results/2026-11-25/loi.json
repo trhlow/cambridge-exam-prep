@@ -1,0 +1,95 @@
+{
+  "time": "14 giờ 48 – 15 giờ 31, ngày 25/11/2026 (chạy lại sau đợt hoàn thiện 25/11, kịch bản thêm tình huống 17)",
+  "place": "Máy phát triển của sinh viên; hệ thống chạy bằng Docker (stack thử nghiệm riêng, cổng 8090, CSDL trống)",
+  "exams": "Thi thử A2 2026-11-25 (A2 Key for Schools: Reading & Writing 60 phút, Listening 30 phút) và Thi thử B1 2026-11-25 (B1 Preliminary for Schools, đề trộn 4 mã theo vị trí máy)",
+  "participants": [
+    [
+      "Trần Hoàng Long",
+      "Người tổ chức, lập biên bản",
+      "Viết và chạy kịch bản; theo dõi kết quả"
+    ],
+    [
+      "Trình duyệt tự động 1",
+      "Admin",
+      "hoanglong"
+    ],
+    [
+      "Trình duyệt tự động 2",
+      "Admin thứ hai",
+      "admin2"
+    ],
+    [
+      "Trình duyệt tự động 3",
+      "Giám thị",
+      "giamthi"
+    ],
+    [
+      "Trình duyệt tự động 4",
+      "Giám khảo",
+      "giamkhao"
+    ],
+    [
+      "Trình duyệt tự động 5–10",
+      "6 thí sinh A2 (0101–0106)",
+      "Theo phiếu đăng nhập; 0102 thêm 25 % giờ"
+    ],
+    [
+      "Trình duyệt tự động 11",
+      "Thí sinh B1 (0201)",
+      "Theo phiếu đăng nhập"
+    ]
+  ],
+  "errors": [],
+  "remarks": [
+    "Buổi thi thử chạy lại đúng kịch bản KICH_BAN_THI_THU.md bằng trình duyệt tự động, mỗi người một trình duyệt riêng, sau đợt hoàn thiện ngày 25/11: End now vẫn nhận câu trả lời trong 5 giây chờ tự lưu, đo độ dài file nghe, SEB cho kênh thời gian thực, nhật ký giám thị, trạng thái đã đọc thông báo lưu trên máy chủ, thang điểm Cambridge English Scale và điểm Speaking.",
+    "Kịch bản có thêm tình huống 17 (giám thị xem nhật ký thao tác, tải CSV); tình huống 9 nay kiểm tra máy mới không hiện lại thông báo đã đọc ở máy cũ; tình huống 15 có thêm bước admin nhập điểm Speaking.",
+    "Kết quả 17/17 tình huống đạt. Listening chạy hết 30 phút thật, thí sinh thêm 25 % giờ chạy 37,5 phút.",
+    "Số đo nổi bật: lệnh tạm dừng đến 6/6 màn hình thí sinh tối đa 224 ms, thông báo cả phòng tối đa 180 ms, End now 145 ms; cả 6 thí sinh tự nộp trong 15 giây sau giờ kết thúc, kể cả máy đã tắt."
+  ],
+  "figures": [
+    [
+      "00-phieu-dang-nhap-A2.png",
+      "Hình 1. Phiếu đăng nhập in cho thí sinh"
+    ],
+    [
+      "03-canh-bao-started-early.png",
+      "Hình 2. Cảnh báo thí sinh bắt đầu trước khi giám thị cho phép"
+    ],
+    [
+      "06-ca-phong-tam-dung.png",
+      "Hình 3. Giám thị tạm dừng cả phòng"
+    ],
+    [
+      "08-offline.png",
+      "Hình 4. Trang giám thị báo thí sinh mất kết nối"
+    ],
+    [
+      "11-thi-sinh-nghe-lai.png",
+      "Hình 5. Thí sinh nghe lại sau khi giám thị tua audio"
+    ],
+    [
+      "12-b1-chon-cau.png",
+      "Hình 6. B1 Writing Part 2: chỉ được chọn một câu"
+    ],
+    [
+      "13-end-now.png",
+      "Hình 7. End now: thí sinh kết thúc, không hoàn tác được"
+    ],
+    [
+      "14-het-gio.png",
+      "Hình 8. Listening hết giờ: cả phòng tự nộp"
+    ],
+    [
+      "15-bang-ket-qua.png",
+      "Hình 9. Bảng kết quả sau khi giám khảo chấm Writing"
+    ],
+    [
+      "16-nhat-ky-duyet.png",
+      "Hình 10. Nhật ký duyệt chéo: admin thứ hai duyệt xoá thí sinh"
+    ],
+    [
+      "17-nhat-ky-giam-thi.png",
+      "Hình 11. Nhật ký thao tác của giám thị"
+    ]
+  ]
+}
