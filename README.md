@@ -74,13 +74,14 @@ Theo hướng dẫn tổ chức repository của Khoa:
 ├── docker/             docker-compose: MySQL + API + web (.env.example mẫu)
 ├── setup/              Bộ cài đặt, dữ liệu thử, hướng dẫn triển khai
 ├── src/
-│   └── backend/        ASP.NET Core (.NET 10): Domain, Infrastructure (EF Core), Api, Tests
+│   ├── backend/        ASP.NET Core (.NET 10): Domain, Infrastructure (EF Core), Api, Tests
+│   └── frontend/       React + TypeScript: màn hình thí sinh, cổng nhân viên; test Playwright (e2e, thi thử)
 ├── progress-report/    Báo cáo tiến độ hằng tuần (bắt buộc)
 └── thesis/             Tài liệu đồ án (bắt buộc)
-    ├── doc/            Đề cương chi tiết, báo cáo (.docx)
-    ├── pdf/            Bản PDF
+    ├── doc/            Đề cương chi tiết, báo cáo (.docx), nội dung báo cáo dạng Markdown (report-src/)
+    ├── pdf/            Bản PDF của quyển báo cáo
     ├── html/           Tài liệu dạng web
-    ├── abs/            Slide, video trình bày
+    ├── abs/            Slide trình bày (SlideTrinhBay_TranHoangLong.pptx), video demo (VideoDemo_TranHoangLong.mp4)
     ├── diagrams/       Sơ đồ thiết kế draw.io (use case, ERD)
     └── refs/           Tài liệu tham khảo
         ├── faculty-templates/   Quy định chung, mẫu đề cương/báo cáo, lịch thực hiện
@@ -229,8 +230,11 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Triển khai HTTPS cho phòng thi thật: `docker/docker-compose.prod.yml` (Production, nginx 443, không demo), MySQL chỉ ở 127.0.0.1, API chạy bằng người dùng không phải root; sao lưu và khôi phục trong container
 - [x] Test đầu-cuối Playwright (`npm run e2e`, stack Docker riêng cổng 8090): thí sinh đăng nhập + PIN + làm bài + tải lại trang; giám thị tạm dừng/cho làm tiếp và máy thí sinh nhận ngay; quản trị viên tạo đề trắng, gửi yêu cầu xoá, admin khác duyệt; giám thị End now → chấm tự động → giám khảo chấm Writing → điểm Final (chạy lại thì `down -v` stack trước)
 - [x] Kiểm thử tải: 100 và 200 thí sinh đồng thời không lỗi (`setup/loadtest/`, kết quả trong `setup/loadtest/results/TONG_KET.md`); sửa kết nối SignalR bị cắt mỗi 12 giây và pool kết nối CSDL
-- [x] Buổi thi thử 16 tình huống theo `setup/mock-exam/KICH_BAN_THI_THU.md`, chạy tự động bằng trình duyệt (`npm run mock-exam`): mỗi vai một trình duyệt (2 quản trị viên, giám thị, giám khảo, 6 thí sinh A2 và 1 thí sinh B1), Listening chạy hết giờ thật. Tìm ra và đã sửa 4 lỗi: máy cũ không bị đăng xuất khi thí sinh đổi máy; End now đôi khi ghi lý do "hết giờ"; thông báo đã đọc bật lại khi sang phần thi sau; cột Audio vẫn đếm sau khi nộp bài. Lần chạy cuối đạt 16/16; biên bản, ảnh chụp và CSV trong `setup/mock-exam/results/`
+- [x] Buổi thi thử theo `setup/mock-exam/KICH_BAN_THI_THU.md` (16 tình huống, từ 25/11 là 17), chạy tự động bằng trình duyệt (`npm run mock-exam`): mỗi vai một trình duyệt (2 quản trị viên, giám thị, giám khảo, 6 thí sinh A2 và 1 thí sinh B1), Listening chạy hết giờ thật. Tìm ra và đã sửa 4 lỗi: máy cũ không bị đăng xuất khi thí sinh đổi máy; End now đôi khi ghi lý do "hết giờ"; thông báo đã đọc bật lại khi sang phần thi sau; cột Audio vẫn đếm sau khi nộp bài. Lần chạy cuối ngày 26/10 đạt 16/16, ngày 07/11 đạt 16/16, ngày 25/11 đạt 17/17 (thêm nhật ký giám thị); biên bản, ảnh chụp và CSV trong `setup/mock-exam/results/`
 - [x] Yêu cầu mới của Victory 29/10 (VE-70…73): trộn N đề gốc thành số đề tuỳ chọn (tối đa 3N), lọc và nhập đề theo A2/B1, đề trắng B1, mỗi người chỉ thấy phần mình làm, chia bài Writing ngẫu nhiên cho giám khảo và chấm ẩn danh theo mã bài
 - [x] Rà soát toàn hệ thống 2–6/11/2026 (`.planning/2026-11-02-review/`, 8 nhóm sửa): tự lưu không mất bài, End all và End now chỉ rút ngắn, phát lại Listening, chấm Writing ẩn danh có lịch sử, vòng đời kỳ thi có khoá hàng, sửa đáp án của admin, phân quyền theo vai trò hiện tại, triển khai HTTPS và chỉ xoá kỳ thi demo do bộ tạo demo tạo ra
-- [x] Hoàn thiện 25/11/2026: End now vẫn nhận câu trả lời trong 5 giây chờ tự lưu, đo độ dài file nghe (giới hạn tua), SEB cho kênh thời gian thực, nhật ký giám thị, trạng thái đã đọc thông báo lưu trên server, thang điểm Cambridge English Scale và điểm Speaking — 1500 test backend, 206 test frontend
-- [ ] Quyển báo cáo: đã có phần đầu (cam đoan, cảm ơn, mục lục, danh mục, tóm tắt), Mở đầu, Chương 1 Tổng quan, Chương 2 Cơ sở lý thuyết và 52 tài liệu tham khảo; còn Chương 3–5
+- [x] Hoàn thiện 25/11/2026: End now vẫn nhận câu trả lời trong 5 giây chờ tự lưu, đo độ dài file nghe (giới hạn tua), SEB cho kênh thời gian thực, nhật ký giám thị, trạng thái đã đọc thông báo lưu trên server, thang điểm Cambridge English Scale và điểm Speaking — 1500 test backend, 206 test frontend, 69 test bộ chuyển đề, 6 test đầu-cuối; thi thử 17/17; kiểm thử tải 200 thí sinh không lỗi máy chủ
+- [x] Quyển báo cáo (`thesis/doc/BaoCao_DoAnChuyenNganh_TranHoangLong.docx`, bản PDF trong `thesis/pdf/`): phần đầu, Mở đầu, Chương 1–5, phụ lục danh sách API và tóm tắt cài đặt, 54 tài liệu tham khảo IEEE
+- [x] Báo cáo tiến độ tuần 1–10 (`progress-report/`)
+- [x] Slide trình bày và video demo (`thesis/abs/`)
+- [ ] Chỉnh sửa quyển báo cáo theo góp ý của GVHD (tuần 21–27/12), nộp link GitHub và nộp quyển ngày 31/12/2026

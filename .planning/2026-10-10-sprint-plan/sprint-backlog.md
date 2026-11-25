@@ -92,8 +92,8 @@ Tổng: 4 story, 12 điểm.
 
 ### Phase 8: Sprint 8 (30/11 – 06/12) — Viết quyển báo cáo Mở đầu, Chương 1–3 — tuần gặp GV 3
 Tổng: 1 story, 5 điểm.
-- [ ] VE-47 [E12] (5đ) Viết quyển báo cáo: Mở đầu, Chương 1–3
-- **Status:** pending
+- [x] VE-47 [E12] (5đ) Viết quyển báo cáo: Mở đầu, Chương 1–3
+- **Status:** complete
 
 ### Phase 9: Sprint 9 (07/12 – 13/12) — Dự phòng: yêu cầu mới của Victory 29/10 (IELTS tách khỏi đồ án chuyên ngành)
 Tổng: 5 story, 19 điểm.
@@ -101,19 +101,19 @@ Tổng: 5 story, 19 điểm.
 - [x] VE-71 [E16] (3đ) Lọc đề theo cấp độ A2/B1, phần thi, trạng thái; nhập PDF theo cấp độ và phần thi đã chọn; đề trắng B1
 - [x] VE-72 [E16] (5đ) Mỗi người chỉ thấy phần mình làm: đề theo người tạo, phiên theo người tạo, quản lý thí sinh theo phân công
 - [x] VE-73 [E16] (5đ) Chia bài Writing ngẫu nhiên, đều cho giám khảo; chấm ẩn danh theo mã bài, chỉ phần Writing
-- [ ] VE-50 [E12] (1đ) Báo cáo tiến độ tuần 9
-- **Status:** pending
+- [x] VE-50 [E12] (1đ) Báo cáo tiến độ tuần 9
+- **Status:** complete
 
 ### Phase 10: Sprint 10 (14/12 – 20/12) — Viết báo cáo: kết quả và kết luận
 Tổng: 2 story, 6 điểm.
-- [ ] VE-51 [E12] (5đ) Viết Chương 4 (kết quả, ảnh giao diện, số liệu kiểm thử) và Chương 5
-- [ ] VE-52 [E12] (1đ) Báo cáo tiến độ tuần 10
-- **Status:** pending
+- [x] VE-51 [E12] (5đ) Viết Chương 4 (kết quả, ảnh giao diện, số liệu kiểm thử) và Chương 5
+- [x] VE-52 [E12] (1đ) Báo cáo tiến độ tuần 10
+- **Status:** complete
 
 ### Phase 11: Sprint 11 (21/12 – 27/12) — Hoàn chỉnh và nộp — tuần gặp GV 4
 Tổng: 3 story, 6 điểm.
 - [ ] VE-53 [E12] (3đ) Chỉnh sửa quyển báo cáo theo góp ý GV, xuất PDF
-- [ ] VE-54 [E12] (2đ) Slide trình bày và video demo (thesis/abs)
+- [x] VE-54 [E12] (2đ) Slide trình bày và video demo (thesis/abs)
 - [ ] VE-55 [E12] (1đ) Cập nhật README cuối cùng, nộp link GitHub, nộp quyển 31/12
 - **Status:** pending
 
