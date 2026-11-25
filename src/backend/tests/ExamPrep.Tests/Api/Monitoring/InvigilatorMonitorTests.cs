@@ -111,13 +111,14 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
         await ActAsync(room.Invigilator, room.First, sectionId, new { action = "Resume", candidateIds = first });
         await ActAsync(room.Invigilator, room.First, sectionId, new { action = "AddIncidentTime", candidateIds = first, minutes = 5, reason = "Fire alarm" });
         (await room.Invigilator.PostAsJsonAsync($"/api/staff/exams/{room.First.ExamId}/messages", new { text = "Ten minutes left." }, ct)).EnsureSuccessStatusCode();
+        (await room.Invigilator.PostAsJsonAsync($"/api/staff/exams/{room.First.ExamId}/messages", new { text = "Please sit down.", candidateIds = first }, ct)).EnsureSuccessStatusCode();
         var outsider = await api.CreateStaffAsync(UserRole.Invigilator, Password);
         using var other = await api.StaffClientAsync(outsider.Username, Password);
 
         var log = (await room.Invigilator.GetFromJsonAsync<List<ActionLogRow>>($"/api/staff/exams/{room.First.ExamId}/actions", ct))!;
         var hidden = await other.GetAsync($"/api/staff/exams/{room.First.ExamId}/actions", ct);
 
-        Assert.Equal(["AnnounceStart", "Pause", "Resume", "AddIncidentTime", "SendMessage"], log.Select(r => r.Action));
+        Assert.Equal(["AnnounceStart", "Pause", "Resume", "AddIncidentTime", "SendMessage", "SendMessage"], log.Select(r => r.Action));
         Assert.Equal("Reading & Writing", log[0].Section);
         Assert.Null(log[0].Candidate);
         Assert.False(string.IsNullOrEmpty(log[1].CandidateNumber));
@@ -126,6 +127,10 @@ public sealed class InvigilatorMonitorTests(ApiFixture api) : IClassFixture<ApiF
         Assert.Equal(5, log[3].Minutes);
         Assert.Equal("Ten minutes left.", log[4].Message);
         Assert.Equal(0, log[4].Recipients);
+        Assert.Null(log[4].Candidate);
+        // A message to one candidate names them.
+        Assert.Equal(1, log[5].Recipients);
+        Assert.Equal(log[1].Candidate, log[5].Candidate);
         Assert.All(log, r => Assert.False(string.IsNullOrEmpty(r.By)));
         Assert.Equal(HttpStatusCode.NotFound, hidden.StatusCode);
     }

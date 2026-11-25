@@ -462,7 +462,7 @@ public sealed class InvigilatorMonitorController(ExamPrepDbContext db, TimeProvi
 
         return actions.Select(a =>
         {
-            int? candidateId = a.Action.AttemptId is null ? ActionLog.Id(a.Action.PayloadJson, "candidateId") : a.CandidateId;
+            int? candidateId = a.Action.AttemptId is null ? ActionLog.Id(a.Action.PayloadJson, "candidateId") ?? ActionLog.OnlyRecipient(a.Action.PayloadJson) : a.CandidateId;
             int? sectionId = a.Action.AttemptId is null ? ActionLog.Id(a.Action.PayloadJson, "sectionId") : a.ExamSectionId;
             return ActionLog.Row(
                 a.Action,

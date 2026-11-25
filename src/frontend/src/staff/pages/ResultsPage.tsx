@@ -160,7 +160,7 @@ function SpeakingInput({ examId, candidate, onSaved }: { examId: number; candida
         onKeyDown={(e) => e.key === 'Enter' && save()}
       />
       {speaking?.maxScore != null && <span className="st-faint"> / {speaking.maxScore}</span>}
-      {error && <div className="st-error">{error}</div>}
+      {error && <div className="st-error st-speaking-error">{error}</div>}
     </>
   )
 }

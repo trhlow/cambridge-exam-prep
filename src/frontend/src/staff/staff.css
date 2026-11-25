@@ -514,6 +514,10 @@
   white-space: nowrap;
 }
 
+.st-speaking-error {
+  max-width: 14em;
+}
+
 .st-speaking {
   width: 5em;
   padding: 4px 6px;

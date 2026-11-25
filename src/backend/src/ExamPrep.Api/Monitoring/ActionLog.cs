@@ -55,6 +55,12 @@ public static class ActionLog
     public static int? Id(string? payloadJson, string name) =>
         Find(Parse(payloadJson), name) is { ValueKind: JsonValueKind.Number } v ? v.GetInt32() : null;
 
+    /// <summary>A message sent to exactly one candidate names them.</summary>
+    public static int? OnlyRecipient(string? payloadJson) =>
+        Find(Parse(payloadJson), "candidateIds") is { ValueKind: JsonValueKind.Array } ids && ids.GetArrayLength() == 1 && ids[0].ValueKind == JsonValueKind.Number
+            ? ids[0].GetInt32()
+            : null;
+
     private static JsonElement? Parse(string? json)
     {
         if (string.IsNullOrEmpty(json))
