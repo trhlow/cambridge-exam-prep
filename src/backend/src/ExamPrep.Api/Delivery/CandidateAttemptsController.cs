@@ -254,7 +254,7 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
 
     private async Task<IActionResult> SaveCoreAsync(int sectionId, SaveResponsesRequest request, CancellationToken cancellationToken)
     {
-        var (attempt, refusal, now) = await RunningAttemptAsync(sectionId, cancellationToken);
+        var (attempt, refusal, now) = await RunningAttemptAsync(sectionId, cancellationToken, acceptJustAfterEndNow: true);
         if (attempt is null)
         {
             return refusal!;
@@ -357,8 +357,14 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         }
     }
 
-    /// <summary>The candidate's attempt when answers may be saved now; otherwise why not (409).</summary>
-    private async Task<(Attempt? Attempt, IActionResult? Refusal, DateTime Now)> RunningAttemptAsync(int sectionId, CancellationToken cancellationToken)
+    /// <summary>
+    /// The candidate's attempt when answers may be saved now; otherwise why not (409). With
+    /// <paramref name="acceptJustAfterEndNow"/>, an attempt the invigilator ended with End now still takes answers for
+    /// <see cref="AttemptExpiry.AutosaveGrace"/>, as time up and End all do: End now submits at once, and the browser
+    /// sends what was still waiting in its autosave as soon as it hears. The attempt goes back to NotGraded so the
+    /// marker marks it again with them (a marker save that read the old answers loses on the concurrency stamp).
+    /// </summary>
+    private async Task<(Attempt? Attempt, IActionResult? Refusal, DateTime Now)> RunningAttemptAsync(int sectionId, CancellationToken cancellationToken, bool acceptJustAfterEndNow = false)
     {
         var now = Now();
         var attempt = await FindAttemptAsync(sectionId, cancellationToken);
@@ -371,6 +377,19 @@ public sealed class CandidateAttemptsController(ExamPrepDbContext db, CandidateS
         if (AttemptExpiry.SubmitIfExpired(attempt, section, candidate, now))
         {
             await db.SaveChangesAsync(cancellationToken);
+        }
+
+        if (acceptJustAfterEndNow
+            && attempt is { Status: AttemptStatus.Submitted, SubmitReason: SubmitReason.InvigilatorEndNow, SubmittedAt: { } submittedAt }
+            && attempt.GradingStatus != GradingStatus.Final
+            && now <= submittedAt + AttemptExpiry.AutosaveGrace)
+        {
+            attempt.GradingStatus = GradingStatus.NotGraded;
+            attempt.RawScore = null;
+            attempt.MaxScore = null;
+            // Rotates the stamp even when the marker has not run yet, so one that already read the answers cannot save.
+            db.Entry(attempt).Property(a => a.GradingStatus).IsModified = true;
+            return (attempt, null, now);
         }
 
         if (attempt.Status != AttemptStatus.InProgress)

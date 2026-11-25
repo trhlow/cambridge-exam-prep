@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using ExamPrep.Api.Delivery;
 using ExamPrep.Domain.Enums;
+using ExamPrep.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamPrep.Tests.Api.Delivery;
@@ -250,6 +252,45 @@ public sealed class CandidateAttemptTests(ApiFixture api) : IClassFixture<ApiFix
         Assert.Equal("InProgress", get.Status);
         Assert.Equal(0, get.RemainingSeconds);
         Assert.Equal(HttpStatusCode.NoContent, save.StatusCode);
+    }
+
+    [Fact]
+    public async Task JustAfterEndNow_AnswersStillWaitingInTheAutosaveAreKept_AndTheAttemptIsMarkedAgain()
+    {
+        api.SkipIfUnavailable();
+        var (client, candidate) = await SignedInAsync();
+        using var _ = client;
+        var section = candidate.ReadingWritingSectionId;
+        await StartAsync(client, section);
+        await SaveAsync(client, section, new ResponseItem(1, "B"));
+
+        // The invigilator's End now, already marked by the sweep.
+        Task EndedNowAsync(DateTime at)
+        {
+            using var scope = api.Factory.Services.CreateScope();
+            return scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>().Attempts
+                .Where(a => a.CandidateId == candidate.CandidateId && a.ExamSectionId == section)
+                .ExecuteUpdateAsync(set => set
+                    .SetProperty(a => a.Status, AttemptStatus.Submitted)
+                    .SetProperty(a => a.SubmittedAt, at)
+                    .SetProperty(a => a.SubmitReason, SubmitReason.InvigilatorEndNow)
+                    .SetProperty(a => a.GradingStatus, GradingStatus.AutoGraded)
+                    .SetProperty(a => a.RawScore, 1m)
+                    .SetProperty(a => a.MaxScore, 30m), ct);
+        }
+
+        await EndedNowAsync(DateTime.UtcNow);
+        var withinGrace = await SaveAsync(client, section, new ResponseItem(2, "A"));
+        var afterSave = await api.GetAttemptAsync(candidate.CandidateId, section);
+        await EndedNowAsync(DateTime.UtcNow - AttemptExpiry.AutosaveGrace - TimeSpan.FromSeconds(1));
+        var tooLate = await SaveAsync(client, section, new ResponseItem(3, "C"));
+
+        Assert.Equal(HttpStatusCode.NoContent, withinGrace.StatusCode);
+        Assert.Equal(AttemptStatus.Submitted, afterSave.Status);
+        Assert.Equal(GradingStatus.NotGraded, afterSave.GradingStatus);
+        Assert.Null(afterSave.RawScore);
+        Assert.Equal(HttpStatusCode.Conflict, tooLate.StatusCode);
+        Assert.Equal("finished", (await tooLate.Content.ReadFromJsonAsync<Problem>(ct))!.Code);
     }
 
     [Fact]
