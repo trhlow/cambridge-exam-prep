@@ -3,12 +3,14 @@ using System.Net.Http.Json;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Exams;
 using ExamPrep.Api.Realtime;
+using ExamPrep.Api.Security;
 using ExamPrep.Domain.Entities;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamPrep.Tests.Api.Access;
@@ -192,6 +194,18 @@ public sealed class AccountAccessTests(ApiFixture api) : IClassFixture<ApiFixtur
         Assert.Equal(HttpStatusCode.NotFound, await GetAssetAsync(audio, otherCookie));
         Assert.Equal(HttpStatusCode.OK, await GetAssetAsync(ownedByAuthor, authorCookie, candidateCookie));
         Assert.Equal(HttpStatusCode.NotFound, await GetAssetAsync(ownedByAuthor, otherCookie, candidateCookie));
+
+        // Once the exam requires Safe Exam Browser, the candidate cookie counts for nothing outside it, even next to a
+        // staff cookie, while the staff member keeps their own files.
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await Db(scope).Exams.Where(e => e.Id == candidate.ExamId).ExecuteUpdateAsync(set => set.SetProperty(e => e.SebConfigKeyHash, new string('a', 64)), ct);
+            SebActionFilter.Forget(scope.ServiceProvider.GetRequiredService<IMemoryCache>(), candidate.ExamId);
+        }
+
+        Assert.Equal(HttpStatusCode.Forbidden, await GetAssetAsync(audio, candidateCookie));
+        Assert.Equal(HttpStatusCode.NotFound, await GetAssetAsync(audio, otherCookie, candidateCookie));
+        Assert.Equal(HttpStatusCode.OK, await GetAssetAsync(ownedByAuthor, authorCookie, candidateCookie));
     }
 
     [Fact]

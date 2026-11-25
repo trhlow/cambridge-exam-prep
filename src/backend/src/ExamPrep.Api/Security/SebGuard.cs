@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using ExamPrep.Api.Auth;
@@ -41,8 +42,11 @@ public static class SebGuard
             return false;
         }
 
-        var expected = ExpectedHash(RequestUrl(request), configKey);
-        return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(sent.ToLowerInvariant()), Encoding.ASCII.GetBytes(expected));
+        var url = RequestUrl(request);
+        // A WebSocket handshake is an http(s) request to the server but a ws(s) URL to the browser: either form counts.
+        var urls = request.HttpContext.WebSockets.IsWebSocketRequest ? [url, "ws" + url[4..]] : new[] { url };
+        var sentBytes = Encoding.ASCII.GetBytes(sent.ToLowerInvariant());
+        return urls.Any(u => CryptographicOperations.FixedTimeEquals(sentBytes, Encoding.ASCII.GetBytes(ExpectedHash(u, configKey))));
     }
 }
 
@@ -53,6 +57,8 @@ public sealed class SkipSebCheckAttribute : Attribute;
 /// <summary>
 /// Refuses every candidate request (API and exam files) of an exam that requires SEB unless it comes from SEB with
 /// the right settings, and raises an <see cref="SecurityEventType.InvalidSebKey"/> warning for a running attempt.
+/// A browser that also holds a staff cookie (only the asset endpoint reads both) keeps the staff member's own rights:
+/// the candidate identity is dropped from the request instead of refusing it.
 /// </summary>
 public sealed class SebActionFilter(ExamPrepDbContext db, IMemoryCache cache, SecurityEventRecorder events) : IAsyncActionFilter
 {
@@ -61,28 +67,43 @@ public sealed class SebActionFilter(ExamPrepDbContext db, IMemoryCache cache, Se
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var user = context.HttpContext.User;
-        var isCandidateOnly = user.Identities.Any(i => i.IsAuthenticated && i.AuthenticationType == CandidateAuthDefaults.Scheme)
-            && !user.Identities.Any(i => i.IsAuthenticated && i.AuthenticationType == StaffAuthDefaults.Scheme);
+        var candidate = user.Identities.FirstOrDefault(i => i.IsAuthenticated && i.AuthenticationType == CandidateAuthDefaults.Scheme);
         var skip = context.ActionDescriptor.EndpointMetadata.OfType<SkipSebCheckAttribute>().Any();
-        if (!isCandidateOnly || skip)
+        if (candidate is null || skip || await PassesAsync(db, cache, context.HttpContext.Request, new ClaimsPrincipal(candidate).GetExamId()))
         {
             await next();
             return;
         }
 
-        var examId = user.GetExamId();
+        await RecordAsync(db, events, new ClaimsPrincipal(candidate).GetCandidateId());
+        var staff = user.Identities.Where(i => i != candidate && i.IsAuthenticated && i.AuthenticationType == StaffAuthDefaults.Scheme).ToList();
+        if (staff.Count > 0)
+        {
+            context.HttpContext.User = new ClaimsPrincipal(staff);
+            await next();
+            return;
+        }
+
+        context.Result = new ObjectResult(new ProblemDetails { Status = StatusCodes.Status403Forbidden, Title = SebGuard.RequiredTitle })
+        {
+            StatusCode = StatusCodes.Status403Forbidden,
+        };
+    }
+
+    /// <summary>True when the exam does not require SEB or the request carries the right Config Key hash.</summary>
+    public static async Task<bool> PassesAsync(ExamPrepDbContext db, IMemoryCache cache, HttpRequest request, int examId)
+    {
         var configKey = await cache.GetOrCreateAsync($"seb:{examId}", entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheFor;
             return db.Exams.AsNoTracking().Where(e => e.Id == examId).Select(e => e.SebConfigKeyHash).SingleOrDefaultAsync();
         });
-        if (configKey is null || SebGuard.Passes(context.HttpContext.Request, configKey))
-        {
-            await next();
-            return;
-        }
+        return configKey is null || SebGuard.Passes(request, configKey);
+    }
 
-        var candidateId = user.GetCandidateId();
+    /// <summary>The InvalidSebKey warning, while the candidate has a running attempt.</summary>
+    public static async Task RecordAsync(ExamPrepDbContext db, SecurityEventRecorder events, int candidateId)
+    {
         var running = await db.Attempts.AsNoTracking()
             .Where(a => a.CandidateId == candidateId && (a.Status == AttemptStatus.InProgress || a.Status == AttemptStatus.Paused))
             .Select(a => new { a.Id, a.ExamSectionId })
@@ -92,11 +113,6 @@ public sealed class SebActionFilter(ExamPrepDbContext db, IMemoryCache cache, Se
             await events.RecordAsync(running.Id, running.ExamSectionId, SecurityEventType.InvalidSebKey,
                 "A request came from a browser other than Safe Exam Browser with this test's settings.", TimeSpan.FromMinutes(5), CancellationToken.None);
         }
-
-        context.Result = new ObjectResult(new ProblemDetails { Status = StatusCodes.Status403Forbidden, Title = SebGuard.RequiredTitle })
-        {
-            StatusCode = StatusCodes.Status403Forbidden,
-        };
     }
 
     /// <summary>Forgets an exam's key after an administrator changes it.</summary>

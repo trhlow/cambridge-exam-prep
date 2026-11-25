@@ -1,10 +1,15 @@
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using ExamPrep.Api.Realtime;
+using ExamPrep.Api.Security;
 using ExamPrep.Domain.Enums;
+using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamPrep.Tests.Api.Realtime;
 
@@ -48,13 +53,23 @@ public sealed class RealtimeTests(ApiFixture api) : IClassFixture<ApiFixture>
         return CookieOf(pinned);
     }
 
-    private async Task<HubConnection> ConnectAsync(string path, string cookie)
+    /// <summary>What Safe Exam Browser adds to every request: SHA-256 of the absolute URL followed by the Config Key.</summary>
+    private sealed class SebHandler(string configKey, HttpMessageHandler inner) : DelegatingHandler(inner)
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            request.Headers.Add(SebGuard.ConfigKeyHashHeader, SebGuard.ExpectedHash(request.RequestUri!.AbsoluteUri, configKey));
+            return base.SendAsync(request, cancellationToken);
+        }
+    }
+
+    private async Task<HubConnection> ConnectAsync(string path, string cookie, string? sebConfigKey = null)
     {
         var server = api.Factory.Server;
         var connection = new HubConnectionBuilder()
             .WithUrl(new Uri(server.BaseAddress, path), options =>
             {
-                options.HttpMessageHandlerFactory = _ => server.CreateHandler();
+                options.HttpMessageHandlerFactory = _ => sebConfigKey is null ? server.CreateHandler() : new SebHandler(sebConfigKey, server.CreateHandler());
                 options.Transports = HttpTransportType.LongPolling;
                 options.Headers["Cookie"] = cookie;
             })
@@ -196,5 +211,47 @@ public sealed class RealtimeTests(ApiFixture api) : IClassFixture<ApiFixture>
         await Assert.ThrowsAnyAsync<Exception>(() => ConnectAsync(StaffRoomHub.Path, string.Empty));
         await Assert.ThrowsAnyAsync<Exception>(() => ConnectAsync(CandidateRoomHub.Path, staffCookie));
         await Assert.ThrowsAnyAsync<Exception>(() => ConnectAsync(StaffRoomHub.Path, candidateCookie));
+    }
+
+    [Fact]
+    public async Task AnExamRequiringSeb_TakesTheCandidatesLiveConnectionOnlyFromSeb()
+    {
+        api.SkipIfUnavailable();
+        const string ConfigKey = "3f7a0c5e9b2d4f6a8c1e3b5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a";
+        var candidate = await api.CreateCandidateAsync(Password);
+        var section = candidate.ReadingWritingSectionId;
+        await api.StartAttemptAsync(candidate.CandidateId, section);
+        var cookie = await CandidateCookieAsync(candidate);
+        using (var scope = api.Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ExamPrepDbContext>().Exams.Where(e => e.Id == candidate.ExamId)
+                .ExecuteUpdateAsync(set => set.SetProperty(e => e.SebConfigKeyHash, ConfigKey), ct);
+            SebActionFilter.Forget(scope.ServiceProvider.GetRequiredService<IMemoryCache>(), candidate.ExamId);
+        }
+
+        // Outside SEB the server closes the connection, at the handshake or right after it.
+        var closed = false;
+        try
+        {
+            await using var outside = await ConnectAsync(CandidateRoomHub.Path, cookie);
+            var gone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            outside.Closed += _ => { gone.TrySetResult(); return Task.CompletedTask; };
+            await gone.Task.WaitAsync(Soon, ct);
+            closed = true;
+        }
+        catch (Exception e) when (e is not TimeoutException)
+        {
+            closed = true;
+        }
+
+        await using var seb = await ConnectAsync(CandidateRoomHub.Path, cookie, ConfigKey);
+        var refresh = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        seb.On(RoomNotifier.RefreshMethod, () => refresh.TrySetResult());
+        using var admin = await api.AdminClientAsync();
+        (await admin.PostAsJsonAsync($"/api/staff/exams/{candidate.ExamId}/sections/{section}/actions", new { action = "Pause", candidateIds = new[] { candidate.CandidateId } }, ct)).EnsureSuccessStatusCode();
+
+        Assert.True(closed);
+        await refresh.Task.WaitAsync(Soon, ct);
+        Assert.Equal(HubConnectionState.Connected, seb.State);
     }
 }

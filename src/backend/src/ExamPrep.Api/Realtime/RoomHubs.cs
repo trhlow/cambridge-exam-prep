@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using ExamPrep.Api.Auth;
 using ExamPrep.Api.Exams;
+using ExamPrep.Api.Security;
 using ExamPrep.Domain.Enums;
 using ExamPrep.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ExamPrep.Api.Realtime;
 
@@ -48,16 +50,28 @@ public sealed class StaffRoomHub(ExamPrepDbContext db) : Hub
 /// <summary>
 /// VE-13: the candidate's live line. While connected the candidate counts as online; an invigilator's pause, time
 /// change, rewind or message tells the browser to ask for the clock at once instead of at the next heartbeat.
-/// Closing the tab or losing the network shows the candidate offline straight away.
+/// Closing the tab or losing the network shows the candidate offline straight away. An exam that requires Safe Exam
+/// Browser accepts the connection only with SEB's Config Key hash, as every candidate request (VE-28); a refused
+/// connection raises no warning, because SEB may not add its header to a WebSocket handshake, and the browser then
+/// keeps to the heartbeat every 5 s.
 /// </summary>
 [Authorize(Policy = CandidateAuthDefaults.ExamPolicy)]
-public sealed class CandidateRoomHub(ExamPrepDbContext db, RoomNotifier notifier, TimeProvider clock) : Hub
+public sealed class CandidateRoomHub(ExamPrepDbContext db, RoomNotifier notifier, TimeProvider clock, IMemoryCache cache, ILogger<CandidateRoomHub> logger) : Hub
 {
     public const string Path = "/hubs/candidate";
+    private const string RefusedItem = "seb-refused";
 
     public override async Task OnConnectedAsync()
     {
         var candidateId = Context.User!.GetCandidateId();
+        if (Context.GetHttpContext() is not { } http || !await SebActionFilter.PassesAsync(db, cache, http.Request, Context.User!.GetExamId()))
+        {
+            logger.LogWarning("Live connection of candidate {CandidateId} refused: no valid Safe Exam Browser Config Key hash.", candidateId);
+            Context.Items[RefusedItem] = true;
+            Context.Abort();
+            return;
+        }
+
         await Groups.AddToGroupAsync(Context.ConnectionId, RoomNotifier.CandidateGroup(candidateId));
         await Groups.AddToGroupAsync(Context.ConnectionId, RoomNotifier.ExamGroup(Context.User!.GetExamId()));
         if (notifier.Connected(candidateId))
@@ -70,6 +84,12 @@ public sealed class CandidateRoomHub(ExamPrepDbContext db, RoomNotifier notifier
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        if (Context.Items.ContainsKey(RefusedItem))
+        {
+            await base.OnDisconnectedAsync(exception);
+            return;
+        }
+
         var candidateId = Context.User!.GetCandidateId();
         // A reload connects the new page before the old one is gone: only the last connection to go marks offline.
         if (notifier.Disconnected(candidateId))
