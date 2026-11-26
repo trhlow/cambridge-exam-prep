@@ -86,7 +86,7 @@ Diagrams are generated, never drawn by hand (`thesis/diagrams/tools`): `gen_erd.
 
 ## Source of truth
 
-- `thesis/refs/cambridge-digital/` — official Cambridge/Inspera exam-day and invigilator guides. Invigilator procedures are identical for A2, B1 and IELTS (all on Inspera; confirmed by the user 09/10/2026).
+- `thesis/refs/cambridge-digital/` — official Cambridge/Inspera exam-day and invigilator guides (local copies only, git-ignored since 26/11 for copyright; the folder's README lists them). Invigilator procedures are identical for A2, B1 and IELTS (all on Inspera; confirmed by the user 09/10/2026).
 - `thesis/refs/inspera-ui-a2.md` — screen-by-screen notes of the official A2 Key for Schools sample tests: header icons, part tabs with "n of m", split panes, inline word picker, drag-and-drop matching, Options menu (contrast, text size, hide timer), notes/highlight. Build the candidate UI against this.
 - `thesis/refs/inspera-ui-b1.md` — the same for the official B1 Preliminary sample tests (VE-33, 21/10): what differs from A2 per part, and the gaps in the engine (Reading 2 people ↔ long text cards and Reading 4 sentences dragged into gaps → VE-34, Listening 2 one question per page → VE-37, Writing 2 choose one of two questions with Yes/No/Undecided → VE-35).
 - `thesis/refs/ielts-format.md` — IELTS structure and question types.

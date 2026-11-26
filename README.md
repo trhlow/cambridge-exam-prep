@@ -85,7 +85,7 @@ Theo hướng dẫn tổ chức repository của Khoa:
     ├── diagrams/       Sơ đồ thiết kế draw.io (use case, ERD)
     └── refs/           Tài liệu tham khảo
         ├── faculty-templates/   Quy định chung, mẫu đề cương/báo cáo, lịch thực hiện
-        ├── cambridge-digital/   Tài liệu thi máy Cambridge / Inspera
+        ├── cambridge-digital/   Tài liệu thi máy Cambridge / Inspera (chỉ giữ trên máy, không đưa lên kho)
         ├── inspera-ui-a2.md     Ghi chép giao diện bài thi mẫu A2 Key for Schools
         └── ielts-format.md      Format đề và dạng câu hỏi IELTS
 ```
@@ -243,4 +243,4 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 
 Mã nguồn, tài liệu và sơ đồ do tác giả viết được phát hành theo giấy phép MIT, xem tệp [LICENSE](LICENSE).
 
-Giấy phép này không áp dụng cho tài liệu của bên thứ ba lưu trong kho để tham khảo: tài liệu của Cambridge University Press & Assessment và Inspera trong `thesis/refs/cambridge-digital/`, và các mẫu của Khoa trong `thesis/refs/faculty-templates/`. Các tài liệu này thuộc bản quyền của chủ sở hữu. Kho mã nguồn không chứa đề thi của Cambridge hay của Trung tâm Anh ngữ Victory; các đề mẫu trong `setup/exam-package/samples/` do tác giả tự soạn.
+Giấy phép này không áp dụng cho các mẫu của Khoa lưu trong `thesis/refs/faculty-templates/`, vốn thuộc bản quyền của Khoa. Tài liệu thi máy của Cambridge University Press & Assessment và Inspera mà đồ án dựa vào không được đưa lên kho; danh sách ở `thesis/refs/cambridge-digital/README.md`. Kho mã nguồn không chứa đề thi của Cambridge hay của Trung tâm Anh ngữ Victory; các đề mẫu trong `setup/exam-package/samples/` do tác giả tự soạn.

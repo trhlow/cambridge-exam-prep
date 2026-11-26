@@ -51,3 +51,7 @@ docker/certs/
 
 # Local review scratch (subagent briefs, reports, diffs)
 .superpowers/
+
+# Cambridge/Inspera guides (their copyright): kept locally for reference, only the README is tracked
+thesis/refs/cambridge-digital/*
+!thesis/refs/cambridge-digital/README.md
