@@ -212,7 +212,7 @@ def text_pt(text, bold=False):
 
 
 def words_of(text):
-    return [w for w in re.split("[ \t\n​]+", text.strip()) if w]  # no break at the no-break spaces of citations
+    return [w for w in re.split("[ \t\n\u200b]+", text.strip()) if w]  # no break at the no-break spaces of citations
 
 
 def cell_lines(text, width_cm, bold=False):
@@ -230,6 +230,32 @@ def cell_lines(text, width_cm, bold=False):
             else:
                 current, last = (w if current is None else current + gap + w), (last + 1 if k == 0 else last)
     return lines + (current is not None), last
+
+
+def place_breaks(text, width_cm, bold=False):
+    """Turns the break marks (U+200B after "/") into a line break where Word would otherwise cut the path mid-word,
+    and drops the others: no invisible character is left in the document."""
+    if "\u200b" not in text:
+        return text
+    avail = (width_cm - CELL_PAD_CM) / 2.54 * 72
+    space = text_pt(" ", bold)
+    out, current = [], None
+    for wi, word in enumerate(text.split(" ")):
+        if wi:
+            out.append(" ")
+        for k, zpart in enumerate(word.split("\u200b")):
+            for h, part in enumerate(re.split(r"(?<=-)(?=.)", zpart)):
+                kind = "space" if k == h == 0 else ("mark" if h == 0 else "hyphen")
+                w = text_pt(part, bold)
+                gap = space if kind == "space" else 0
+                if current is not None and current + gap + w > avail:
+                    if kind == "mark":
+                        out.append("\n")
+                    current = w
+                else:
+                    current = w if current is None else current + gap + w
+                out.append(part)
+    return "".join(out)
 
 
 def table_widths(rows, widths):
@@ -317,7 +343,7 @@ def add_bullet_style(doc):
     lvl = el("w:lvl", **{"w:ilvl": 0})
     lvl.append(el("w:start", **{"w:val": 1}))
     lvl.append(el("w:numFmt", **{"w:val": "bullet"}))
-    lvl.append(el("w:lvlText", **{"w:val": "–"}))
+    lvl.append(el("w:lvlText", **{"w:val": "-"}))  # a short hyphen: "–" reads as a long dash
     lvl.append(el("w:lvlJc", **{"w:val": "left"}))
     lp = el("w:pPr")
     lp.append(el("w:ind", **{"w:left": 1077, "w:hanging": 357}))
@@ -518,8 +544,8 @@ class Builder:
         return p
 
     def table(self, caption, widths, rows):
-        # long paths may wrap after "/" (a zero-width space) instead of being cut mid-word
-        rows = [[re.sub(r"\S{21,}", lambda m: m.group().replace("/", "/​"), c) for c in r] for r in rows]
+        # long paths may wrap after "/" (marked here, a line break in the document) instead of being cut mid-word
+        rows = [[re.sub(r"\S{21,}", lambda m: m.group().replace("/", "/\u200b"), c) for c in r] for r in rows]
         widths = table_widths(rows, widths)
         # a column is centred only when all its cells are short (numbers, codes), never half and half
         short = [all(len(r[j]) < 18 for r in rows[1:]) for j in range(len(rows[0]))]
@@ -546,7 +572,7 @@ class Builder:
                 pf = p.paragraph_format
                 pf.space_before, pf.space_after, pf.line_spacing = Pt(3), Pt(3), 1.15
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER if (i == 0 or short[j]) else WD_ALIGN_PARAGRAPH.LEFT
-                self.runs(p, value)
+                self.runs(p, place_breaks(value, widths[j], i == 0))
                 for r in p.runs:
                     r.font.name, r.font.size = "Times New Roman", Pt(13)
                     if i == 0:
