@@ -41,9 +41,6 @@ REFS = {
              "Addison-Wesley, 2009."),
     "cefr2001": ("Council of Europe 1", "Council of Europe, *Common European Framework of Reference for Languages: "
                  "Learning, Teaching, Assessment*. Cambridge, U.K.: Cambridge Univ. Press, 2001."),
-    "cefr2020": ("Council of Europe 2", "Council of Europe, *Common European Framework of Reference for Languages: "
-                 "Learning, Teaching, Assessment – Companion Volume*. Strasbourg, France: Council of Europe Publishing, "
-                 "2020. [Online]. Available: https://rm.coe.int/16809ea0d4"),
     "dompurify": ("Cure53", "Cure53, “DOMPurify,” GitHub repository. " + ACCESSED + "https://github.com/cure53/DOMPurify"),
     "compose": ("Docker 1", "Docker Inc., “Docker Compose,” Docker Docs. " + ACCESSED + "https://docs.docker.com/compose/"),
     "docker": ("Docker 2", "Docker Inc., “What is Docker?,” Docker Docs. " + ACCESSED +

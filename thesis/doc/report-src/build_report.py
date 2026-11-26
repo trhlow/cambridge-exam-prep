@@ -432,15 +432,30 @@ def landscape_footers(doc):
 
 
 def fill_footer(doc):
-    footer = doc.sections[1].footer
-    for p in footer.paragraphs:
-        if "GVHD" in p.text:
-            runs = p.runs
-            runs[0].text = "GVHD: ThS. Nhan Minh Phúc"
-            runs[-1].text = "\tSVTH: Trần Hoàng Long"  # two tabs as in the template: SVTH sits at the right tab
+    """As the template: the rule over the footer ends where "SVTH: name" ends, and the page number sits just after
+    that, 172 twips to the right. The template's tab stop and number frame are placed for its 2 cm right margin; the
+    faculty's 1.5 cm one makes the text 0.5 cm wider, so both move with it."""
     sec = doc.sections[1]
     sec.left_margin, sec.right_margin = Cm(3), Cm(1.5)
     sec.top_margin, sec.bottom_margin = Cm(2), Cm(2)
+    text_w = sec.page_width.twips - sec.left_margin.twips - sec.right_margin.twips
+    footer = sec.footer
+    for p in footer.paragraphs:
+        frame = p._p.find(qn("w:pPr") + "/" + qn("w:framePr"))
+        if frame is not None:
+            frame_p = frame
+        if "GVHD" in p.text:
+            runs = p.runs
+            runs[0].text = "GVHD: ThS. Nhan Minh Phúc"
+            runs[-1].text = "SVTH: Trần Hoàng Long"  # one tab, to the right stop at the end of the rule
+            pr = p._p.find(qn("w:pPr"))
+            rule_end = text_w - int(pr.find(qn("w:ind")).get(qn("w:right")))
+            tabs = set_child(pr, "w:tabs")
+            for kind, pos in (("center", 4320), ("right", 8640)):  # the Footer style's stops
+                tabs.append(el("w:tab", **{"w:val": "clear", "w:pos": pos}))
+            tabs.append(el("w:tab", **{"w:val": "right", "w:pos": rule_end}))
+            order_ppr(pr)
+    frame_p.set(qn("w:x"), str(sec.left_margin.twips + rule_end + 172))
 
 
 def clear_body(doc):
@@ -620,7 +635,8 @@ class Builder:
 
     def sign(self, lines):
         first = True
-        for line in lines.split("|"):
+        items = lines.split("|")
+        for k, line in enumerate(items):
             p = self.para(align=WD_ALIGN_PARAGRAPH.CENTER)
             pf = p.paragraph_format
             pf.left_indent = Cm(8)
@@ -628,27 +644,28 @@ class Builder:
             pf.line_spacing = 1.5
             r = p.add_run(line)
             r.italic = line.startswith("Vĩnh Long") or line.startswith("(")
-            r.bold = line in ("Sinh viên thực hiện", "Trần Hoàng Long", "Giảng viên hướng dẫn", "Giảng viên chấm")
+            # the signer's role, and the name written under the room to sign
+            r.bold = k == 1 or (k == len(items) - 1 and k and items[k - 1] == "")
             if line == "":
                 for _ in range(2):
                     self.para().paragraph_format.left_indent = Cm(8)
             first = False
 
-    def comment_page(self, title, signer):
-        """As the template: the centred title, two blank lines, 33 dotted writing lines (a tab with a dot leader to the
-        right margin), a blank line, then the signer in bold and "(Ký và ghi rõ họ tên)" on the right."""
+    def comment_page(self, title, signer, name=""):
+        """The centred title, a blank line, 28 dotted writing lines (a tab with a dot leader to the right margin), then
+        the same signature block as Lời cam đoan and Lời cảm ơn: place and date, the signer, "(Ký và ghi rõ họ tên)",
+        room to sign and the name when it is known."""
         self.unnumbered(title, in_toc=False)
-        for n in range(36):
+        for n in range(29):
             p = self.para(align=WD_ALIGN_PARAGRAPH.JUSTIFY)
             pf = p.paragraph_format
             pf.space_before, pf.space_after, pf.line_spacing, pf.first_line_indent = Pt(0), Pt(0), Pt(16), Cm(0)  # single line of 14 pt, as the template
-            if 2 <= n < 35:
+            if n:
                 tabs = set_child(ppr(p._p), "w:tabs")
                 tabs.append(el("w:tab", **{"w:val": "right", "w:leader": "dot", "w:pos": TEXT_WIDTH_TWIPS}))
                 order_ppr(p._p.pPr)
                 p.add_run("\t")
-        self.para(align=WD_ALIGN_PARAGRAPH.RIGHT).add_run(signer).bold = True
-        self.para(align=WD_ALIGN_PARAGRAPH.RIGHT).add_run("(Ký và ghi rõ họ tên)")
+        self.sign(f"Vĩnh Long, ngày … tháng … năm 2026|{signer}|(Ký và ghi rõ họ tên)||{name}")
 
     def toc(self, title, instr):
         self.unnumbered(title, in_toc=title != "MỤC LỤC")
@@ -742,8 +759,8 @@ def build():
         elif line.startswith("@sign "):
             b.sign(line[6:])
         elif line.startswith("@nhanxet "):
-            title, signer = line[9:].split("|")
-            b.comment_page(title, signer)
+            title, signer, *name = line[9:].split("|")
+            b.comment_page(title, signer, name[0] if name else "")
         elif line.startswith("@toc "):
             b.toc(line[5:], 'TOC \\o "1-3" \\h \\z \\u')
         elif line.startswith("@lot "):
