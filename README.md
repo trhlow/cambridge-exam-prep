@@ -234,7 +234,13 @@ EXAMPREP_TEST_MYSQL="server=localhost;port=3306;user=root;password=<MYSQL_ROOT_P
 - [x] Yêu cầu mới của Victory 29/10 (VE-70…73): trộn N đề gốc thành số đề tuỳ chọn (tối đa 3N), lọc và nhập đề theo A2/B1, đề trắng B1, mỗi người chỉ thấy phần mình làm, chia bài Writing ngẫu nhiên cho giám khảo và chấm ẩn danh theo mã bài
 - [x] Rà soát toàn hệ thống 2–6/11/2026 (`.planning/2026-11-02-review/`, 8 nhóm sửa): tự lưu không mất bài, End all và End now chỉ rút ngắn, phát lại Listening, chấm Writing ẩn danh có lịch sử, vòng đời kỳ thi có khoá hàng, sửa đáp án của admin, phân quyền theo vai trò hiện tại, triển khai HTTPS và chỉ xoá kỳ thi demo do bộ tạo demo tạo ra
 - [x] Hoàn thiện 25/11/2026: End now vẫn nhận câu trả lời trong 5 giây chờ tự lưu, đo độ dài file nghe (giới hạn tua), SEB cho kênh thời gian thực, nhật ký giám thị, trạng thái đã đọc thông báo lưu trên server, thang điểm Cambridge English Scale và điểm Speaking — 1500 test backend, 206 test frontend, 69 test bộ chuyển đề, 6 test đầu-cuối; thi thử 17/17; kiểm thử tải 200 thí sinh không lỗi máy chủ
-- [x] Quyển báo cáo (`thesis/doc/BaoCao_DoAnChuyenNganh_TranHoangLong.docx`, bản PDF trong `thesis/pdf/`): phần đầu, Mở đầu, Chương 1–5, phụ lục danh sách API và tóm tắt cài đặt, 54 tài liệu tham khảo IEEE
+- [x] Quyển báo cáo (`thesis/doc/BaoCao_DoAnChuyenNganh_TranHoangLong.docx`, bản PDF trong `thesis/pdf/`): phần đầu, Mở đầu, Chương 1–5, phụ lục danh sách API và tóm tắt cài đặt, 53 tài liệu tham khảo IEEE
 - [x] Báo cáo tiến độ tuần 1–10 (`progress-report/`)
 - [x] Slide trình bày và video demo (`thesis/abs/`)
 - [ ] Chỉnh sửa quyển báo cáo theo góp ý của GVHD (tuần 21–27/12), nộp link GitHub và nộp quyển ngày 31/12/2026
+
+## Giấy phép
+
+Mã nguồn, tài liệu và sơ đồ do tác giả viết được phát hành theo giấy phép MIT, xem tệp [LICENSE](LICENSE).
+
+Giấy phép này không áp dụng cho tài liệu của bên thứ ba lưu trong kho để tham khảo: tài liệu của Cambridge University Press & Assessment và Inspera trong `thesis/refs/cambridge-digital/`, và các mẫu của Khoa trong `thesis/refs/faculty-templates/`. Các tài liệu này thuộc bản quyền của chủ sở hữu. Kho mã nguồn không chứa đề thi của Cambridge hay của Trung tâm Anh ngữ Victory; các đề mẫu trong `setup/exam-package/samples/` do tác giả tự soạn.
