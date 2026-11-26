@@ -17,11 +17,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.dirname(HERE)
 
 FONT = "fontFamily=Times New Roman;fontSize=15;"
-SPACING, LEFT = 340, 130          # lifeline centres; a lane fits the longest label
-HEAD_W, HEAD_H = 170, 56
-FIRST_ROW, ROW, SELF_ROW = HEAD_H + 50, 58, 84
+# At most 860 wide, so 15 px text prints at about 8 pt on a 16.5 cm portrait column; labels wrap to their lane.
+MAX_WIDTH, MAX_SPACING, MARGIN = 860, 340, 95
+HEAD_H = 56
+FIRST_ROW, ROW, SELF_ROW = HEAD_H + 40, 46, 76
 BAR_W = 12
-NOTE_W, NOTE_LINE = SPACING - 60, 21   # a note stays inside its lane
+LINE, CHAR_PX = 20, 6.3
 
 HEAD = f"rounded=0;whiteSpace=wrap;html=1;{FONT}"
 ACTOR = f"shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;{FONT}"
@@ -66,28 +67,69 @@ class Doc:
             f.write(xml)
 
 
-def note_height(text):
-    chars_per_line = NOTE_W // 8
-    lines = sum(max(1, -(-len(part) // chars_per_line)) for part in text.split("\n"))
-    return lines * NOTE_LINE + 18
+def wrap(text, width_px):
+    """Breaks a label into lines that fit width_px (Times New Roman 15 px is about 6.3 px a character), as evenly as
+    the line count allows, so no line is left with a single word."""
+    chars = max(8, int(width_px / CHAR_PX))
+    count = len(_wrap(text, chars))
+    while chars > 8 and len(_wrap(text, chars - 1)) == count:
+        chars -= 1
+    return _wrap(text, chars)
+
+
+def _wrap(text, chars):
+    lines = []
+    for part in text.split("\n"):
+        line = ""
+        for word in part.split(" "):
+            if line and len(line) + 1 + len(word) > chars:
+                lines.append(line)
+                line = word
+            else:
+                line = f"{line} {word}" if line else word
+        lines.append(line)
+    return lines
 
 
 def build(spec):
     parts = spec["participants"]
-    x_of = {p["id"]: LEFT + i * SPACING for i, p in enumerate(parts)}
+    n = len(parts)
+    spacing = min(MAX_SPACING, (MAX_WIDTH - 2 * MARGIN) / max(n - 1, 1))
+    head_w = spacing - 16
+    left = MARGIN
+    x_of = {p["id"]: left + i * spacing for i, p in enumerate(parts)}
+    right = left + (n - 1) * spacing + MARGIN
     actors = {p["id"] for p in parts if p.get("actor")}
 
-    # First pass: the y of every row, and the activation bars (open on a call, close on the reply).
+    # First pass: the y of every row, and the activation bars (open on a call, close on the reply). A label sits above
+    # its arrow, so a row starts with room for the label's lines.
     y = FIRST_ROW
     rows, bars, open_bars = [], [], {}
     for m in spec["messages"]:
         if "note" in m:
-            h = note_height(m["note"])
-            rows.append((m, y, h))
+            x0 = x_of[m["over"]] + 22
+            w = min(2 * spacing - 44, right - x0)
+            if w < spacing:                          # the last lifeline: the note goes on its left
+                w = min(2 * spacing - 44, x_of[m["over"]] - 22)
+                x0 = x_of[m["over"]] - 22 - w
+            lines = wrap(m["note"], w - 20)
+            h = len(lines) * LINE + 18
+            rows.append((m, y, h, "\n".join(lines), x0, w))
             y += h + 26
             continue
         is_self = m["from"] == m["to"]
-        rows.append((m, y, 0))
+        if is_self:
+            x0 = x_of[m["from"]] + BAR_W / 2 + 54
+            w = x_of[m["from"]] + spacing - x0 - 8
+            if m["from"] == parts[-1]["id"]:       # no lane on the right: the label goes in the lane on the left
+                x0, w = x_of[m["from"]] - spacing + 20, spacing - 34
+            lines = wrap(m["label"], w)
+            rows.append((m, y, 0, "\n".join(lines), x0, w))
+        else:
+            span = abs(x_of[m["to"]] - x_of[m["from"]]) - 2 * BAR_W
+            lines = wrap(m["label"], span - 12)
+            y += (len(lines) - 1) * LINE          # room above the arrow for the extra lines
+            rows.append((m, y, 0, "\n".join(lines), 0, 0))
         if m.get("return"):
             start = open_bars.pop(m["from"], None)
             if start is not None:
@@ -96,7 +138,7 @@ def build(spec):
             open_bars[m["to"]] = y
         if m["from"] not in open_bars and not m.get("return"):
             open_bars[m["from"]] = y
-        y += SELF_ROW if is_self else ROW
+        y += max(SELF_ROW, len(lines) * LINE + 34) if is_self else ROW
     bottom = y + 20
     bars += [(pid, start, bottom - 10) for pid, start in open_bars.items()]
     bars = [bar for bar in bars if bar[0] not in actors]   # people have no activation bar
@@ -107,7 +149,7 @@ def build(spec):
         if p.get("actor"):
             d.vertex(p["label"], ACTOR, x - 15, 4, 30, HEAD_H - 24)
         else:
-            d.vertex(p["label"], HEAD, x - HEAD_W / 2, 0, HEAD_W, HEAD_H)
+            d.vertex(p["label"], HEAD, x - head_w / 2, 0, head_w, HEAD_H)
         d.line("", LIFE, [(x, HEAD_H + (16 if p.get("actor") else 0)), (x, bottom)])
     for pid, start, end in bars:
         d.vertex("", BAR, x_of[pid] - BAR_W / 2, start - 6, BAR_W, max(end - start + 12, 24))
@@ -117,19 +159,19 @@ def build(spec):
             return x_of[pid]
         return x_of[pid] + (BAR_W / 2 if toward > x_of[pid] else -BAR_W / 2)
 
-    for m, y, h in rows:
+    for m, y, h, text, x0, w in rows:
         if "note" in m:
-            x = x_of[m["over"]] + 22
-            d.vertex(m["note"], NOTE, x, y - 10, NOTE_W, h)
+            d.vertex(text, NOTE, x0, y - 10, w, h)
             continue
         if m["from"] == m["to"]:
             x = x_of[m["from"]] + BAR_W / 2
             d.line("", SYNC, [(x, y), (x + 46, y), (x + 46, y + 30), (x, y + 30)])
-            d.vertex(m["label"], TEXT, x + 54, y - 6, SPACING - 70, 40)
+            lines = text.count("\n") + 1
+            d.vertex(text, TEXT, x0, y + 15 - lines * LINE / 2 - 4, w, lines * LINE + 8)
             continue
         style = REPLY if m.get("return") else ASYNC if m.get("async") else SYNC
         sx, tx = x_of[m["from"]], x_of[m["to"]]
-        d.line(m["label"], style, [(edge_x(m["from"], tx), y), (edge_x(m["to"], sx), y)])
+        d.line(text, style, [(edge_x(m["from"], tx), y), (edge_x(m["to"], sx), y)])
     return d
 
 

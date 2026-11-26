@@ -1,5 +1,5 @@
 {
-  "title": "Thí sinh đăng nhập và bắt đầu phần thi (theo các bước của Cambridge)",
+  "title": "Thí sinh đăng nhập hai bước (mật khẩu, rồi mã PIN)",
   "participants": [
     {
       "id": "ts",
@@ -70,73 +70,6 @@
       "from": "api",
       "to": "fe",
       "label": "200 + cookie (pin_verified = True)",
-      "return": true
-    },
-    {
-      "from": "ts",
-      "to": "fe",
-      "label": "Kiểm tra tên; Readiness check; Confirm"
-    },
-    {
-      "from": "fe",
-      "to": "api",
-      "label": "GET /api/candidate/sections"
-    },
-    {
-      "from": "api",
-      "to": "fe",
-      "label": "Các phần thi (Listening: Locked)",
-      "return": true
-    },
-    {
-      "from": "ts",
-      "to": "fe",
-      "label": "Open; đọc hướng dẫn; I confirm; Start"
-    },
-    {
-      "from": "fe",
-      "to": "api",
-      "label": "POST /sections/{id}/attempt"
-    },
-    {
-      "from": "api",
-      "to": "db",
-      "label": "Tạo attempts (AttemptClock.Start)"
-    },
-    {
-      "from": "db",
-      "to": "api",
-      "label": "attempt",
-      "return": true
-    },
-    {
-      "from": "api",
-      "to": "fe",
-      "label": "AttemptState (giờ còn lại, câu trả lời)",
-      "return": true
-    },
-    {
-      "from": "fe",
-      "to": "api",
-      "label": "PUT .../responses (tự lưu)",
-      "async": true
-    },
-    {
-      "from": "api",
-      "to": "fe",
-      "label": "200",
-      "return": true
-    },
-    {
-      "from": "fe",
-      "to": "api",
-      "label": "POST .../heartbeat mỗi 5 giây",
-      "async": true
-    },
-    {
-      "from": "api",
-      "to": "fe",
-      "label": "Đồng hồ, thông báo, vị trí audio",
       "return": true
     }
   ]

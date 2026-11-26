@@ -42,44 +42,49 @@ class Doc:
 
 
 def state_machine():
+    """Portrait layout, at most 700 wide so the 12 px labels print at 8 pt or more on a 16.5 cm column: the running
+    states at the top, the submitted state with its grading sub-machine below them."""
     d = Doc()
-    d.vertex("Máy trạng thái của một lượt làm bài (attempts)", f"text;html=1;{FONT}fontSize=16;fontStyle=1;align=left;", 40, 0, 600, 30)
+    d.vertex("Máy trạng thái của một lượt làm bài (attempts)", f"text;html=1;{FONT}fontSize=16;fontStyle=1;align=left;", 20, 0, 600, 30)
+    label = f"text;html=1;whiteSpace=wrap;{FONT}fontSize=12;align=left;verticalAlign=top;"
 
-    init = d.vertex("", INITIAL, 50, 162, 26, 26)
-    todo = d.vertex("Chưa bắt đầu\n(NotStarted)", STATE + "verticalAlign=middle;", 130, 140, 170, 70)
+    init = d.vertex("", INITIAL, 30, 63, 26, 26)
+    todo = d.vertex("Chưa bắt đầu\n(NotStarted)", STATE + "verticalAlign=middle;", 80, 45, 180, 62)
     work = d.vertex("Đang làm (InProgress)\n\nentry / tính ends_at\ndo / tự lưu câu trả lời,\nheartbeat 5 giây",
-                    STATE, 470, 115, 230, 120)
+                    STATE, 40, 230, 240, 120)
     pause = d.vertex("Tạm dừng (Paused)\n\nentry / ghi paused_at\ndo / đồng hồ đứng yên",
-                     STATE, 470, 400, 230, 100)
+                     STATE, 470, 230, 210, 110)
 
     d.edge(init, todo)
-    d.edge(todo, work, "Thí sinh mở phần thi\n[các phần trước đã nộp]\n/ AttemptClock.Start", dy=-34)
-    d.edge(work, pause, "Giám thị Pause\n[thí sinh đang online]", "exitX=0.3;exitY=1;entryX=0.3;entryY=0;", dx=-78)
-    d.edge(pause, work, "Giám thị Resume\n/ paused_seconds += thời gian dừng", "exitX=0.7;exitY=0;entryX=0.7;entryY=1;", dx=96)
-    d.edge(work, work, "Cộng giờ sự cố · End at / End in\nTua audio · Use test end time\n/ tính lại ends_at",
-           "exitX=0.25;exitY=0;entryX=0.75;entryY=0;", points=[(527, 70), (642, 70)], dy=-30)
-    d.edge(pause, pause, "Cộng giờ sự cố · Use test end time", "exitX=0.25;exitY=1;entryX=0.75;entryY=1;",
-           points=[(527, 545), (642, 545)], dy=18)
+    d.edge(todo, work, "Thí sinh mở phần thi\n[các phần trước đã nộp]\n/ AttemptClock.Start", "exitX=0.5;exitY=1;entryX=0.54;entryY=0;")
+    d.edge(work, work, "", "exitX=1;exitY=0.12;entryX=0.85;entryY=0;", points=[(320, 244), (320, 200), (244, 200)])
+    d.vertex("Cộng giờ sự cố, End at / End in,\ntua audio, Use test end time\n/ tính lại ends_at", label, 330, 150, 230, 60)
+    d.edge(work, pause, "", "exitX=1;exitY=0.55;entryX=0;entryY=0.6;")
+    d.vertex("Giám thị Pause\n[thí sinh đang online]", label + "align=center;", 290, 256, 170, 36)
+    d.edge(pause, work, "", "exitX=0;exitY=0.9;entryX=1;entryY=0.825;")
+    d.vertex("Giám thị Resume\n/ paused_seconds += thời gian dừng", label + "align=center;", 280, 335, 190, 36)
+    d.edge(pause, pause, "", "exitX=0.3;exitY=1;entryX=0.7;entryY=1;", points=[(533, 380), (617, 380)])
+    d.vertex("Cộng giờ sự cố, Use test end time", label + "align=center;", 460, 384, 230, 22)
 
     # Submitted, with the grading sub-machine inside.
     done = d.vertex("Đã nộp (Submitted) — chấm điểm (grading_status)",
                     f"swimlane;rounded=1;html=1;{FONT}fontStyle=1;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;",
-                    960, 60, 580, 460)
-    d.edge(work, done, "Hết giờ [TimeExpired]\nGiám thị End now [InvigilatorEndNow]\n/ ghi submitted_at", "entryX=0;entryY=0.24;", dy=-44)
+                    20, 470, 660, 380)
+    d.edge(work, done, "Hết giờ [TimeExpired]\nGiám thị End now [InvigilatorEndNow]\n/ ghi submitted_at",
+           "exitX=0.5;exitY=1;entryX=0.24;entryY=0;")
 
-    g_init = d.vertex("", INITIAL, 30, 60, 22, 22, parent=done)
-    not_graded = d.vertex("Chưa chấm\n(NotGraded)", GRADE, 90, 46, 160, 50, parent=done)
-    auto = d.vertex("Đã chấm tự động\n(AutoGraded)", GRADE, 30, 230, 170, 56, parent=done)
-    manual = d.vertex("Chờ chấm Writing\n(NeedsManualMarking)", GRADE, 260, 230, 190, 56, parent=done)
-    final = d.vertex("Hoàn tất\n(Final)", GRADE, 270, 370, 170, 50, parent=done)
-    end = d.vertex("", FINAL, 104, 384, 24, 24, parent=done)
+    g_init = d.vertex("", INITIAL, 190, 57, 22, 22, parent=done)
+    not_graded = d.vertex("Chưa chấm\n(NotGraded)", GRADE, 245, 43, 170, 50, parent=done)
+    auto = d.vertex("Đã chấm tự động\n(AutoGraded)", GRADE, 40, 180, 190, 56, parent=done)
+    manual = d.vertex("Chờ chấm Writing\n(NeedsManualMarking)\ndo / giám khảo chấm từng câu", GRADE, 390, 172, 230, 72, parent=done)
+    final = d.vertex("Hoàn tất\n(Final)", GRADE, 420, 300, 170, 50, parent=done)
+    end = d.vertex("", FINAL, 123, 313, 24, 24, parent=done)
 
     d.edge(g_init, not_graded, parent=done)
-    d.edge(not_graded, auto, "AttemptMarker\n[đề không có Writing]", "exitX=0.3;exitY=1;entryX=0.5;entryY=0;", parent=done, dx=-30)
-    d.edge(not_graded, manual, "AttemptMarker\n[có bài Writing]", "exitX=0.8;exitY=1;entryX=0.5;entryY=0;", parent=done, dx=30)
-    d.edge(manual, manual, "Giám khảo chấm một câu\n[còn câu chưa chấm]", "exitX=1;exitY=0.3;entryX=1;entryY=0.7;",
-           points=[(478, 247), (478, 270)], parent=done, dx=-25, dy=-58)
-    d.edge(manual, final, "Giám khảo chấm câu Writing cuối\n/ điểm = tự động + Writing", "", parent=done, dx=-4)
+    d.edge(not_graded, auto, "AttemptMarker\n[đề không có Writing]", "exitX=0.3;exitY=1;entryX=0.5;entryY=0;", parent=done)
+    d.edge(not_graded, manual, "AttemptMarker\n[có bài Writing]", "exitX=0.8;exitY=1;entryX=0.5;entryY=0;", parent=done)
+    d.edge(manual, final, "", "", parent=done)
+    d.vertex("Giám khảo chấm câu Writing cuối\n/ điểm = tự động + Writing", label + "align=right;", 200, 254, 300, 36, parent=done)
     d.edge(auto, end, "", "exitX=0.5;exitY=1;entryX=0.5;entryY=0;", parent=done)
     d.edge(final, end, "", "exitX=0;exitY=0.5;entryX=1;entryY=0.5;", parent=done)
 
@@ -88,7 +93,7 @@ def state_machine():
             "• Không có nút nộp bài của thí sinh (giống Cambridge): chờ hết giờ hoặc giám thị End now.\n"
             "• Phần thi sau (Listening) chỉ mở khi mọi phần trước đã ở trạng thái Đã nộp.")
     d.vertex(note, f"shape=note;whiteSpace=wrap;html=1;size=14;align=left;spacingLeft=8;{FONT}fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;",
-             40, 590, 820, 100)
+             20, 875, 660, 100)
 
     body = "".join(d.cells)
     return (f'<diagram name="Trạng thái lượt làm bài"><mxGraphModel grid="1" gridSize="10" page="0">'

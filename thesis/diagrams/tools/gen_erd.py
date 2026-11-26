@@ -64,6 +64,33 @@ GROUPS = {
 }
 
 ROW, HEAD, COL_GAP, ROW_GAP, KEY_W = 22, 28, 190, 46, 52
+BRIEF = False   # portrait group figures: column names only (the full ERD keeps the types)
+
+# The group ERDs of the report, drawn for a portrait page: two columns of tables, at most about 700 wide so the 12 px
+# text prints at 8 pt on a 16.5 cm column. The content group is split in two figures. A key is drawn when both tables
+# are in the figure, otherwise written after the column ("→ assets").
+FIGURES = {
+    "content": ("Nội dung đề thi: loại bài thi và cấu trúc đề", "content", [
+        ["exam_types", "section_templates", "test_papers", "answer_keys"],
+        ["paper_parts", "question_groups", "questions"],
+    ]),
+    "content-mixes": ("Nội dung đề thi: đề trộn, tệp và nhật ký sửa đáp án", "content", [
+        ["paper_mixes", "paper_mix_sources"],
+        ["assets", "answer_corrections"],
+    ]),
+    "exams": ("Kỳ thi và thí sinh", "exams", [
+        ["exams", "exam_sections", "candidate_messages"],
+        ["candidates", "exam_invigilators", "exam_examiners", "exam_candidate_managers"],
+    ]),
+    "delivery": ("Làm bài, chấm điểm và giám sát", "delivery", [
+        ["attempts", "annotations"],
+        ["invigilator_actions", "security_events", "responses", "manual_marks"],
+    ]),
+    "accounts": ("Tài khoản nhân sự và cấu hình", "accounts", [
+        ["users", "user_areas"],
+        ["approval_requests", "site_settings"],
+    ]),
+}
 # Keys inside one column normally loop through the corridor on the right of the column (outer left for the first
 # column); these loop on the left instead, so two loops of one column never overlap.
 LOOP_LEFT = {("answer_keys", "question_id")}
@@ -117,7 +144,7 @@ def label(table, col, ctype, ckey, nullable, drawn=in_group):
         keys.append("FK")
     if (table, col) in uniques and ckey != "PRI":
         keys.append("UQ")
-    text = f"{col} : {ctype}" + ("" if nullable or ckey == "PRI" else " NN")
+    text = col if BRIEF else f"{col} : {ctype}" + ("" if nullable or ckey == "PRI" else " NN")
     ref = fks.get((table, col))
     if ref and not drawn(table, col, ref):
         text += f"  → {ref}"
@@ -126,7 +153,7 @@ def label(table, col, ctype, ckey, nullable, drawn=in_group):
 
 def width(table, drawn=in_group):
     longest = max(len(label(table, *c, drawn=drawn)[1]) for c in cols[table])
-    return max(230, int(round((KEY_W + 18 + longest * 6.4) / 10.0)) * 10)
+    return max(180 if BRIEF else 230, int(round((KEY_W + 18 + longest * 6.4) / 10.0)) * 10)
 
 
 class Doc:
@@ -172,7 +199,7 @@ def table_box(d, t, x, y, w, colours, drawn=in_group):
                  "dropTarget=0;portConstraint=eastwest;top=0;left=0;right=0;bottom=0;html=1;",
                  0, HEAD + i * ROW, w, ROW, parent=tid, cid=rid)
         d.vertex(keys, "shape=partialRectangle;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;fontStyle=1;"
-                 f"overflow=hidden;whiteSpace=wrap;html=1;{FONT}fontSize=10;", 0, 0, KEY_W, ROW, parent=rid)
+                 f"overflow=hidden;whiteSpace=wrap;html=1;{FONT}fontSize={12 if BRIEF else 10};", 0, 0, KEY_W, ROW, parent=rid)
         style = "fontStyle=5;" if is_pk else ""
         colour = "fontColor=#555555;" if "→" in text else ""
         d.vertex(text, "shape=partialRectangle;connectable=0;fillColor=none;top=0;left=0;bottom=0;right=0;align=left;"
@@ -221,7 +248,7 @@ def best_order(items):
     return best
 
 
-def draw_erd(title, filename, columns, colour_of, drawn, loop_left=frozenset(), note=""):
+def draw_erd(title, filename, columns, colour_of, drawn, loop_left=frozenset(), note="", col_gap=COL_GAP, left=100):
     """Tables in columns; every drawn key is one line. A key between the same or neighbouring columns turns once in a
     lane of the corridor between them; a key that skips columns climbs in a lane next to its table, runs along its
     own track above all tables and comes down in a lane next to the other table. No two lines share a lane or a
@@ -229,13 +256,22 @@ def draw_erd(title, filename, columns, colour_of, drawn, loop_left=frozenset(), 
     keys = [((t, c), ref) for (t, c), ref in sorted(fks.items()) if t in colour_of and ref in colour_of and drawn(t, c, ref)]
     column_of = {t: i for i, column in enumerate(columns) for t in column}
     long_keys = [k for k in keys if abs(column_of[k[0][0]] - column_of[k[1]]) > 1]
+    if col_gap is None:  # just wide enough for the lanes of the busiest corridor between two columns
+        between = defaultdict(int)
+        for (t, c), ref in keys:
+            if column_of[t] != column_of[ref]:
+                between[max(column_of[t], column_of[ref])] += 1
+        col_gap = 16 * (max(between.values(), default=0) + 1) + 12
+    if left is None:     # loops of the first column run on its left
+        loops = sum(1 for (t, c), ref in keys if column_of[t] == column_of[ref] == 0)
+        left = 24 + 16 * (loops + 1)
 
     d = Doc()
-    d.vertex(title, f"text;html=1;align=left;verticalAlign=middle;{FONT}fontSize=16;fontStyle=1;", 40, 0, 900, 30)
+    d.vertex(title, f"text;html=1;align=left;verticalAlign=middle;{FONT}fontSize=16;fontStyle=1;", 20 if BRIEF else 40, 0, 600 if BRIEF else 900, 30)
     top = 60 + 16 * len(long_keys)
 
     pos, col_x, col_w = {}, [], []
-    x = 100               # room for loops on the far left
+    x = left              # room for loops on the far left
     for column in columns:
         w = max(width(t, drawn) for t in column)
         y = top
@@ -245,7 +281,7 @@ def draw_erd(title, filename, columns, colour_of, drawn, loop_left=frozenset(), 
             y += HEAD + ROW * len(cols[t]) + ROW_GAP
         col_x.append(x)
         col_w.append(w)
-        x += w + COL_GAP
+        x += w + col_gap
 
     def row_y(t, c):
         return pos[t][1] + HEAD + ROW * [n for n, *_ in cols[t]].index(c) + ROW / 2
@@ -337,17 +373,28 @@ def draw_erd(title, filename, columns, colour_of, drawn, loop_left=frozenset(), 
                           (b["lane"], b["y1"]), (b["lane"], b["y2"]), (side_x(cb, b["side2"]), b["y2"])])
 
     bottom = table_bottom + 16 * len(below) + (16 if below else 0)
-    d.vertex("PK khoá chính · FK khoá ngoại · UQ duy nhất · NN bắt buộc (NOT NULL) · chân gà: nhiều, hai vạch: đúng một" + note,
-             f"text;html=1;align=left;verticalAlign=middle;{FONT}fontColor=#444444;", 40, bottom + 30, 1600, 24)
+    legend = ("PK khoá chính · FK khoá ngoại · UQ duy nhất" + ("" if BRIEF else " · NN bắt buộc (NOT NULL)")
+              + " · chân gà: nhiều, hai vạch: đúng một" + note)
+    right = max(col_x[-1] + col_w[-1] + (bounds[len(columns)][1] - bounds[len(columns)][0] if len(columns) in bounds else 0), 600)
+    d.vertex(legend, f"text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;{FONT}fontColor=#444444;",
+             20, bottom + 20, (right - 20) if BRIEF else 1600, 44 if BRIEF else 24)
     d.save(filename, title)
     return len(keys)
 
 
 def group_diagram(key):
-    title, colours, columns = GROUPS[key]
+    """One portrait figure of the report (FIGURES): column names only, smaller rows and gaps."""
+    global BRIEF, ROW, ROW_GAP
+    title, group, columns = FIGURES[key]
+    colours = GROUPS[group][1]
     tables = {t: colours for column in columns for t in column}
-    return draw_erd(f"ERD: {title}", f"erd-{key}.drawio", columns, tables, in_group, LOOP_LEFT,
-                    " · “→ bảng”: khoá ngoại sang nhóm khác (xem ERD toàn bộ)")
+    shown = lambda t, c, ref: t in tables and ref in tables
+    BRIEF, ROW, ROW_GAP = True, 20, 28  # shortcut: module switches, restored below; a layout object if this grows
+    try:
+        return draw_erd(f"ERD: {title}", f"erd-{key}.drawio", columns, tables, shown, LOOP_LEFT,
+                        " · “→ bảng”: khoá ngoại sang bảng ở hình khác", col_gap=None, left=None)
+    finally:
+        BRIEF, ROW, ROW_GAP = False, 22, 46
 
 
 # The whole schema on one page: the columns follow the flow staff → session → delivery → content, so most keys join
@@ -439,7 +486,8 @@ def overview():
 
 if __name__ == "__main__":
     print("wrote erd-full.drawio;", full_diagram(), "lines")
-    for key in GROUPS:
+    assert {t for _, _, columns in FIGURES.values() for col in columns for t in col} == set(cols)
+    for key in FIGURES:
         group_diagram(key)
         print("wrote", f"erd-{key}.drawio")
     links = overview()

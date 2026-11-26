@@ -50,7 +50,8 @@ class Doc:
 
 
 def exam_day():
-    """Figure 1.1: one computer-based exam session, from the Cambridge exam day booklet and invigilator guide."""
+    """Figure 1.1: one computer-based exam session, from the Cambridge exam day booklet and invigilator guide.
+    Steps run top to bottom so the figure fits the width of a portrait page."""
     d = Doc()
     steps = [
         "Chuẩn bị phòng thi: mở trình duyệt khoá trên mọi máy thí sinh, vào trang đăng nhập",
@@ -62,54 +63,49 @@ def exam_day():
     ]
     ids = []
     for i, text in enumerate(steps):
-        col, row = i % 3, i // 3
-        x, y = 40 + col * 380, 40 + row * 170
-        if row == 1:
-            x = 40 + (2 - col) * 380
-        ids.append(d.vertex(text, STEP, x, y, 300, 100))
-        d.vertex(str(i + 1), NUM, x + 12, y + 32, 36, 36)
-    d.edge(ids[0], ids[1])
-    d.edge(ids[1], ids[2])
-    d.edge(ids[2], ids[3], style="exitX=0.5;exitY=1;entryX=0.5;entryY=0;")
-    d.edge(ids[3], ids[4])
-    d.edge(ids[4], ids[5])
+        y = 20 + i * 100
+        ids.append(d.vertex(text, STEP, 20, y, 660, 64))
+        d.vertex(str(i + 1), NUM, 32, y + 14, 36, 36)
+    for a, b in zip(ids, ids[1:]):
+        d.edge(a, b)
     d.save("exam-day.drawio")
 
 
 def clean_architecture():
-    """Figure 2.1: Clean Architecture, horizontal view, after Microsoft's Common web application architectures."""
+    """Figure 2.1: Clean Architecture, after Microsoft's Common web application architectures: the core below, the
+    two outer layers above it, every compile-time dependency pointing down into the core."""
     d = Doc()
-    ui = d.vertex("Lớp giao diện / API\n(Controllers, Filters, Middleware,\nProgram.cs: composition root)", BOX, 40, 40, 260, 110)
-    core = d.vertex("Application Core\n(Entities, Interfaces,\nDomain Services, quy tắc nghiệp vụ)",
-                    BOX.replace("#dae8fc", "#d5e8d4").replace("#6c8ebf", "#82b366"), 500, 40, 270, 110)
+    ui = d.vertex("Lớp giao diện / API\n(Controllers, Filters, Middleware,\nProgram.cs: composition root)", BOX, 20, 20, 250, 110)
     infra = d.vertex("Infrastructure\n(DbContext, Migrations,\ntruy cập dữ liệu, dịch vụ hạ tầng)",
-                     BOX.replace("#dae8fc", "#fff2cc").replace("#6c8ebf", "#d6b656"), 970, 40, 260, 110)
-    d.edge(ui, core, "phụ thuộc\nlúc biên dịch")
-    d.edge(infra, core, "cài đặt\ncác interface")
-    d.edge(ui, infra, "chỉ nối lúc chạy\n(dependency injection)",
-           "dashed=1;exitX=0.5;exitY=1;entryX=0.5;entryY=1;edgeStyle=orthogonalEdgeStyle;")
+                     BOX.replace("#dae8fc", "#fff2cc").replace("#6c8ebf", "#d6b656"), 430, 20, 250, 110)
+    core = d.vertex("Application Core\n(Entities, Interfaces,\nDomain Services, quy tắc nghiệp vụ)",
+                    BOX.replace("#dae8fc", "#d5e8d4").replace("#6c8ebf", "#82b366"), 205, 270, 290, 110)
+    d.edge(ui, core, "phụ thuộc\nlúc biên dịch", "exitX=0.5;exitY=1;entryX=0.25;entryY=0;")
+    d.edge(infra, core, "cài đặt\ncác interface", "exitX=0.5;exitY=1;entryX=0.75;entryY=0;")
+    d.edge(ui, infra, "", "dashed=1;")
+    d.vertex("chỉ nối lúc chạy\n(dependency injection)", NOTE, 270, 14, 160, 50)  # above the line, not on it
     d.vertex("Mũi tên liền: phụ thuộc lúc biên dịch, luôn hướng vào Application Core. "
-             "Mũi tên đứt: phụ thuộc chỉ có lúc chạy.", NOTE, 235, 195, 760, 40)
+             "Mũi tên đứt: phụ thuộc chỉ có lúc chạy.", NOTE, 20, 400, 660, 44)
     d.save("clean-architecture.drawio")
 
 
 def signalr():
     """Figure 2.2: server push through a SignalR hub and the transport fallback order."""
     d = Doc()
-    hub = d.vertex("Máy chủ ASP.NET Core\nHub SignalR", BOX, 380, 40, 260, 80)
-    clients = [d.vertex(t, BOX.replace("#dae8fc", "#ffffff"), 60 + i * 330, 230, 240, 70)
+    hub = d.vertex("Máy chủ ASP.NET Core\nHub SignalR", BOX, 220, 20, 260, 80)
+    clients = [d.vertex(t, BOX.replace("#dae8fc", "#ffffff"), 20 + i * 240, 200, 180, 60)
                for i, t in enumerate(["Trình duyệt 1", "Trình duyệt 2", "Trình duyệt 3"])]
     for c in clients:
         d.edge(hub, c, "", "startArrow=block;startFill=1;")
-    d.vertex("Máy chủ gọi phương thức ở client (đẩy dữ liệu), client gọi phương thức ở hub", NOTE, 120, 330, 780, 30)
+    d.vertex("Máy chủ gọi phương thức ở client (đẩy dữ liệu), client gọi phương thức ở hub", NOTE, 20, 275, 660, 44)
     order = [("WebSockets", "#d5e8d4", "#82b366"), ("Server-Sent Events", "#fff2cc", "#d6b656"), ("Long Polling", "#f8cecc", "#b85450")]
     prev = None
     for i, (t, fill, stroke) in enumerate(order):
-        b = d.vertex(t, BOX.replace("#dae8fc", fill).replace("#6c8ebf", stroke), 160 + i * 250, 410, 200, 50)
+        b = d.vertex(t, BOX.replace("#dae8fc", fill).replace("#6c8ebf", stroke), 20 + i * 240, 350, 180, 50)
         if prev:
             d.edge(prev, b, "")
         prev = b
-    d.vertex("Thứ tự chọn phương thức truyền: dùng phương thức đầu tiên mà cả máy chủ và trình duyệt hỗ trợ", NOTE, 120, 470, 780, 30)
+    d.vertex("Thứ tự chọn phương thức truyền: dùng phương thức đầu tiên mà cả máy chủ và trình duyệt hỗ trợ", NOTE, 20, 410, 660, 44)
     d.save("signalr.drawio")
 
 
@@ -127,29 +123,30 @@ def test_pyramid():
 
 
 def deployment():
-    """Figure 3.x: how the system is deployed in the exam room (docker/docker-compose.yml and the production override)."""
+    """Figure 3.x: how the system is deployed in the exam room (docker/docker-compose.yml and the production override).
+    The computers sit above the server, and the three containers are stacked inside it."""
     d = Doc()
     white = BOX.replace("#dae8fc", "#ffffff")
-    cand = d.vertex("Máy thí sinh (× N)\nWindows, Safe Exam Browser", white, 40, 70, 270, 80)
-    staff = d.vertex("Máy giám thị, nhân viên\nChrome hoặc Edge", white, 40, 250, 270, 80)
+    cand = d.vertex("Máy thí sinh (× N)\nWindows, Safe Exam Browser", white, 20, 20, 300, 70)
+    staff = d.vertex("Máy giám thị, nhân viên\nChrome hoặc Edge", white, 380, 20, 300, 70)
     d.vertex("Máy chủ phòng thi: Docker Compose", f"rounded=1;arcSize=4;whiteSpace=wrap;html=1;{FONT}fontStyle=1;"
-             "fillColor=none;strokeColor=#666666;dashed=1;verticalAlign=top;spacingTop=8;", 420, 20, 920, 420)
-    web = d.vertex("web: nginx\ntệp tĩnh React;\nchuyển tiếp /api, /hubs", BOX, 450, 120, 230, 120)
+             "fillColor=none;strokeColor=#666666;dashed=1;verticalAlign=top;spacingTop=8;", 20, 160, 660, 450)
+    web = d.vertex("web: nginx\ntệp tĩnh React; chuyển tiếp /api, /hubs", BOX, 60, 210, 340, 80)
     api = d.vertex("api: ASP.NET Core (.NET 10)\nREST API, hub SignalR,\ndịch vụ nền nộp bài và chấm,\nbộ chuyển đề Python",
-                   BOX.replace("#dae8fc", "#d5e8d4").replace("#6c8ebf", "#82b366"), 730, 120, 270, 120)
+                   BOX.replace("#dae8fc", "#d5e8d4").replace("#6c8ebf", "#82b366"), 60, 340, 340, 120)
     db = d.vertex("mysql: MySQL 8.4\nchỉ mở ở 127.0.0.1", BOX.replace("#dae8fc", "#fff2cc").replace("#6c8ebf", "#d6b656"),
-                  1110, 120, 210, 120)
+                  60, 510, 340, 70)
     cyl = f"shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;size=10;{FONT}fontSize=13;fillColor=#f5f5f5;strokeColor=#666666;"
-    files = d.vertex("App_Data: hình, audio,\nkhoá Data Protection", cyl, 750, 310, 230, 80)
-    data = d.vertex("mysql-data", cyl, 1130, 310, 170, 80)
-    d.edge(cand, web, "HTTP(S), WebSocket")
-    d.edge(staff, web, "/staff")
+    files = d.vertex("App_Data: hình, audio,\nkhoá Data Protection", cyl, 450, 360, 200, 80)
+    data = d.vertex("mysql-data", cyl, 450, 505, 200, 80)
+    d.edge(cand, web, "HTTP(S), WebSocket", "exitX=0.5;exitY=1;entryX=0.3;entryY=0;")
+    d.edge(staff, web, "/staff", "exitX=0.5;exitY=1;entryX=0.85;entryY=0;")
     d.edge(web, api, "")
     d.edge(api, db, "EF Core")
     d.edge(api, files, "", "dashed=1;endArrow=none;")
     d.edge(db, data, "", "dashed=1;endArrow=none;")
     d.vertex("Bản demo: HTTP cổng 8080, môi trường Development. Bản thi thật: thêm docker-compose.prod.yml, "
-             "HTTPS cổng 443, môi trường Production.", NOTE, 420, 455, 920, 40)
+             "HTTPS cổng 443, môi trường Production.", NOTE, 20, 625, 660, 44)
     d.save("deployment.drawio")
 
 
